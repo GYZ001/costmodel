@@ -37,6 +37,7 @@ export interface AnalysisResult {
   recommendation: string;
   risk_level: string;
   summary: string;
+  is_local_analysis?: boolean;
 }
 
 export interface KlineIndicators {
@@ -97,11 +98,12 @@ export interface AppConfig {
   stock: StockConfig;
   news: NewsConfig;
   data_source: DataSourceConfig;
+  has_ai_config?: boolean;
 }
 
 export interface AnalyzeRequest {
   stock_code: string;
-  stock_name: string;
+  stock_name?: string;
   market?: string;
   period?: string;
   days?: number;

@@ -8,10 +8,10 @@ export const useStockAnalysis = () => {
 
   const {
     stockCode,
-    stockName,
     market,
     period,
     days,
+    setStockName,
     setKlineData,
     setNewsData,
     setAnalysisResult,
@@ -20,8 +20,8 @@ export const useStockAnalysis = () => {
   } = useStockStore();
 
   const analyze = useCallback(async () => {
-    if (!stockCode || !stockName) {
-      setError('请输入股票代码和名称');
+    if (!stockCode || !stockCode.trim()) {
+      setError('请输入股票代码');
       return;
     }
 
@@ -35,29 +35,35 @@ export const useStockAnalysis = () => {
       setKlineData(klineResult.data, klineResult.indicators);
 
       setProgress('正在获取新闻资讯...');
-      const newsResult = await getNews(stockCode, stockName, 7);
+      const newsResult = await getNews(stockCode, '', 7);
       setNewsData(newsResult.data, newsResult.sentiment);
 
-      setProgress('正在进行 AI 分析...');
+      setProgress('正在分析...');
       const analysisResult = await analyzeStock({
         stock_code: stockCode,
-        stock_name: stockName,
+        stock_name: '',
         market,
         period,
         days,
       });
+
+      if (analysisResult.stock_name) {
+        setStockName(analysisResult.stock_name);
+      }
+
       setAnalysisResult(analysisResult);
 
       setProgress('分析完成');
     } catch (err: any) {
       console.error('Analysis error:', err);
-      setError(err.response?.data?.message || err.message || '分析失败');
+      const errorMessage = err.response?.data?.message || err.message || '分析失败，请稍后重试';
+      setError(errorMessage);
     } finally {
       setIsAnalyzing(false);
       setLoading(false);
       setProgress('');
     }
-  }, [stockCode, stockName, market, period, days, setKlineData, setNewsData, setAnalysisResult, setLoading, setError]);
+  }, [stockCode, market, period, days, setStockName, setKlineData, setNewsData, setAnalysisResult, setLoading, setError]);
 
   return {
     analyze,

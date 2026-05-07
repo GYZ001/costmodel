@@ -1,6 +1,6 @@
 import React from 'react';
 import { useStockStore } from '../stores/stockStore';
-import { Brain, TrendingUp, MessageSquare, Shield, Download, Copy } from 'lucide-react';
+import { Brain, TrendingUp, MessageSquare, Shield, Download, Copy, Sparkles } from 'lucide-react';
 
 export const AIAnalysisResult: React.FC = () => {
   const { analysisResult, stockCode, stockName } = useStockStore();
@@ -13,7 +13,7 @@ export const AIAnalysisResult: React.FC = () => {
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
-    link.download = `${stockCode}_${stockName}_分析报告_${analysisResult.analysis_date}.txt`;
+    link.download = `${stockCode}_${stockName || '股票'}_分析报告_${analysisResult.analysis_date}.txt`;
     link.click();
     URL.revokeObjectURL(url);
   };
@@ -47,7 +47,7 @@ export const AIAnalysisResult: React.FC = () => {
 ----------
 情绪判断: ${analysisResult.news_analysis.sentiment}
 关键事件:
-${analysisResult.news_analysis.key_events.map(e => `- ${e}`).join('\n')}
+${(analysisResult.news_analysis.key_events || []).map((e: string) => `- ${e}`).join('\n')}
 市场反馈: ${analysisResult.news_analysis.market_feedback}
 
 综合建议
@@ -68,7 +68,7 @@ ${analysisResult.summary}
           <div className="w-10 h-10 bg-gradient-to-br from-rose-500 to-red-600 rounded-xl flex items-center justify-center">
             <Brain className="w-5 h-5 text-white" />
           </div>
-          <h3 className="text-lg font-bold text-gray-900">AI 分析结果</h3>
+          <h3 className="text-lg font-bold text-gray-900">分析结果</h3>
         </div>
         <div className="h-48 flex items-center justify-center text-gray-400">
           暂无分析结果，请先搜索股票
@@ -76,6 +76,8 @@ ${analysisResult.summary}
       </div>
     );
   }
+
+  const isLocalAnalysis = (analysisResult as any).is_local_analysis === true;
 
   const cards = [
     {
@@ -133,7 +135,15 @@ ${analysisResult.summary}
           <div className="w-10 h-10 bg-gradient-to-br from-rose-500 to-red-600 rounded-xl flex items-center justify-center">
             <Brain className="w-5 h-5 text-white" />
           </div>
-          <h3 className="text-lg font-bold text-gray-900">AI 分析结果</h3>
+          <div>
+            <h3 className="text-lg font-bold text-gray-900">分析结果</h3>
+            {isLocalAnalysis && (
+              <span className="text-xs text-gray-500 flex items-center gap-1">
+                <Sparkles className="w-3 h-3" />
+                本地分析模式
+              </span>
+            )}
+          </div>
         </div>
         <div className="flex items-center gap-2">
           <button
@@ -195,13 +205,13 @@ ${analysisResult.summary}
           <div>
             <span className="text-gray-500">支撑位</span>
             <p className="font-semibold text-emerald-600">
-              {analysisResult.technical_analysis.support_level.toFixed(2)}
+              {analysisResult.technical_analysis.support_level?.toFixed(2)}
             </p>
           </div>
           <div>
             <span className="text-gray-500">压力位</span>
             <p className="font-semibold text-red-600">
-              {analysisResult.technical_analysis.resistance_level.toFixed(2)}
+              {analysisResult.technical_analysis.resistance_level?.toFixed(2)}
             </p>
           </div>
         </div>

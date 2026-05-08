@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { useStockStore } from '../stores/stockStore';
 import { useStockAnalysis } from '../hooks/useStockAnalysis';
 import { Search, Loader2 } from 'lucide-react';
@@ -17,6 +17,16 @@ export const StockSearchForm: React.FC = () => {
   } = useStockStore();
 
   const { analyze, isAnalyzing, progress } = useStockAnalysis();
+
+  useEffect(() => {
+    if (!stockCode) {
+      setStockCode('600519');
+      const timer = setTimeout(() => {
+        analyze();
+      }, 500);
+      return () => clearTimeout(timer);
+    }
+  }, []);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();

@@ -1,15 +1,48 @@
 import React, { useState, useEffect } from 'react';
 import { Header } from '../components/Header';
-import { getConfig, updateConfig } from '../api/stockApi';
-import { Save, Loader2, CheckCircle } from 'lucide-react';
-import type { AppConfig } from '../types';
+import { getConfig, updateConfig, getModelList } from '../api/stockApi';
+import { Save, Loader2, CheckCircle, Brain, ExternalLink } from 'lucide-react';
+import type { AppConfig, AIConfig } from '../types';
+
+const MODEL_LIST = [
+  {
+    id: 'deepseek',
+    name: 'DeepSeek',
+    models: ['deepseek-chat', 'deepseek-coder'],
+    url: 'https://platform.deepseek.com/'
+  },
+  {
+    id: 'qwen',
+    name: '通义千问',
+    models: ['qwen-plus', 'qwen-plus-latest', 'qwen-turbo', 'qwen-max', 'qwen-long'],
+    url: 'https://dashscope.console.aliyun.com/'
+  },
+  {
+    id: 'doubao',
+    name: '豆包',
+    models: ['doubao-pro-32k', 'doubao-pro-4k', 'doubao-lite-4k', 'doubao-lite-32k'],
+    url: 'https://console.volcengine.com/ark/'
+  },
+  {
+    id: 'glm',
+    name: '智谱 GLM',
+    models: ['glm-4', 'glm-4-plus', 'glm-4-flash', 'glm-3-turbo'],
+    url: 'https://open.bigmodel.cn/'
+  },
+  {
+    id: 'kimi',
+    name: 'Kimi',
+    models: ['moonshot-v1-8k', 'moonshot-v1-32k', 'moonshot-v1-128k'],
+    url: 'https://platform.moonshot.cn/'
+  },
+];
 
 const defaultConfig: AppConfig = {
   ai: {
-    provider: 'openai',
+    provider: 'deepseek',
     api_key: '',
     base_url: '',
-    model: 'gpt-4',
+    model: 'deepseek-chat',
   },
   stock: {
     default_market: 'A股',
@@ -22,7 +55,7 @@ const defaultConfig: AppConfig = {
     keywords_template: '{stock_code} {stock_name}',
   },
   data_source: {
-    kline_provider: 'akshare',
+    kline_provider: 'eastmoney',
   },
 };
 
@@ -31,6 +64,7 @@ export const SettingsPage: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [showKey, setShowKey] = useState(false);
 
   useEffect(() => {
     loadConfig();
@@ -39,7 +73,9 @@ export const SettingsPage: React.FC = () => {
   const loadConfig = async () => {
     try {
       const data = await getConfig();
-      setConfig(data);
+      if (data && data.ai) {
+        setConfig(data);
+      }
     } catch (err) {
       console.error('Failed to load config:', err);
     } finally {
@@ -52,19 +88,34 @@ export const SettingsPage: React.FC = () => {
     setSaved(false);
 
     try {
-      await updateConfig({
-        stock: config.stock,
-        news: config.news,
-        data_source: config.data_source,
-      });
+      await updateConfig(config);
       setSaved(true);
       setTimeout(() => setSaved(false), 3000);
     } catch (err) {
       console.error('Failed to save config:', err);
-      alert('保存失败');
+      alert('保存失败，请重试');
     } finally {
       setSaving(false);
     }
+  };
+
+  const handleProviderChange = (provider: string) => {
+    const modelInfo = MODEL_LIST.find(m => m.id === provider);
+    const defaultModel = modelInfo?.models[0] || '';
+
+    setConfig({
+      ...config,
+      ai: {
+        ...config.ai,
+        provider,
+        model: defaultModel,
+        base_url: '',
+      },
+    });
+  };
+
+  const getCurrentModelInfo = () => {
+    return MODEL_LIST.find(m => m.id === config.ai.provider);
   };
 
   if (loading) {
@@ -78,6 +129,8 @@ export const SettingsPage: React.FC = () => {
     );
   }
 
+  const currentModelInfo = getCurrentModelInfo();
+
   return (
     <div className="min-h-screen bg-gray-50">
       <Header />
@@ -87,76 +140,70 @@ export const SettingsPage: React.FC = () => {
 
         <div className="space-y-6">
           <section className="bg-white rounded-2xl shadow-lg p-6 border border-gray-100">
-            <h2 className="text-lg font-bold text-gray-900 mb-4">AI 配置</h2>
-            <p className="text-sm text-gray-500 mb-6">
-              配置 AI 接口以启用智能分析功能
-            </p>
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-10 h-10 bg-gradient-to-br from-purple-500 to-pink-600 rounded-xl flex items-center justify-center">
+                <Brain className="w-5 h-5 text-white" />
+              </div>
+              <div>
+                <h2 className="text-lg font-bold text-gray-900">AI 模型配置</h2>
+                <p className="text-sm text-gray-500">选择 AI 模型并配置密钥</p>
+              </div>
+            </div>
 
             <div className="space-y-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  AI 提供商
+                  AI 模型
                 </label>
                 <select
                   value={config.ai.provider}
-                  onChange={(e) =>
-                    setConfig({
-                      ...config,
-                      ai: { ...config.ai, provider: e.target.value },
-                    })
-                  }
+                  onChange={(e) => handleProviderChange(e.target.value)}
                   className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all"
                 >
-                  <option value="openai">OpenAI (GPT-4)</option>
-                  <option value="claude">Claude</option>
-                  <option value="ollama">Ollama (本地模型)</option>
+                  {MODEL_LIST.map((model) => (
+                    <option key={model.id} value={model.id}>
+                      {model.name}
+                    </option>
+                  ))}
                 </select>
               </div>
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   API Key
+                  <span className="text-red-500 ml-1">*</span>
                 </label>
-                <input
-                  type="password"
-                  value={config.ai.api_key}
-                  onChange={(e) =>
-                    setConfig({
-                      ...config,
-                      ai: { ...config.ai, api_key: e.target.value },
-                    })
-                  }
-                  placeholder="输入您的 API Key"
-                  className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all"
-                />
-              </div>
-
-              {config.ai.provider === 'ollama' && (
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Base URL
-                  </label>
+                <div className="relative">
                   <input
-                    type="text"
-                    value={config.ai.base_url}
+                    type={showKey ? 'text' : 'password'}
+                    value={config.ai.api_key}
                     onChange={(e) =>
                       setConfig({
                         ...config,
-                        ai: { ...config.ai, base_url: e.target.value },
+                        ai: { ...config.ai, api_key: e.target.value },
                       })
                     }
-                    placeholder="http://localhost:11434"
-                    className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all"
+                    placeholder="输入您的 API Key"
+                    className="w-full px-4 py-3 pr-12 border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all"
                   />
+                  <button
+                    type="button"
+                    onClick={() => setShowKey(!showKey)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                  >
+                    {showKey ? '隐藏' : '显示'}
+                  </button>
                 </div>
-              )}
+                <p className="mt-1 text-xs text-gray-500">
+                  请从 {currentModelInfo?.name} 官网获取 API Key
+                </p>
+              </div>
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  模型
+                  模型版本
                 </label>
-                <input
-                  type="text"
+                <select
                   value={config.ai.model}
                   onChange={(e) =>
                     setConfig({
@@ -164,42 +211,48 @@ export const SettingsPage: React.FC = () => {
                       ai: { ...config.ai, model: e.target.value },
                     })
                   }
-                  placeholder="gpt-4"
                   className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all"
-                />
+                >
+                  {currentModelInfo?.models.map((model) => (
+                    <option key={model} value={model}>
+                      {model}
+                    </option>
+                  ))}
+                </select>
               </div>
+
+              {config.ai.api_key && (
+                <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-4">
+                  <div className="flex items-start gap-3">
+                    <div className="w-8 h-8 bg-emerald-500 rounded-lg flex items-center justify-center flex-shrink-0">
+                      <CheckCircle className="w-4 h-4 text-white" />
+                    </div>
+                    <div>
+                      <p className="font-medium text-emerald-800">AI 配置已就绪</p>
+                      <p className="text-sm text-emerald-600 mt-1">
+                        {currentModelInfo?.name} - {config.ai.model}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              <a
+                href={currentModelInfo?.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-2 text-sm text-blue-600 hover:text-blue-700"
+              >
+                <ExternalLink className="w-4 h-4" />
+                前往 {currentModelInfo?.name} 获取 API Key
+              </a>
             </div>
           </section>
 
           <section className="bg-white rounded-2xl shadow-lg p-6 border border-gray-100">
-            <h2 className="text-lg font-bold text-gray-900 mb-4">数据源配置</h2>
-            <p className="text-sm text-gray-500 mb-6">
-              配置股票数据来源和分析参数
-            </p>
+            <h2 className="text-lg font-bold text-gray-900 mb-4">分析参数</h2>
 
             <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  K线数据源
-                </label>
-                <select
-                  value={config.data_source.kline_provider}
-                  onChange={(e) =>
-                    setConfig({
-                      ...config,
-                      data_source: {
-                        ...config.data_source,
-                        kline_provider: e.target.value,
-                      },
-                    })
-                  }
-                  className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all"
-                >
-                  <option value="akshare">AkShare (推荐)</option>
-                  <option value="yfinance">Yahoo Finance</option>
-                </select>
-              </div>
-
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -245,7 +298,7 @@ export const SettingsPage: React.FC = () => {
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    默认分析天数
+                    分析天数
                   </label>
                   <input
                     type="number"
@@ -267,7 +320,7 @@ export const SettingsPage: React.FC = () => {
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    新闻搜索天数
+                    新闻天数
                   </label>
                   <input
                     type="number"

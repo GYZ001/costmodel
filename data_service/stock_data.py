@@ -1,15 +1,19 @@
 #!/usr/bin/env python3
 """
-股票数据服务 - 使用新浪财经 API 获取真实数据
+股票数据服务 - 支持真实数据 + AI 分析
 """
 
 import json
 import sys
 import re
+import os
 from datetime import datetime, timedelta
 from http.server import HTTPServer, BaseHTTPRequestHandler
 import urllib.request
 import urllib.parse
+
+from ai_models import AI_MODELS
+from ai_analyzer import analyze_with_ai
 
 stock_name_map = {
     '600519': '贵州茅台',
@@ -34,6 +38,48 @@ stock_name_map = {
     '600048': '保利发展',
 }
 
+config = {
+    'ai': {
+        'provider': 'deepseek',
+        'api_key': '',
+        'base_url': '',
+        'model': 'deepseek-chat',
+    },
+    'stock': {
+        'default_market': 'A股',
+        'default_period': '日线',
+        'default_days': 30,
+    },
+    'news': {
+        'search_days': 7,
+        'max_results': 10,
+    },
+}
+
+CONFIG_FILE = os.path.join(os.path.dirname(__file__), 'config.json')
+
+def load_config():
+    """加载配置"""
+    global config
+    if os.path.exists(CONFIG_FILE):
+        try:
+            with open(CONFIG_FILE, 'r') as f:
+                saved = json.load(f)
+                if saved.get('ai'):
+                    config['ai'] = saved['ai']
+                if saved.get('stock'):
+                    config['stock'] = saved['stock']
+        except Exception as e:
+            print(f"加载配置失败: {e}", file=sys.stderr)
+
+def save_config():
+    """保存配置"""
+    try:
+        with open(CONFIG_FILE, 'w') as f:
+            json.dump(config, f, ensure_ascii=False, indent=2)
+    except Exception as e:
+        print(f"保存配置失败: {e}", file=sys.stderr)
+
 def get_stock_name(code: str) -> str:
     """根据股票代码获取名称"""
     upper_code = code.upper()
@@ -44,40 +90,6 @@ def get_stock_name(code: str) -> str:
     if upper_code.startswith('0') or upper_code.startswith('3'):
         return '深证股票'
     return f'股票{code}'
-
-def get_kline_data_sina(code: str, days: int = 30):
-    """使用新浪财经 API 获取真实K线数据"""
-    try:
-        if code.startswith('6'):
-            symbol = f"sh{code}"
-        else:
-            symbol = f"sz{code}"
-
-        url = f"https://quotes.sina.cn/cn/api/jsonp.php/var%20_{symbol}=/CN_MarketDataService.getKLineData?symbol={symbol}&scale=240&ma=no&datalen={days}"
-        
-        req = urllib.request.Request(url, headers={'User-Agent': 'Mozilla/5.0'})
-        with urllib.request.urlopen(req, timeout=10) as response:
-            data = response.read().decode('utf-8')
-
-        match = re.search(r'\[.*\]', data, re.DOTALL)
-        if not match:
-            return None
-
-        kline_list = json.loads(match.group())
-        result = []
-        for item in kline_list[-days:]:
-            result.append({
-                'date': item.get('day', '').split(' ')[0],
-                'open': float(item.get('open', 0)),
-                'high': float(item.get('high', 0)),
-                'low': float(item.get('low', 0)),
-                'close': float(item.get('close', 0)),
-                'volume': float(item.get('volume', 0))
-            })
-        return result
-    except Exception as e:
-        print(f"新浪财经数据获取失败: {e}", file=sys.stderr)
-        return None
 
 def get_kline_data_eastmoney(code: str, days: int = 30):
     """使用东方财富 API 获取真实K线数据"""
@@ -115,7 +127,7 @@ def get_kline_data_eastmoney(code: str, days: int = 30):
         return None
 
 def get_kline_data_mock(code: str, days: int = 30):
-    """生成模拟数据（当API不可用时）"""
+    """生成模拟数据"""
     import random
     data = []
     base_price = 100.0
@@ -220,31 +232,12 @@ def get_news_mock(code: str, name: str, days: int = 7):
             'positive_count': positive_count,
             'negative_count': negative_count,
             'neutral_count': neutral_count,
-            'positive_ratio': (positive_count / 10) * 100,
-            'negative_ratio': (negative_count / 10) * 100
         }
     }
 
-def analyze_stock(code: str, name: str = '', days: int = 30):
-    """分析股票"""
-    if not name:
-        name = get_stock_name(code)
-
-    print(f"[数据服务] 分析 {name}({code})", file=sys.stderr)
-
-    kline_data = get_kline_data_eastmoney(code, days)
-    
-    if not kline_data:
-        print(f"[数据服务] 东方财富失败，尝试新浪财经", file=sys.stderr)
-        kline_data = get_kline_data_sina(code, days)
-
-    if not kline_data:
-        print(f"[数据服务] 所有API失败，使用模拟数据", file=sys.stderr)
-        kline_data = get_kline_data_mock(code, days)
-
+def generate_local_analysis(stock_code: str, stock_name: str, kline_data: list, news_data: list):
+    """生成本地分析结果"""
     indicators = calculate_indicators(kline_data)
-    news_result = get_news_mock(code, name, 7)
-
     closes = [d['close'] for d in kline_data]
     price_change = indicators['price_change'] if indicators else 0
 
@@ -254,7 +247,9 @@ def analyze_stock(code: str, name: str = '', days: int = 30):
     elif price_change < -3:
         trend = '下跌'
 
-    sentiment = news_result['sentiment']['sentiment']
+    news_sentiment = news_data[0].get('sentiment', {}) if news_data else {'sentiment': '中性'}
+    sentiment = news_sentiment.get('sentiment', '中性')
+
     recommendation = '观望'
     if trend == '上涨' and sentiment in ['偏正面', '正面']:
         recommendation = '买入'
@@ -266,11 +261,11 @@ def analyze_stock(code: str, name: str = '', days: int = 30):
     support_level = indicators['lowest'] * 1.02 if indicators else 0
     resistance_level = indicators['highest'] * 0.98 if indicators else 0
 
-    key_events = [n['title'] for n in news_result['data'][:5]]
+    key_events = [n['title'] for n in news_data[:5]] if news_data else []
 
-    result = {
-        'stock_code': code,
-        'stock_name': name,
+    return {
+        'stock_code': stock_code,
+        'stock_name': stock_name,
         'analysis_date': datetime.now().strftime('%Y-%m-%d'),
         'technical_analysis': {
             'trend': trend,
@@ -281,17 +276,43 @@ def analyze_stock(code: str, name: str = '', days: int = 30):
         'news_analysis': {
             'sentiment': sentiment,
             'key_events': key_events,
-            'market_feedback': f"正{news_result['sentiment']['positive_count']}负{news_result['sentiment']['negative_count']}中{news_result['sentiment']['neutral_count']}"
+            'market_feedback': f"正{news_sentiment.get('positive_count', 0)}负{news_sentiment.get('negative_count', 0)}中{news_sentiment.get('neutral_count', 0)}"
         },
         'recommendation': recommendation,
         'risk_level': '高' if abs(price_change) > 10 else '中' if abs(price_change) > 5 else '低',
-        'summary': f'{name}({code})近期{trend}，消息面{sentiment}，建议{recommendation}',
+        'summary': f'{stock_name}({stock_code})近期{trend}，消息面{sentiment}，建议{recommendation}',
         'is_local_analysis': True
     }
 
+def analyze_stock(code: str, name: str = '', days: int = 30):
+    """分析股票"""
+    if not name:
+        name = get_stock_name(code)
+
+    print(f"[数据服务] 分析 {name}({code})", file=sys.stderr)
+
+    kline_data = get_kline_data_eastmoney(code, days)
+    if not kline_data:
+        print(f"[数据服务] 使用模拟数据", file=sys.stderr)
+        kline_data = get_kline_data_mock(code, days)
+
+    indicators = calculate_indicators(kline_data)
     print(f"[数据服务] 最新收盘价: {indicators['latest_close'] if indicators else 'N/A'}", file=sys.stderr)
 
-    return result
+    news_result = get_news_mock(code, name, 7)
+
+    ai_result = analyze_with_ai(code, name, kline_data, news_result['data'], config['ai'])
+    
+    if ai_result:
+        print(f"[数据服务] AI 分析成功", file=sys.stderr)
+        ai_result['stock_code'] = code
+        ai_result['stock_name'] = name
+        ai_result['analysis_date'] = datetime.now().strftime('%Y-%m-%d')
+        ai_result['is_local_analysis'] = False
+        return ai_result
+    else:
+        print(f"[数据服务] 使用本地分析", file=sys.stderr)
+        return generate_local_analysis(code, name, kline_data, news_result['data'])
 
 class DataHandler(BaseHTTPRequestHandler):
     def log_message(self, format, *args):
@@ -310,18 +331,14 @@ class DataHandler(BaseHTTPRequestHandler):
         query = urllib.parse.parse_qs(parsed.query)
 
         if path == '/api/health' or path == '/health':
-            self.send_json({'status': 'ok'})
+            self.send_json({'status': 'ok', 'ai_configured': bool(config['ai'].get('api_key'))})
 
         elif path == '/api/kline' or path == '/kline':
             code = query.get('code', [''])[0]
             days = int(query.get('days', [30])[0])
-
             kline_data = get_kline_data_eastmoney(code, days)
             if not kline_data:
-                kline_data = get_kline_data_sina(code, days)
-            if not kline_data:
                 kline_data = get_kline_data_mock(code, days)
-
             indicators = calculate_indicators(kline_data)
             self.send_json({'data': kline_data, 'indicators': indicators})
 
@@ -333,9 +350,12 @@ class DataHandler(BaseHTTPRequestHandler):
 
         elif path == '/api/config' or path == '/config':
             self.send_json({
-                'has_ai_config': False,
-                'data_source': {'kline_provider': 'eastmoney'}
+                **config,
+                'has_ai_config': bool(config['ai'].get('api_key')),
             })
+
+        elif path == '/api/models' or path == '/models':
+            self.send_json({'models': list(AI_MODELS.keys())})
 
         else:
             self.send_response(404)
@@ -358,15 +378,25 @@ class DataHandler(BaseHTTPRequestHandler):
 
                 result = analyze_stock(code, name, days)
                 self.send_json(result)
-            except json.JSONDecodeError as e:
-                print(f"JSON 解析错误: {e}", file=sys.stderr)
+            except json.JSONDecodeError:
                 self.send_json({'error': '无效的请求数据'}, 400)
             except Exception as e:
                 print(f"分析错误: {e}", file=sys.stderr)
                 self.send_json({'error': str(e)}, 500)
 
         elif self.path == '/api/config' or self.path == '/config':
-            self.send_json({'status': 'ok'})
+            try:
+                data = json.loads(body)
+                if 'ai' in data:
+                    if data['ai'].get('api_key'):
+                        config['ai'] = data['ai']
+                if 'stock' in data:
+                    config['stock'] = data['stock']
+                save_config()
+                self.send_json({'status': 'ok', 'has_ai_config': bool(config['ai'].get('api_key'))})
+            except Exception as e:
+                print(f"保存配置错误: {e}", file=sys.stderr)
+                self.send_json({'error': str(e)}, 500)
 
         else:
             self.send_response(404)
@@ -380,7 +410,9 @@ class DataHandler(BaseHTTPRequestHandler):
         self.end_headers()
 
 if __name__ == '__main__':
+    load_config()
     PORT = 3000
     server = HTTPServer(('0.0.0.0', PORT), DataHandler)
     print(f"股票数据服务启动: http://localhost:{PORT}", file=sys.stderr)
+    print(f"AI 配置状态: {'已配置' if config['ai'].get('api_key') else '未配置'}", file=sys.stderr)
     server.serve_forever()

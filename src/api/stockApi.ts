@@ -15,7 +15,7 @@ const API_BASE_URL = '/api';
 
 const api = axios.create({
   baseURL: API_BASE_URL,
-  timeout: 60000,
+  timeout: 120000,
   headers: {
     'Content-Type': 'application/json',
   },
@@ -57,6 +57,11 @@ export const getConfig = async (): Promise<AppConfig> => {
 export const updateConfig = async (config: Partial<AppConfig>): Promise<AppConfig> => {
   const response = await api.post<AppConfig>('/config', config);
   return response.data;
+};
+
+export const getModelList = async (): Promise<string[]> => {
+  const response = await api.get<{ models: string[] }>('/models');
+  return response.data.models;
 };
 
 export default api;

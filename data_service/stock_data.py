@@ -309,10 +309,10 @@ class DataHandler(BaseHTTPRequestHandler):
         path = parsed.path
         query = urllib.parse.parse_qs(parsed.query)
 
-        if path == '/health':
+        if path == '/api/health' or path == '/health':
             self.send_json({'status': 'ok'})
 
-        elif path == '/kline':
+        elif path == '/api/kline' or path == '/kline':
             code = query.get('code', [''])[0]
             days = int(query.get('days', [30])[0])
 
@@ -325,13 +325,13 @@ class DataHandler(BaseHTTPRequestHandler):
             indicators = calculate_indicators(kline_data)
             self.send_json({'data': kline_data, 'indicators': indicators})
 
-        elif path == '/news':
+        elif path == '/api/news' or path == '/news':
             code = query.get('code', [''])[0]
             name = query.get('name', [''])[0] or get_stock_name(code)
             days = int(query.get('days', [7])[0])
             self.send_json(get_news_mock(code, name, days))
 
-        elif path == '/config':
+        elif path == '/api/config' or path == '/config':
             self.send_json({
                 'has_ai_config': False,
                 'data_source': {'kline_provider': 'eastmoney'}
@@ -345,7 +345,7 @@ class DataHandler(BaseHTTPRequestHandler):
         content_length = int(self.headers.get('Content-Length', 0))
         body = self.rfile.read(content_length).decode()
 
-        if self.path == '/analyze':
+        if self.path == '/api/analyze' or self.path == '/analyze':
             try:
                 data = json.loads(body)
                 code = data.get('stock_code', '')
@@ -365,7 +365,7 @@ class DataHandler(BaseHTTPRequestHandler):
                 print(f"分析错误: {e}", file=sys.stderr)
                 self.send_json({'error': str(e)}, 500)
 
-        elif self.path == '/config':
+        elif self.path == '/api/config' or self.path == '/config':
             self.send_json({'status': 'ok'})
 
         else:

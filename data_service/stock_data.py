@@ -15,67 +15,6 @@ import urllib.parse
 from ai_models import AI_MODELS
 from ai_analyzer import analyze_with_ai
 
-stock_name_map = {
-    '600519': '贵州茅台',
-    '000858': '五粮液',
-    '000001': '平安银行',
-    '600036': '招商银行',
-    '601318': '中国平安',
-    '000333': '美的集团',
-    '600887': '伊利股份',
-    '002594': '比亚迪',
-    '600276': '恒瑞医药',
-    '300750': '宁德时代',
-    '601888': '中国中免',
-    '600030': '中信证券',
-    '600900': '长江电力',
-    '601012': '隆基绿能',
-    '002415': '海康威视',
-    '601398': '工商银行',
-    '601939': '建设银行',
-    '600016': '民生银行',
-    '000002': '万科A',
-    '600048': '保利发展',
-    '000426': '兴业银锡',
-    '000651': '格力电器',
-    '000725': '京东方A',
-    '002230': '科大讯飞',
-    '002236': '大华股份',
-    '002714': '牧原股份',
-    '002475': '立讯精密',
-    '300059': '东方财富',
-    '300760': '迈瑞医疗',
-    '600009': '上海机场',
-    '600028': '中国石化',
-    '600050': '中国联通',
-    '600104': '上汽集团',
-    '600276': '恒瑞医药',
-    '600309': '万华化学',
-    '600585': '海螺水泥',
-    '600690': '海尔智家',
-    '600703': '三安光电',
-    '600809': '山西汾酒',
-    '600887': '伊利股份',
-    '601012': '隆基绿能',
-    '601066': '中信建投',
-    '601088': '中国神华',
-    '601166': '兴业银行',
-    '601186': '中国铁建',
-    '601211': '国泰君安',
-    '601236': '红塔证券',
-    '601288': '农业银行',
-    '601336': '新华保险',
-    '601390': '中国中铁',
-    '601601': '中国太保',
-    '601628': '中国人寿',
-    '601668': '中国建筑',
-    '601688': '华泰证券',
-    '601728': '中国电信',
-    '601857': '中国石油',
-    '601888': '中国中免',
-    '601899': '紫金矿业',
-}
-
 config = {
     'ai': {
         'provider': 'deepseek',
@@ -118,17 +57,6 @@ def save_config():
     except Exception as e:
         print(f"保存配置失败: {e}", file=sys.stderr)
 
-def get_stock_name(code: str) -> str:
-    """根据股票代码获取名称"""
-    upper_code = code.upper()
-    if upper_code in stock_name_map:
-        return stock_name_map[upper_code]
-    if upper_code.startswith('6'):
-        return '上证股票'
-    if upper_code.startswith('0') or upper_code.startswith('3'):
-        return '深证股票'
-    return f'股票{code}'
-
 def get_kline_data_eastmoney(code: str, days: int = 30):
     """使用东方财富 API 获取真实K线数据"""
     try:
@@ -143,7 +71,10 @@ def get_kline_data_eastmoney(code: str, days: int = 30):
         with urllib.request.urlopen(req, timeout=10) as response:
             data = json.loads(response.read().decode('utf-8'))
 
-        klines = data.get('data', {}).get('klines', [])
+        data_obj = data.get('data', {})
+        klines = data_obj.get('klines', [])
+        stock_name = data_obj.get('name', '')
+
         if not klines:
             return None
 
@@ -159,7 +90,11 @@ def get_kline_data_eastmoney(code: str, days: int = 30):
                     'low': float(parts[4]),
                     'volume': float(parts[5])
                 })
-        return result
+
+        return {
+            'name': stock_name,
+            'data': result
+        }
     except Exception as e:
         print(f"东方财富数据获取失败: {e}", file=sys.stderr)
         return None
@@ -190,7 +125,10 @@ def get_kline_data_mock(code: str, days: int = 30):
             'volume': volume
         })
 
-    return data
+    return {
+        'name': f'股票{code}',
+        'data': data
+    }
 
 def calculate_indicators(kline_data):
     """计算技术指标"""
@@ -324,33 +262,38 @@ def generate_local_analysis(stock_code: str, stock_name: str, kline_data: list, 
 
 def analyze_stock(code: str, name: str = '', days: int = 30):
     """分析股票"""
-    if not name:
-        name = get_stock_name(code)
+    print(f"[数据服务] 分析 {name or code}({code})", file=sys.stderr)
 
-    print(f"[数据服务] 分析 {name}({code})", file=sys.stderr)
-
-    kline_data = get_kline_data_eastmoney(code, days)
-    if not kline_data:
+    kline_result = get_kline_data_eastmoney(code, days)
+    if not kline_result:
         print(f"[数据服务] 使用模拟数据", file=sys.stderr)
-        kline_data = get_kline_data_mock(code, days)
+        kline_result = get_kline_data_mock(code, days)
+
+    stock_name = kline_result.get('name', name) if isinstance(kline_result, dict) else name
+    kline_data = kline_result.get('data', []) if isinstance(kline_result, dict) else kline_result
+
+    if not stock_name:
+        stock_name = name or f'股票{code}'
+
+    print(f"[数据服务] 股票名称: {stock_name}", file=sys.stderr)
 
     indicators = calculate_indicators(kline_data)
     print(f"[数据服务] 最新收盘价: {indicators['latest_close'] if indicators else 'N/A'}", file=sys.stderr)
 
-    news_result = get_news_mock(code, name, 7)
+    news_result = get_news_mock(code, stock_name, 7)
 
-    ai_result = analyze_with_ai(code, name, kline_data, news_result['data'], config['ai'])
-    
+    ai_result = analyze_with_ai(code, stock_name, kline_data, news_result['data'], config['ai'])
+
     if ai_result:
         print(f"[数据服务] AI 分析成功", file=sys.stderr)
         ai_result['stock_code'] = code
-        ai_result['stock_name'] = name
+        ai_result['stock_name'] = stock_name
         ai_result['analysis_date'] = datetime.now().strftime('%Y-%m-%d')
         ai_result['is_local_analysis'] = False
         return ai_result
     else:
         print(f"[数据服务] 使用本地分析", file=sys.stderr)
-        return generate_local_analysis(code, name, kline_data, news_result['data'])
+        return generate_local_analysis(code, stock_name, kline_data, news_result['data'])
 
 class DataHandler(BaseHTTPRequestHandler):
     def log_message(self, format, *args):
@@ -376,18 +319,24 @@ class DataHandler(BaseHTTPRequestHandler):
             code = query.get('code', [''])[0]
             days = int(query.get('days', [30])[0])
             print(f"[K线请求] 股票代码: {code}, 天数: {days}", file=sys.stderr)
-            kline_data = get_kline_data_eastmoney(code, days)
-            if not kline_data:
-                kline_data = get_kline_data_mock(code, days)
+            kline_result = get_kline_data_eastmoney(code, days)
+            if not kline_result:
+                kline_result = get_kline_data_mock(code, days)
+
+            kline_data = kline_result.get('data', []) if isinstance(kline_result, dict) else kline_result
             indicators = calculate_indicators(kline_data)
             print(f"[K线返回] 数据条数: {len(kline_data)}", file=sys.stderr)
             self.send_json({'data': kline_data, 'indicators': indicators})
 
         elif path == '/api/news' or path == '/news':
             code = query.get('code', [''])[0]
-            name = query.get('name', [''])[0] or get_stock_name(code)
             days = int(query.get('days', [7])[0])
-            print(f"[新闻请求] 股票代码: {code}, 名称: {name}, 天数: {days}", file=sys.stderr)
+            print(f"[新闻请求] 股票代码: {code}, 天数: {days}", file=sys.stderr)
+            kline_result = get_kline_data_eastmoney(code, 1)
+            if kline_result and isinstance(kline_result, dict):
+                name = kline_result.get('name', f'股票{code}')
+            else:
+                name = f'股票{code}'
             result = get_news_mock(code, name, days)
             print(f"[新闻返回] 条数: {len(result.get('data', []))}", file=sys.stderr)
             self.send_json(result)

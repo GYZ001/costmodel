@@ -5,6 +5,7 @@ import { KLineChart } from '../components/KLineChart';
 import { TechnicalIndicators } from '../components/TechnicalIndicators';
 import { NewsList } from '../components/NewsList';
 import { AIAnalysisResult } from '../components/AIAnalysisResult';
+import { DiagnosticPanel } from '../components/DiagnosticPanel';
 import { useStockStore } from '../stores/stockStore';
 import { AlertCircle } from 'lucide-react';
 
@@ -26,6 +27,8 @@ export const HomePage: React.FC = () => {
             <p className="text-sm text-red-700">{error}</p>
           </div>
         )}
+
+        <DiagnosticPanel />
 
         {isLoading && (
           <div className="mb-6 p-8 bg-white rounded-2xl shadow-lg border border-gray-100 text-center">

@@ -329,6 +329,7 @@ class DataHandler(BaseHTTPRequestHandler):
         parsed = urllib.parse.urlparse(self.path)
         path = parsed.path
         query = urllib.parse.parse_qs(parsed.query)
+        print(f"[HTTP GET] 路径: {path}, Query: {query}", file=sys.stderr)
 
         if path == '/api/health' or path == '/health':
             self.send_json({'status': 'ok', 'ai_configured': bool(config['ai'].get('api_key'))})
@@ -336,17 +337,22 @@ class DataHandler(BaseHTTPRequestHandler):
         elif path == '/api/kline' or path == '/kline':
             code = query.get('code', [''])[0]
             days = int(query.get('days', [30])[0])
+            print(f"[K线请求] 股票代码: {code}, 天数: {days}", file=sys.stderr)
             kline_data = get_kline_data_eastmoney(code, days)
             if not kline_data:
                 kline_data = get_kline_data_mock(code, days)
             indicators = calculate_indicators(kline_data)
+            print(f"[K线返回] 数据条数: {len(kline_data)}", file=sys.stderr)
             self.send_json({'data': kline_data, 'indicators': indicators})
 
         elif path == '/api/news' or path == '/news':
             code = query.get('code', [''])[0]
             name = query.get('name', [''])[0] or get_stock_name(code)
             days = int(query.get('days', [7])[0])
-            self.send_json(get_news_mock(code, name, days))
+            print(f"[新闻请求] 股票代码: {code}, 名称: {name}, 天数: {days}", file=sys.stderr)
+            result = get_news_mock(code, name, days)
+            print(f"[新闻返回] 条数: {len(result.get('data', []))}", file=sys.stderr)
+            self.send_json(result)
 
         elif path == '/api/config' or path == '/config':
             self.send_json({
@@ -364,6 +370,7 @@ class DataHandler(BaseHTTPRequestHandler):
     def do_POST(self):
         content_length = int(self.headers.get('Content-Length', 0))
         body = self.rfile.read(content_length).decode()
+        print(f"[HTTP POST] 路径: {self.path}, Body: {body}", file=sys.stderr)
 
         if self.path == '/api/analyze' or self.path == '/analyze':
             try:
@@ -371,12 +378,14 @@ class DataHandler(BaseHTTPRequestHandler):
                 code = data.get('stock_code', '')
                 name = data.get('stock_name', '')
                 days = data.get('days', 30)
+                print(f"[分析请求] 股票代码: {code}, 名称: {name}, 天数: {days}", file=sys.stderr)
 
                 if not code:
                     self.send_json({'error': '缺少股票代码'}, 400)
                     return
 
                 result = analyze_stock(code, name, days)
+                print(f"[分析结果] 股票名称: {result.get('stock_name')}, 推荐: {result.get('recommendation')}", file=sys.stderr)
                 self.send_json(result)
             except json.JSONDecodeError:
                 self.send_json({'error': '无效的请求数据'}, 400)

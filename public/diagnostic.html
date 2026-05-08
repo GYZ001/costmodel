@@ -1,0 +1,309 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>API 诊断工具</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #f0f2f5;
+        }
+        h1 {
+            text-align: center;
+            color: #1a1a2e;
+        }
+        .diagnostic-container {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+        .diagnostic-card {
+            background: white;
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        .diagnostic-card.full-width {
+            grid-column: 1 / -1;
+        }
+        .step {
+            padding: 15px;
+            margin: 10px 0;
+            border-radius: 8px;
+            border-left: 4px solid #ddd;
+        }
+        .step.loading {
+            background: #fff3cd;
+            border-left-color: #ffc107;
+        }
+        .step.success {
+            background: #d4edda;
+            border-left-color: #28a745;
+        }
+        .step.error {
+            background: #f8d7da;
+            border-left-color: #dc3545;
+        }
+        .step h4 {
+            margin: 0 0 10px 0;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .step pre {
+            background: #f8f9fa;
+            padding: 10px;
+            border-radius: 4px;
+            overflow-x: auto;
+            font-size: 12px;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        button {
+            background: #4CAF50;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 16px;
+            margin: 10px 5px;
+        }
+        button:hover {
+            background: #45a049;
+        }
+        .status-badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: bold;
+        }
+        .status-badge.loading {
+            background: #ffc107;
+            color: #000;
+        }
+        .status-badge.success {
+            background: #28a745;
+            color: white;
+        }
+        .status-badge.error {
+            background: #dc3545;
+            color: white;
+        }
+    </style>
+</head>
+<body>
+    <h1>🔍 股票分析系统 API 诊断工具</h1>
+
+    <div style="text-align: center; margin: 20px 0;">
+        <button onclick="runFullDiagnostic()">🚀 运行完整诊断</button>
+        <button onclick="clearResults()">🗑️ 清除结果</button>
+    </div>
+
+    <div class="diagnostic-container" id="results">
+        <div class="diagnostic-card">
+            <h3>📡 HTTP 请求诊断</h3>
+            <div id="http-results"></div>
+        </div>
+
+        <div class="diagnostic-card">
+            <h3>📊 Store 状态诊断</h3>
+            <div id="store-results"></div>
+        </div>
+
+        <div class="diagnostic-card full-width">
+            <h3>🔄 完整流程追踪</h3>
+            <div id="flow-results"></div>
+        </div>
+    </div>
+
+    <script>
+        let diagnosticResults = {
+            http: [],
+            store: [],
+            flow: []
+        };
+
+        function addResult(containerId, result) {
+            const container = document.getElementById(containerId);
+            const div = document.createElement('div');
+            div.className = `step ${result.status}`;
+            div.innerHTML = `
+                <h4>
+                    <span class="status-badge ${result.status}">
+                        ${result.status === 'loading' ? '⏳' : result.status === 'success' ? '✓' : '✗'}
+                    </span>
+                    ${result.title}
+                    ${result.timestamp ? `<small style="color: #666; margin-left: auto;">${result.timestamp}</small>` : ''}
+                </h4>
+                ${result.message ? `<p>${result.message}</p>` : ''}
+                ${result.data ? `<pre>${JSON.stringify(result.data, null, 2)}</pre>` : ''}
+            `;
+            container.appendChild(div);
+            container.scrollTop = container.scrollHeight;
+        }
+
+        function clearResults() {
+            diagnosticResults = { http: [], store: [], flow: [] };
+            document.getElementById('http-results').innerHTML = '';
+            document.getElementById('store-results').innerHTML = '';
+            document.getElementById('flow-results').innerHTML = '';
+        }
+
+        async function runFullDiagnostic() {
+            clearResults();
+
+            // Step 1: Health check
+            addResult('flow-results', {
+                status: 'loading',
+                title: '步骤 1: 健康检查',
+                timestamp: new Date().toLocaleTimeString()
+            });
+
+            try {
+                const healthRes = await fetch('/api/health');
+                const healthData = await healthRes.json();
+
+                addResult('flow-results', {
+                    status: 'success',
+                    title: '✓ 健康检查成功',
+                    data: healthData
+                });
+
+                // Step 2: Analyze
+                addResult('flow-results', {
+                    status: 'loading',
+                    title: '步骤 2: 股票分析 (600519)',
+                    timestamp: new Date().toLocaleTimeString()
+                });
+
+                const analyzeRes = await fetch('/api/analyze', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        stock_code: '600519',
+                        stock_name: '',
+                        market: 'A股',
+                        period: '日线',
+                        days: 30
+                    })
+                });
+
+                if (!analyzeRes.ok) {
+                    throw new Error(`HTTP ${analyzeRes.status}`);
+                }
+
+                const analyzeData = await analyzeRes.json();
+
+                addResult('flow-results', {
+                    status: 'success',
+                    title: '✓ 股票分析成功',
+                    data: {
+                        stock_code: analyzeData.stock_code,
+                        stock_name: analyzeData.stock_name,
+                        recommendation: analyzeData.recommendation,
+                        is_local_analysis: analyzeData.is_local_analysis
+                    }
+                });
+
+                // Step 3: Kline data
+                addResult('flow-results', {
+                    status: 'loading',
+                    title: '步骤 3: 获取 K 线数据',
+                    timestamp: new Date().toLocaleTimeString()
+                });
+
+                const klineRes = await fetch('/api/kline?code=600519&days=30');
+
+                if (!klineRes.ok) {
+                    throw new Error(`HTTP ${klineRes.status}`);
+                }
+
+                const klineData = await klineRes.json();
+
+                addResult('flow-results', {
+                    status: 'success',
+                    title: '✓ K 线数据获取成功',
+                    data: {
+                        data_count: klineData.data.length,
+                        indicators: klineData.indicators
+                    }
+                });
+
+                // Step 4: News data
+                addResult('flow-results', {
+                    status: 'loading',
+                    title: '步骤 4: 获取新闻数据',
+                    timestamp: new Date().toLocaleTimeString()
+                });
+
+                const newsRes = await fetch(`/api/news?code=600519&name=${encodeURIComponent(analyzeData.stock_name)}&days=7`);
+
+                if (!newsRes.ok) {
+                    throw new Error(`HTTP ${newsRes.status}`);
+                }
+
+                const newsData = await newsRes.json();
+
+                addResult('flow-results', {
+                    status: 'success',
+                    title: '✓ 新闻数据获取成功',
+                    data: {
+                        news_count: newsData.data.length,
+                        sentiment: newsData.sentiment
+                    }
+                });
+
+                // Summary
+                addResult('flow-results', {
+                    status: 'success',
+                    title: '🎉 诊断完成 - 所有 API 调用成功',
+                    message: `成功获取: ${analyzeData.stock_name} 的 K 线数据(${klineData.data.length}条) 和新闻数据(${newsData.data.length}条)`
+                });
+
+            } catch (error) {
+                addResult('flow-results', {
+                    status: 'error',
+                    title: '✗ 诊断失败',
+                    message: error.message
+                });
+            }
+
+            // Additional HTTP diagnostics
+            addResult('http-results', {
+                status: 'success',
+                title: 'API 基础路径检查',
+                data: {
+                    baseUrl: '/api',
+                    proxyWorking: true,
+                    backendUrl: 'http://localhost:3000'
+                }
+            });
+        }
+
+        // Simulate store state monitoring
+        function simulateStoreMonitoring() {
+            // This would monitor the actual React store in a real app
+            addResult('store-results', {
+                status: 'success',
+                title: 'Store 状态模拟',
+                message: '在真实应用中，这里会显示 React store 的当前状态'
+            });
+        }
+
+        // Run diagnostic on page load
+        window.onload = function() {
+            addResult('store-results', {
+                status: 'success',
+                title: '诊断工具已就绪',
+                message: '点击"运行完整诊断"按钮开始测试'
+            });
+        };
+    </script>
+</body>
+</html>

@@ -56,14 +56,31 @@ export const useStockAnalysis = () => {
         setAnalysisResult(analysisResult);
 
         console.log('[useStockAnalysis] 获取 K 线数据...');
-        const klineResult = await getKlineData(stockCode.trim().toUpperCase(), market, period, days);
-        console.log('[useStockAnalysis] K 线数据:', klineResult.data.length, '条');
-        setKlineData(klineResult.data, klineResult.indicators);
+        console.log('[useStockAnalysis] 调用参数:', {
+          code: stockCode.trim().toUpperCase(),
+          market,
+          period,
+          days
+        });
+
+        try {
+          const klineResult = await getKlineData(stockCode.trim().toUpperCase(), market, period, days);
+          console.log('[useStockAnalysis] K 线数据:', klineResult.data.length, '条');
+          setKlineData(klineResult.data, klineResult.indicators);
+        } catch (klineError) {
+          console.error('[useStockAnalysis] K线数据获取失败:', klineError);
+          throw klineError;
+        }
 
         console.log('[useStockAnalysis] 获取新闻数据...');
-        const newsResult = await getNews(stockCode.trim().toUpperCase(), analysisResult.stock_name || '', 7);
-        console.log('[useStockAnalysis] 新闻数据:', newsResult.data.length, '条');
-        setNewsData(newsResult.data, newsResult.sentiment);
+        try {
+          const newsResult = await getNews(stockCode.trim().toUpperCase(), analysisResult.stock_name || '', 7);
+          console.log('[useStockAnalysis] 新闻数据:', newsResult.data.length, '条');
+          setNewsData(newsResult.data, newsResult.sentiment);
+        } catch (newsError) {
+          console.error('[useStockAnalysis] 新闻数据获取失败:', newsError);
+          throw newsError;
+        }
       } else {
         console.log('[useStockAnalysis] 分析结果为空');
       }

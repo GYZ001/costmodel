@@ -4,3 +4,16 @@ dist
 *.log
 .env.local
 .env.production.local
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+*.egg-info/
+.eggs/
+
+# Config files
+data_service/config.json
+.env

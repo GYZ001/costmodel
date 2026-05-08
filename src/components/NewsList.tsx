@@ -35,8 +35,8 @@ export const NewsList: React.FC = () => {
   };
 
   return (
-    <div className="bg-white rounded-2xl shadow-lg p-6 border border-gray-100">
-      <div className="flex items-center justify-between mb-4">
+    <div className="bg-white rounded-2xl shadow-lg p-6 border border-gray-100 flex flex-col flex-1 min-h-0">
+      <div className="flex items-center justify-between mb-4 flex-shrink-0">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 bg-gradient-to-br from-purple-500 to-pink-600 rounded-xl flex items-center justify-center">
             <Newspaper className="w-5 h-5 text-white" />
@@ -54,7 +54,7 @@ export const NewsList: React.FC = () => {
         )}
       </div>
 
-      <div className="space-y-3 max-h-96 overflow-y-auto">
+      <div className="flex-1 min-h-0 overflow-y-auto space-y-3 pr-1">
         {newsData.map((news, index) => (
           <a
             key={index}
@@ -82,7 +82,7 @@ export const NewsList: React.FC = () => {
       </div>
 
       {newsSentiment && (
-        <div className="mt-4 pt-4 border-t border-gray-100">
+        <div className="mt-4 pt-4 border-t border-gray-100 flex-shrink-0">
           <div className="flex items-center justify-between text-sm">
             <span className="text-gray-500">情感分析</span>
             <div className="flex items-center gap-4">

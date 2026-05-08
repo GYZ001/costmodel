@@ -20,12 +20,20 @@ export interface TechnicalAnalysis {
   support_level: number;
   resistance_level: number;
   indicators_summary: string;
+  detail?: string;
 }
 
 export interface NewsAnalysis {
   sentiment: string;
   key_events: string[];
   market_feedback: string;
+  detail?: string;
+}
+
+export interface PositionAnalysis {
+  current_pnl_pct: number | null;
+  cost_vs_support: string | null;
+  advice_for_holder: string | null;
 }
 
 export interface AnalysisResult {
@@ -37,7 +45,11 @@ export interface AnalysisResult {
   recommendation: string;
   risk_level: string;
   summary: string;
+  investment_logic?: string;
+  risk_factors?: string[];
+  action_plan?: string;
   is_local_analysis?: boolean;
+  position_analysis?: PositionAnalysis;
 }
 
 export interface KlineIndicators {
@@ -93,6 +105,12 @@ export interface DataSourceConfig {
   kline_provider: string;
 }
 
+export interface PositionInfo {
+  has_position: boolean;
+  cost_price: number | null;
+  shares: number | null;
+}
+
 export interface AppConfig {
   ai: AIConfig;
   stock: StockConfig;
@@ -108,6 +126,7 @@ export interface AnalyzeRequest {
   period?: string;
   days?: number;
   use_ai?: boolean;
+  position?: PositionInfo;
 }
 
 export type Market = 'A股' | '港股' | '美股';

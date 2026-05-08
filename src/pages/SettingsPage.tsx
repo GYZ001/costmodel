@@ -1,39 +1,45 @@
 import React, { useState, useEffect } from 'react';
 import { Header } from '../components/Header';
-import { getConfig, updateConfig, getModelList } from '../api/stockApi';
-import { Save, Loader2, CheckCircle, Brain, ExternalLink } from 'lucide-react';
-import type { AppConfig, AIConfig } from '../types';
+import { getConfig, updateConfig, testConnection } from '../api/stockApi';
+import { Save, Loader2, CheckCircle, Brain, ExternalLink, Wifi, WifiOff, X } from 'lucide-react';
+import type { AppConfig } from '../types';
 
 const MODEL_LIST = [
   {
     id: 'deepseek',
     name: 'DeepSeek',
-    models: ['deepseek-chat', 'deepseek-coder'],
+    models: ['deepseek-v4-flash', 'deepseek-v4-pro', 'deepseek-chat', 'deepseek-reasoner'],
     url: 'https://platform.deepseek.com/'
   },
   {
     id: 'qwen',
     name: '通义千问',
-    models: ['qwen-plus', 'qwen-plus-latest', 'qwen-turbo', 'qwen-max', 'qwen-long'],
+    models: ['qwen-max', 'qwen-plus', 'qwen-turbo', 'qwen-long', 'qwen3-235b-a22b'],
     url: 'https://dashscope.console.aliyun.com/'
   },
   {
     id: 'doubao',
     name: '豆包',
-    models: ['doubao-pro-32k', 'doubao-pro-4k', 'doubao-lite-4k', 'doubao-lite-32k'],
+    models: ['doubao-1-5-pro-32k', 'doubao-1-5-lite-32k', 'doubao-pro-32k', 'doubao-lite-32k'],
     url: 'https://console.volcengine.com/ark/'
   },
   {
     id: 'glm',
     name: '智谱 GLM',
-    models: ['glm-4', 'glm-4-plus', 'glm-4-flash', 'glm-3-turbo'],
+    models: ['glm-4-plus', 'glm-4-air', 'glm-4-flash', 'glm-z1-flash'],
     url: 'https://open.bigmodel.cn/'
   },
   {
     id: 'kimi',
     name: 'Kimi',
-    models: ['moonshot-v1-8k', 'moonshot-v1-32k', 'moonshot-v1-128k'],
+    models: ['kimi-latest', 'moonshot-v1-128k', 'moonshot-v1-32k', 'moonshot-v1-8k'],
     url: 'https://platform.moonshot.cn/'
+  },
+  {
+    id: 'openai',
+    name: 'OpenAI',
+    models: ['gpt-4.1', 'gpt-4.1-mini', 'gpt-4o', 'gpt-4o-mini', 'o3', 'o3-mini'],
+    url: 'https://platform.openai.com/'
   },
 ];
 
@@ -65,6 +71,8 @@ export const SettingsPage: React.FC = () => {
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [showKey, setShowKey] = useState(false);
+  const [testing, setTesting] = useState(false);
+  const [testResult, setTestResult] = useState<{ success: boolean; message: string } | null>(null);
 
   useEffect(() => {
     loadConfig();
@@ -112,6 +120,20 @@ export const SettingsPage: React.FC = () => {
         base_url: '',
       },
     });
+    setTestResult(null);
+  };
+
+  const handleTest = async () => {
+    setTesting(true);
+    setTestResult(null);
+    try {
+      const result = await testConnection();
+      setTestResult(result);
+    } catch {
+      setTestResult({ success: false, message: '请求失败，请检查网络或先保存配置后重试' });
+    } finally {
+      setTesting(false);
+    }
   };
 
   const getCurrentModelInfo = () => {
@@ -234,6 +256,58 @@ export const SettingsPage: React.FC = () => {
                       </p>
                     </div>
                   </div>
+                </div>
+              )}
+
+              <div className="flex items-center gap-3">
+                <button
+                  type="button"
+                  onClick={handleTest}
+                  disabled={testing || !config.ai.api_key}
+                  className="px-4 py-2.5 bg-blue-500 text-white text-sm font-medium rounded-xl hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center gap-2"
+                >
+                  {testing ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      测试中...
+                    </>
+                  ) : (
+                    <>
+                      <Wifi className="w-4 h-4" />
+                      测试连通性
+                    </>
+                  )}
+                </button>
+                {!config.ai.api_key && (
+                  <span className="text-xs text-gray-400">请先填写 API Key</span>
+                )}
+              </div>
+
+              {testResult && (
+                <div className={`flex items-start gap-3 p-4 rounded-xl border ${
+                  testResult.success
+                    ? 'bg-emerald-50 border-emerald-200'
+                    : 'bg-red-50 border-red-200'
+                }`}>
+                  {testResult.success ? (
+                    <Wifi className="w-5 h-5 text-emerald-500 flex-shrink-0 mt-0.5" />
+                  ) : (
+                    <WifiOff className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" />
+                  )}
+                  <div className="flex-1">
+                    <p className={`text-sm font-medium ${testResult.success ? 'text-emerald-800' : 'text-red-800'}`}>
+                      {testResult.success ? '连接成功' : '连接失败'}
+                    </p>
+                    <p className={`text-xs mt-0.5 ${testResult.success ? 'text-emerald-600' : 'text-red-600'}`}>
+                      {testResult.message}
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => setTestResult(null)}
+                    className="text-gray-400 hover:text-gray-600"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
                 </div>
               )}
 

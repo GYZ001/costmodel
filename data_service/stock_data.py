@@ -20,7 +20,7 @@ config = {
         'provider': 'deepseek',
         'api_key': '',
         'base_url': '',
-        'model': 'deepseek-chat',
+        'model': 'deepseek-v4-flash',
     },
     'stock': {
         'default_market': 'A股',
@@ -160,56 +160,152 @@ def calculate_indicators(kline_data):
         'lowest': min(d['low'] for d in kline_data)
     }
 
-def get_news_mock(code: str, name: str, days: int = 7):
-    """生成模拟新闻"""
-    import random
+def _classify_sentiment(title: str, summary: str):
+    positive_kw = ['增长', '新高', '突破', '上涨', '买入', '增持', '利好', '超预期', '盈利', '创新', '扭亏', '连涨', '大涨']
+    negative_kw = ['下跌', '亏损', '减持', '利空', '风险', '违规', '处罚', '下调', '暴跌', '退市', '亏损', '连跌', '大跌', '警示']
+    text = title + summary
+    has_pos = any(k in text for k in positive_kw)
+    has_neg = any(k in text for k in negative_kw)
+    if has_pos and not has_neg:
+        return 'positive'
+    elif has_neg and not has_pos:
+        return 'negative'
+    return 'neutral'
 
-    templates = [
-        f"{name}发布年度业绩预告，净利润同比增长20%",
-        f"分析师上调{name}目标价至新高",
-        f"{name}获机构买入评级",
-        f"{name}发布新产品线",
-        f"{name}宣布战略合作计划",
-        f"机构调研{name}，关注核心业务",
-        f"{name}股价创近期新高",
-        f"券商看好{name}，维持增持评级",
-        f"{name}入选重要指数成分股",
-        f"{name}发布季报，业绩超预期",
-    ]
-
-    sources = ['东方财富', '新浪财经', '证券时报', '第一财经', '财联社']
-    news_data = []
-
-    for i, template in enumerate(templates[:10]):
-        days_ago = random.randint(0, days)
-        date = datetime.now() - timedelta(days=days_ago)
-        news_data.append({
-            'title': template,
-            'url': f'https://finance.example.com/news/{code}_{i}',
-            'publish_time': date.strftime('%Y-%m-%d %H:%M'),
-            'source': random.choice(sources),
-            'summary': f'{name}相关报道，更多详情请查看原文。'
-        })
-
-    positive_count = random.randint(3, 7)
-    negative_count = random.randint(0, 2)
-    neutral_count = 10 - positive_count - negative_count
-
+def _build_sentiment(news_list: list):
+    pos = sum(1 for n in news_list if n.get('_sent') == 'positive')
+    neg = sum(1 for n in news_list if n.get('_sent') == 'negative')
+    neu = len(news_list) - pos - neg
+    total = len(news_list) or 1
     sentiment = '中性'
-    if positive_count > negative_count + 2:
+    if pos > neg + 2:
         sentiment = '偏正面'
-    elif negative_count > positive_count:
+    elif neg > pos + 1:
         sentiment = '偏负面'
+    for n in news_list:
+        n.pop('_sent', None)
+    return {
+        'sentiment': sentiment,
+        'positive_count': pos,
+        'negative_count': neg,
+        'neutral_count': neu,
+        'positive_ratio': round(pos / total, 2),
+        'negative_ratio': round(neg / total, 2),
+    }
+
+def _get_news_eastmoney(name: str):
+    """东方财富搜索 API，返回真实文章链接"""
+    keyword = urllib.parse.quote(name)
+    param = urllib.parse.quote(json.dumps({
+        "uid": "",
+        "keyword": name,
+        "type": ["cmsArticleWebOld"],
+        "client": "web",
+        "clientType": "web",
+        "clientVersion": "curr",
+        "param": {
+            "cmsArticleWebOld": {
+                "searchScope": "default",
+                "sort": "time",
+                "pageIndex": 1,
+                "pageSize": 20,
+                "preTag": "",
+                "postTag": "",
+            }
+        }
+    }, ensure_ascii=False))
+    url = f"https://search-api-web.eastmoney.com/search/jsonp?cb=&param={param}"
+    req = urllib.request.Request(url, headers={
+        'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36',
+        'Referer': 'https://so.eastmoney.com/',
+        'Accept': '*/*',
+    })
+    with urllib.request.urlopen(req, timeout=12) as resp:
+        raw = resp.read().decode('utf-8').strip()
+
+    raw = raw.lstrip('(').rstrip(';').rstrip(')')
+    data = json.loads(raw)
+    articles = data.get('result', {}).get('cmsArticleWebOld', [])
+    if isinstance(articles, dict):
+        articles = articles.get('list', [])
+
+    news_list = []
+    for a in articles[:15]:
+        title = re.sub(r'<[^>]+>', '', a.get('title', ''))
+        art_url = a.get('url', '')
+        if not art_url or not art_url.startswith('http'):
+            continue
+        summary = re.sub(r'<[^>]+>', '', a.get('content', '') or a.get('summary', ''))[:120]
+        item = {
+            'title': title,
+            'url': art_url,
+            'publish_time': a.get('date', ''),
+            'source': a.get('mediaName', '东方财富'),
+            'summary': summary,
+            '_sent': _classify_sentiment(title, summary),
+        }
+        news_list.append(item)
+    return news_list
+
+def _get_news_sina(name: str):
+    """新浪财经 feed API，返回真实文章链接"""
+    keyword = urllib.parse.quote(name)
+    url = f"https://feed.mix.sina.com.cn/api/roll/get?pageid=153&lid=2516&k={keyword}&num=20&page=1&r=0.1"
+    req = urllib.request.Request(url, headers={
+        'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36',
+        'Referer': 'https://finance.sina.com.cn/',
+    })
+    with urllib.request.urlopen(req, timeout=12) as resp:
+        data = json.loads(resp.read().decode('utf-8'))
+
+    articles = data.get('result', {}).get('data', [])
+    news_list = []
+    for a in articles[:15]:
+        title = re.sub(r'<[^>]+>', '', a.get('title', ''))
+        art_url = a.get('url', '')
+        if not art_url or not art_url.startswith('http'):
+            continue
+        ctime = a.get('ctime', '')
+        try:
+            publish_time = datetime.fromtimestamp(int(ctime)).strftime('%Y-%m-%d %H:%M') if ctime else ''
+        except Exception:
+            publish_time = ctime
+        summary = re.sub(r'<[^>]+>', '', a.get('intro', '') or a.get('summary', ''))[:120]
+        item = {
+            'title': title,
+            'url': art_url,
+            'publish_time': publish_time,
+            'source': a.get('media_name', '新浪财经'),
+            'summary': summary,
+            '_sent': _classify_sentiment(title, summary),
+        }
+        news_list.append(item)
+    return news_list
+
+def get_news_real(code: str, name: str, days: int = 7):
+    """多源获取真实新闻，所有来源失败时返回空列表"""
+    news_list = []
+
+    try:
+        news_list = _get_news_eastmoney(name)
+        print(f"[新闻] 东方财富获取 {len(news_list)} 条", file=sys.stderr)
+    except Exception as e:
+        print(f"[新闻] 东方财富失败: {e}", file=sys.stderr)
+
+    if not news_list:
+        try:
+            news_list = _get_news_sina(name)
+            print(f"[新闻] 新浪财经获取 {len(news_list)} 条", file=sys.stderr)
+        except Exception as e:
+            print(f"[新闻] 新浪财经失败: {e}", file=sys.stderr)
+
+    sentiment = _build_sentiment(news_list)
 
     return {
-        'data': news_data,
-        'sentiment': {
-            'sentiment': sentiment,
-            'positive_count': positive_count,
-            'negative_count': negative_count,
-            'neutral_count': neutral_count,
-        }
+        'data': news_list,
+        'sentiment': sentiment,
     }
+
 
 def generate_local_analysis(stock_code: str, stock_name: str, kline_data: list, news_data: list):
     """生成本地分析结果"""
@@ -247,22 +343,30 @@ def generate_local_analysis(stock_code: str, stock_name: str, kline_data: list, 
             'trend': trend,
             'support_level': round(support_level, 2),
             'resistance_level': round(resistance_level, 2),
-            'indicators_summary': f"MA5:{indicators['ma5']}, MA10:{indicators['ma10']}, 涨跌:{indicators['price_change']:.2f}%" if indicators else ''
+            'indicators_summary': f"MA5:{indicators['ma5']}, MA10:{indicators['ma10']}, 涨跌:{indicators['price_change']:.2f}%" if indicators else '',
+            'detail': ''
         },
         'news_analysis': {
             'sentiment': sentiment,
             'key_events': key_events,
-            'market_feedback': f"正{news_sentiment.get('positive_count', 0)}负{news_sentiment.get('negative_count', 0)}中{news_sentiment.get('neutral_count', 0)}"
+            'market_feedback': f"正面{news_sentiment.get('positive_count', 0)}条 负面{news_sentiment.get('negative_count', 0)}条 中性{news_sentiment.get('neutral_count', 0)}条",
+            'detail': ''
         },
         'recommendation': recommendation,
         'risk_level': '高' if abs(price_change) > 10 else '中' if abs(price_change) > 5 else '低',
-        'summary': f'{stock_name}({stock_code})近期{trend}，消息面{sentiment}，建议{recommendation}',
+        'summary': f'{stock_name}({stock_code})近期{trend}，消息面{sentiment}，建议{recommendation}。本分析为本地规则引擎生成，如需深度AI分析请配置API Key。',
+        'investment_logic': f'基于技术指标判断趋势{trend}，消息面情绪{sentiment}，综合给出{recommendation}建议。',
+        'risk_factors': ['本分析为本地规则引擎生成，仅供参考', '市场存在不确定性，请做好风险管理', '建议配置AI模型获取更深度分析'],
+        'action_plan': '如需精准操作建议，请在设置页面配置AI API Key以启用AI深度分析。',
         'is_local_analysis': True
     }
 
-def analyze_stock(code: str, name: str = '', days: int = 30):
+def analyze_stock(code: str, name: str = '', days: int = 30, position: dict = None):
     """分析股票"""
     print(f"[数据服务] 分析 {name or code}({code})", file=sys.stderr)
+
+    if not config['ai'].get('api_key'):
+        raise ValueError("未配置 AI API Key，请在设置中配置后重试")
 
     kline_result = get_kline_data_eastmoney(code, days)
     if not kline_result:
@@ -280,9 +384,9 @@ def analyze_stock(code: str, name: str = '', days: int = 30):
     indicators = calculate_indicators(kline_data)
     print(f"[数据服务] 最新收盘价: {indicators['latest_close'] if indicators else 'N/A'}", file=sys.stderr)
 
-    news_result = get_news_mock(code, stock_name, 7)
+    news_result = get_news_real(code, stock_name, 7)
 
-    ai_result = analyze_with_ai(code, stock_name, kline_data, news_result['data'], config['ai'])
+    ai_result = analyze_with_ai(code, stock_name, kline_data, news_result['data'], config['ai'], position)
 
     if ai_result:
         print(f"[数据服务] AI 分析成功", file=sys.stderr)
@@ -292,8 +396,7 @@ def analyze_stock(code: str, name: str = '', days: int = 30):
         ai_result['is_local_analysis'] = False
         return ai_result
     else:
-        print(f"[数据服务] 使用本地分析", file=sys.stderr)
-        return generate_local_analysis(code, stock_name, kline_data, news_result['data'])
+        raise RuntimeError("AI 分析失败，请检查 API Key 是否正确或网络是否畅通")
 
 class DataHandler(BaseHTTPRequestHandler):
     def log_message(self, format, *args):
@@ -337,7 +440,7 @@ class DataHandler(BaseHTTPRequestHandler):
                 name = kline_result.get('name', f'股票{code}')
             else:
                 name = f'股票{code}'
-            result = get_news_mock(code, name, days)
+            result = get_news_real(code, name, days)
             print(f"[新闻返回] 条数: {len(result.get('data', []))}", file=sys.stderr)
             self.send_json(result)
 
@@ -349,6 +452,25 @@ class DataHandler(BaseHTTPRequestHandler):
 
         elif path == '/api/models' or path == '/models':
             self.send_json({'models': list(AI_MODELS.keys())})
+
+        elif path == '/api/test-connection' or path == '/test-connection':
+            api_key = config['ai'].get('api_key', '')
+            if not api_key:
+                self.send_json({'success': False, 'message': '未配置 API Key'})
+                return
+            try:
+                from ai_analyzer import AIAnalyzer
+                ai_cfg = config['ai']
+                analyzer = AIAnalyzer(
+                    ai_cfg.get('provider', 'deepseek'),
+                    ai_cfg.get('api_key', ''),
+                    ai_cfg.get('model', 'deepseek-v4-flash'),
+                    ai_cfg.get('base_url', '')
+                )
+                ok, msg = analyzer.test_connection()
+                self.send_json({'success': ok, 'message': msg})
+            except Exception as e:
+                self.send_json({'success': False, 'message': str(e)})
 
         else:
             self.send_response(404)
@@ -365,13 +487,14 @@ class DataHandler(BaseHTTPRequestHandler):
                 code = data.get('stock_code', '')
                 name = data.get('stock_name', '')
                 days = data.get('days', 30)
-                print(f"[分析请求] 股票代码: {code}, 名称: {name}, 天数: {days}", file=sys.stderr)
+                position = data.get('position', None)
+                print(f"[分析请求] 股票代码: {code}, 名称: {name}, 天数: {days}, 持仓: {position}", file=sys.stderr)
 
                 if not code:
                     self.send_json({'error': '缺少股票代码'}, 400)
                     return
 
-                result = analyze_stock(code, name, days)
+                result = analyze_stock(code, name, days, position)
                 print(f"[分析结果] 股票名称: {result.get('stock_name')}, 推荐: {result.get('recommendation')}", file=sys.stderr)
                 self.send_json(result)
             except json.JSONDecodeError:

@@ -2,6 +2,16 @@ import { useCallback, useState } from 'react';
 import { useStockStore } from '../stores/stockStore';
 import { analyzeStock, getKlineData, getNews } from '../api/stockApi';
 
+const PERIOD_TO_DAYS: Record<string, number> = {
+  日线: 1,
+  周线: 7,
+  月线: 30,
+};
+
+function toDays(count: number, period: string): number {
+  return count * (PERIOD_TO_DAYS[period] ?? 1);
+}
+
 export const useStockAnalysis = () => {
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [progress, setProgress] = useState('');
@@ -11,6 +21,7 @@ export const useStockAnalysis = () => {
     market,
     period,
     days,
+    getPositionInfo,
     setStockName,
     setKlineData,
     setNewsData,
@@ -32,16 +43,20 @@ export const useStockAnalysis = () => {
     setLoading(true);
     setError(null);
 
+    const actualDays = toDays(days, period);
+
     try {
       setProgress('正在分析...');
 
       console.log('[useStockAnalysis] 调用 analyzeStock API...');
+      const positionInfo = getPositionInfo();
       const analysisResult = await analyzeStock({
         stock_code: stockCode.trim().toUpperCase(),
         stock_name: '',
         market,
         period,
-        days,
+        days: actualDays,
+        position: positionInfo.has_position ? positionInfo : undefined,
       });
 
       console.log('[useStockAnalysis] 分析结果:', analysisResult);
@@ -60,11 +75,11 @@ export const useStockAnalysis = () => {
           code: stockCode.trim().toUpperCase(),
           market,
           period,
-          days
+          days: actualDays,
         });
 
         try {
-          const klineResult = await getKlineData(stockCode.trim().toUpperCase(), market, period, days);
+          const klineResult = await getKlineData(stockCode.trim().toUpperCase(), market, period, actualDays);
           console.log('[useStockAnalysis] K 线数据:', klineResult.data.length, '条');
           setKlineData(klineResult.data, klineResult.indicators);
         } catch (klineError) {

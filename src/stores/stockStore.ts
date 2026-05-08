@@ -6,7 +6,8 @@ import type {
   SentimentResult,
   AnalysisResult,
   Market,
-  Period
+  Period,
+  PositionInfo,
 } from '../types';
 
 interface StockState {
@@ -15,6 +16,9 @@ interface StockState {
   market: Market;
   period: Period;
   days: number;
+  hasPosition: boolean;
+  costPrice: string;
+  shares: string;
   klineData: KlineData[];
   klineIndicators: KlineIndicators | null;
   newsData: NewsItem[];
@@ -28,6 +32,10 @@ interface StockState {
   setMarket: (market: Market) => void;
   setPeriod: (period: Period) => void;
   setDays: (days: number) => void;
+  setHasPosition: (v: boolean) => void;
+  setCostPrice: (v: string) => void;
+  setShares: (v: string) => void;
+  getPositionInfo: () => PositionInfo;
   setKlineData: (data: KlineData[], indicators: KlineIndicators) => void;
   setNewsData: (data: NewsItem[], sentiment: SentimentResult) => void;
   setAnalysisResult: (result: AnalysisResult) => void;
@@ -42,6 +50,9 @@ const initialState = {
   market: 'A股' as Market,
   period: '日线' as Period,
   days: 30,
+  hasPosition: false,
+  costPrice: '',
+  shares: '',
   klineData: [],
   klineIndicators: null,
   newsData: [],
@@ -51,7 +62,7 @@ const initialState = {
   error: null,
 };
 
-export const useStockStore = create<StockState>((set) => ({
+export const useStockStore = create<StockState>((set, get) => ({
   ...initialState,
 
   setStockCode: (code) => set({ stockCode: code }),
@@ -59,6 +70,18 @@ export const useStockStore = create<StockState>((set) => ({
   setMarket: (market) => set({ market }),
   setPeriod: (period) => set({ period }),
   setDays: (days) => set({ days }),
+  setHasPosition: (v) => set({ hasPosition: v }),
+  setCostPrice: (v) => set({ costPrice: v }),
+  setShares: (v) => set({ shares: v }),
+
+  getPositionInfo: () => {
+    const { hasPosition, costPrice, shares } = get();
+    return {
+      has_position: hasPosition,
+      cost_price: costPrice ? parseFloat(costPrice) : null,
+      shares: shares ? parseInt(shares) : null,
+    };
+  },
 
   setKlineData: (data, indicators) =>
     set({ klineData: data, klineIndicators: indicators }),

@@ -70,4 +70,9 @@ export const getModelList = async (): Promise<string[]> => {
   return response.data.models;
 };
 
+export const testConnection = async (): Promise<{ success: boolean; message: string }> => {
+  const response = await api.get<{ success: boolean; message: string }>('/test-connection');
+  return response.data;
+};
+
 export default api;

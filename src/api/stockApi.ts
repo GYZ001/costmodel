@@ -33,7 +33,10 @@ export const getKlineData = async (
   days: number = 30
 ): Promise<{ data: KlineData[]; indicators: KlineIndicators }> => {
   const response = await api.get<KlineResponse>('/kline', {
-    params: { code, market, period, days },
+    params: {
+      code: code,
+      days: days
+    },
   });
   return response.data;
 };
@@ -44,7 +47,10 @@ export const getNews = async (
   days: number = 7
 ): Promise<{ data: NewsItem[]; sentiment: SentimentResult }> => {
   const response = await api.get<NewsResponse>('/news', {
-    params: { code, name, days },
+    params: {
+      code: code,
+      days: days
+    },
   });
   return response.data;
 };

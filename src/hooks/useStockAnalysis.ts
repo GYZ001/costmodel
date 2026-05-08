@@ -30,33 +30,43 @@ export const useStockAnalysis = () => {
     setError(null);
 
     try {
-      setProgress('正在获取 K 线数据...');
-      const klineResult = await getKlineData(stockCode, market, period, days);
-      setKlineData(klineResult.data, klineResult.indicators);
-
-      setProgress('正在获取新闻资讯...');
-      const newsResult = await getNews(stockCode, '', 7);
-      setNewsData(newsResult.data, newsResult.sentiment);
-
       setProgress('正在分析...');
+      
       const analysisResult = await analyzeStock({
-        stock_code: stockCode,
+        stock_code: stockCode.trim().toUpperCase(),
         stock_name: '',
         market,
         period,
         days,
       });
 
-      if (analysisResult.stock_name) {
-        setStockName(analysisResult.stock_name);
-      }
+      if (analysisResult) {
+        if (analysisResult.stock_name) {
+          setStockName(analysisResult.stock_name);
+        }
+        
+        setAnalysisResult(analysisResult);
+        
+        const klineResult = await getKlineData(stockCode.trim().toUpperCase(), market, period, days);
+        setKlineData(klineResult.data, klineResult.indicators);
 
-      setAnalysisResult(analysisResult);
+        const newsResult = await getNews(stockCode.trim().toUpperCase(), analysisResult.stock_name || '', 7);
+        setNewsData(newsResult.data, newsResult.sentiment);
+      }
 
       setProgress('分析完成');
     } catch (err: any) {
       console.error('Analysis error:', err);
-      const errorMessage = err.response?.data?.message || err.message || '分析失败，请稍后重试';
+      let errorMessage = '分析失败，请稍后重试';
+      
+      if (err.response) {
+        errorMessage = err.response.data?.message || `服务器错误 (${err.response.status})`;
+      } else if (err.request) {
+        errorMessage = '无法连接到服务器，请确保后端服务已启动';
+      } else {
+        errorMessage = err.message || errorMessage;
+      }
+      
       setError(errorMessage);
     } finally {
       setIsAnalyzing(false);

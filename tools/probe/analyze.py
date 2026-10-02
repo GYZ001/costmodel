@@ -86,131 +86,55 @@ def title_of(html):
     return strip(m.group(1))[:150] if m else None
 
 
-# ---------------------------------------------------------------- Canada
-def canada():
-    o = Out("CANADA StatCan 18-10-0245-01")
-    o.show("WDS getFullTableDownloadCSV", "https://www150.statcan.gc.ca/t1/wds/rest/getFullTableDownloadCSV/18100245/en", n=250)
-    st, ct, b, fu = o.show("WDS getCubeMetadata POST", "https://www150.statcan.gc.ca/t1/wds/rest/getCubeMetadata",
-                           n=0, data=json.dumps([{"productId": 18100245}]).encode(), headers={"Content-Type": "application/json"})
-    try:
-        m = json.loads(b)[0]["object"]
-        o("   meta:", {k: m.get(k) for k in ("cubeTitleEn", "cubeStartDate", "cubeEndDate", "releaseTime", "frequencyCode", "nbSeriesCube")})
-        for d in m.get("dimension", []):
-            mem = d.get("member", [])
-            o(f"   dim {d.get('dimensionNameEn')}: {len(mem)} members; first:", [x.get("memberNameEn") for x in mem[:16]])
-        fn = m.get("footnote", [])
-        o("   footnotes:", len(fn))
-        for f in fn[:6]:
-            o("     -", strip(f.get("footnotesEn", ""))[:300])
-    except Exception as e:  # noqa: BLE001
-        o("   meta parse failed", e)
-    st, ct, b, fu = o.show("full zip", "https://www150.statcan.gc.ca/n1/tbl/csv/18100245-eng.zip", n=0, timeout=90)
-    try:
-        z = zipfile.ZipFile(io.BytesIO(b))
-        o("   zip members:", z.namelist())
-        rows = list(csv.DictReader(io.StringIO(z.read("18100245.csv").decode("utf-8-sig"))))
-        geos = Counter(r["GEO"] for r in rows)
-        o("   GEO values:", dict(geos))
-        lat = max(r["REF_DATE"] for r in rows)
-        o("   latest REF_DATE:", lat, "| min:", min(r["REF_DATE"] for r in rows))
-        o("   UOM values:", Counter(r["UOM"] for r in rows).most_common(6))
-        o("   STATUS values:", Counter(r["STATUS"] for r in rows).most_common(6), "SYMBOL:", Counter(r["SYMBOL"] for r in rows).most_common(4))
-        latest_by_geo = defaultdict(int)
-        for r in rows:
-            if r["REF_DATE"] == lat and r["VALUE"]:
-                latest_by_geo[r["GEO"]] += 1
-        o("   #products with value in latest month by GEO:", dict(latest_by_geo))
-        can = [r for r in rows if r["GEO"] == "Canada" and r["REF_DATE"] == lat]
-        o("   n products Canada latest:", len(can))
-        vecs = {}
-        for r in can:
-            pl = r["Products"].lower()
-            if any(k in pl for k in KEYS):
-                o(f"     {r['VECTOR']} | {r['Products']} | {r['VALUE']} {r['UOM']}")
-                vecs[r["Products"]] = r["VECTOR"]
-        meta = z.read("18100245_MetaData.csv").decode("utf-8-sig", "replace")
-        idx = meta.find("Footnote")
-        o("   metadata footnote block:", strip(meta[idx: idx + 1500]) if idx >= 0 else meta[:600])
-        pick = [v for p, v in vecs.items() if p.startswith("Eggs") or p.startswith("White bread")][:2]
-        if pick:
-            body = json.dumps([{"vectorId": int(v[1:]), "latestN": 3} for v in pick]).encode()
-            st, ct, b2, fu = o.show("WDS getDataFromVectorsAndLatestNPeriods", "https://www150.statcan.gc.ca/t1/wds/rest/getDataFromVectorsAndLatestNPeriods",
-                                    n=0, data=body, headers={"Content-Type": "application/json"})
-            try:
-                for obj in json.loads(b2):
-                    ob = obj["object"]
-                    o("     vec", ob["vectorId"], [(p["refPer"], p["value"], p.get("releaseTime")) for p in ob["vectorDataPoint"]])
-            except Exception as e:  # noqa: BLE001
-                o("     parse fail", e, txt(b2[:300]))
-    except Exception as e:  # noqa: BLE001
-        o("   zip parse failed", type(e).__name__, e)
-    return o
+JP_KEYS = ["食パン", "米", "うるち米", "鶏卵", "牛乳", "牛肉", "豚肉", "鶏肉", "じゃがいも", "トマト", "りんご", "バナナ", "砂糖", "食用油", "小麦粉", "ばれいしょ"]
 
 
-# ---------------------------------------------------------------- France
-def france():
-    o = Out("FRANCE INSEE BDM IPC-PM-2015 (prix moyens)")
-    st, ct, b, fu = o.show("BDM lastNObservations=1", "https://bdm.insee.fr/series/sdmx/data/IPC-PM-2015?lastNObservations=1", n=0, timeout=90)
-    try:
-        root = ET.fromstring(b)
-        ser = [el for el in root.iter() if el.tag.split("}")[-1] == "Series"]
-        o("   total series:", len(ser))
-        o("   by (FREQ, SERIE_ARRETEE, REF_AREA):", Counter((s.get("FREQ"), s.get("SERIE_ARRETEE"), s.get("REF_AREA")) for s in ser).most_common(12))
-        o("   attribute keys:", sorted(ser[0].attrib.keys()) if ser else None)
-        act = [s for s in ser if s.get("SERIE_ARRETEE") == "FALSE" and s.get("FREQ") == "M"]
-        o("   active monthly series:", len(act), "areas:", Counter(s.get("REF_AREA") for s in act))
-        lastp = Counter()
-        egg = None
-        for s in act:
-            obs = [x for x in s if x.tag.split("}")[-1] == "Obs"]
-            p = obs[-1].get("TIME_PERIOD") if obs else None
-            v = obs[-1].get("OBS_VALUE") if obs else None
-            lastp[p] += 1
-            if s.get("REF_AREA") == "FM":
-                o(f"     {s.get('IDBANK')} | {s.get('PRIX_CONSO')} | {(s.get('TITLE_EN') or '')[:120]} | {p} {v} {s.get('UNIT_MEASURE')} | upd {s.get('LAST_UPDATE')}")
-            if egg is None and "egg" in (s.get("TITLE_EN") or "").lower():
-                egg = s.get("IDBANK")
-        o("   last-period histogram (active monthly):", lastp.most_common(6))
-        if egg:
-            st, ct, b2, fu = o.show("BDM SERIES_BDM single idbank", f"https://bdm.insee.fr/series/sdmx/data/SERIES_BDM/{egg}?startPeriod=2024-01", n=0)
-            obs = re.findall(r'TIME_PERIOD="([^"]+)" OBS_VALUE="([^"]+)"', txt(b2))
-            o("     obs:", obs[:3], "...", obs[-3:])
-    except Exception as e:  # noqa: BLE001
-        o("   parse failed", type(e).__name__, e, txt(b[:300]))
-    o.show("api.insee.fr BDM V1", "https://api.insee.fr/series/BDM/V1/data/IPC-PM-2015?lastNObservations=1", n=250)
-    o.show("api.insee.fr BDM (no V1)", "https://api.insee.fr/series/BDM/data/IPC-PM-2015?lastNObservations=1", n=250)
-    o.show("BDM datastructure", "https://bdm.insee.fr/series/sdmx/datastructure/FR1/IPC-PM-2015", n=200)
-    return o
+def xl_rows(b, name, limit_sheets=3, max_rows=4000):
+    """Yield (sheet, row_values) from xlsx or xls bytes."""
+    out = []
+    if b[:2] == b"PK":
+        import openpyxl
+        wb = openpyxl.load_workbook(io.BytesIO(b), read_only=True, data_only=True)
+        for ws in wb.worksheets[:limit_sheets]:
+            for i, r in enumerate(ws.iter_rows(values_only=True)):
+                if i > max_rows:
+                    break
+                out.append((ws.title, [c for c in r]))
+    else:
+        import xlrd
+        wb = xlrd.open_workbook(file_contents=b)
+        for sh in wb.sheets()[:limit_sheets]:
+            for i in range(min(sh.nrows, max_rows)):
+                out.append((sh.name, sh.row_values(i)))
+    return out
 
 
-# ---------------------------------------------------------------- UK
-def uk():
-    o = Out("UK ONS price quotes / item indices / MM23 avg prices / shopping prices tool")
+def compact(row, n=14):
+    vals = [str(c).strip() for c in row if c not in (None, "") and str(c).strip()]
+    return " | ".join(vals[:n])[:400]
+
+
+# ---------------------------------------------------------------- UK round 2
+def uk2():
+    o = Out("UK2 price quotes download + MM23 recency + shopping tool adhoc")
     base = "https://www.ons.gov.uk/economy/inflationandpriceindices/datasets/consumerpriceindicescpiandretailpricesindexrpiitemindicesandpricequotes"
-    st, ct, b, fu = o.show("landing", base, n=0)
-    h = txt(b)
-    o("   title:", title_of(h))
-    o.links(h, r'/file\?uri=[^"\s]+', n=12)
-    st, ct, b, fu = o.show("landing /data json", base + "/data", n=0)
+    st, ct, b, fu, dt = fetch(base + "/data")
+    j = json.loads(b)
+    dss = [d["uri"] for d in j.get("datasets", [])]
+    pq = [u for u in dss if "pricequote" in u.lower()]
+    o("   dataset uris containing 'pricequote':", len(pq), pq[:6])
+    o("   other recent dataset uris:", [u.rsplit("/", 1)[-1] for u in dss[:14]])
     pq_url = None
-    try:
-        j = json.loads(b)
-        o("   keys:", list(j.keys()))
-        dss = j.get("datasets", [])
-        o("   datasets:", len(dss), [d.get("uri") for d in dss[:6]])
-        for d in dss[:4]:
-            st2, ct2, b2, fu2 = fetch("https://www.ons.gov.uk" + d["uri"] + "/data")
-            try:
-                jj = json.loads(b2)
-                files = [x.get("file") for x in jj.get("downloads", [])]
-                o("     ", d["uri"], "| release", jj.get("description", {}).get("releaseDate"), "| files", files)
-                for f in files:
-                    if f and "pricequote" in f.lower() and f.lower().endswith((".csv", ".zip")) and not pq_url:
-                        pq_url = "https://www.ons.gov.uk/file?uri=" + d["uri"] + "/" + f
-            except Exception as e:  # noqa: BLE001
-                o("      sub fail", st2, e, txt(b2[:150]))
-    except Exception as e:  # noqa: BLE001
-        o("   json fail", e, txt(b[:200]))
+    for u in pq[:3]:
+        st2, ct2, b2, fu2, dt2 = fetch("https://www.ons.gov.uk" + u + "/data")
+        try:
+            jj = json.loads(b2)
+            files = [x.get("file") for x in jj.get("downloads", [])]
+            o("     ", u.rsplit("/", 1)[-1], "| release", jj.get("description", {}).get("releaseDate"), "| title", jj.get("description", {}).get("title"), "| files", files)
+            if not pq_url and files:
+                pq_url = "https://www.ons.gov.uk/file?uri=" + u + "/" + files[0]
+        except Exception as e:  # noqa: BLE001
+            o("      sub fail", st2, e)
     if pq_url:
         st, ct, b, fu = o.show("price quotes file", pq_url, n=0, timeout=120)
         try:
@@ -219,168 +143,130 @@ def uk():
                 o("   zip:", z.namelist())
                 b = z.read(z.namelist()[0])
             rows = list(csv.DictReader(io.StringIO(txt(b))))
-            o("   rows:", len(rows), "cols:", list(rows[0].keys()))
+            cols = list(rows[0].keys())
+            o("   rows:", len(rows), "cols:", cols)
             o("   sample row:", rows[0])
+            low = {c.lower(): c for c in cols}
+            cid, cdesc, cprice, cval = low.get("item_id"), low.get("item_desc"), low.get("price"), low.get("validity")
+            o("   VALIDITY:", Counter(r.get(cval) for r in rows).most_common(8) if cval else None, "| SHOP_TYPE:", Counter(r.get(low.get("shop_type")) for r in rows).most_common(4) if low.get("shop_type") else None)
             items = defaultdict(list)
             desc = {}
             for r in rows:
-                iid = r.get("ITEM_ID") or r.get("item_id")
-                d = r.get("ITEM_DESC") or r.get("item_desc") or ""
-                desc[iid] = d
+                desc[r[cid]] = r[cdesc]
                 try:
-                    pr = float(r.get("PRICE") or r.get("price"))
-                    if pr > 0 and (r.get("VALIDITY") in (None, "3", "4")):
-                        items[iid].append(pr)
+                    pr = float(r[cprice])
                 except (TypeError, ValueError):
-                    pass
-            o("   distinct items:", len(desc), "| VALIDITY:", Counter(r.get("VALIDITY") for r in rows).most_common(6))
+                    continue
+                if pr > 0 and (not cval or r[cval] in ("3", "4")):
+                    items[r[cid]].append(pr)
+            o("   distinct items:", len(desc))
             n = 0
             for iid, d in sorted(desc.items(), key=lambda x: x[1]):
                 if any(k in d.lower() for k in KEYS) and items.get(iid):
                     ps = items[iid]
-                    o(f"     {iid} | {d} | n={len(ps)} median={statistics.median(ps):.2f} mean={statistics.mean(ps):.2f}")
+                    o(f"     {iid} | {d} | n={len(ps)} median={statistics.median(ps):.2f}")
                     n += 1
-                    if n > 70:
+                    if n > 60:
                         break
         except Exception as e:  # noqa: BLE001
             o("   pq parse failed", type(e).__name__, e)
-    st, ct, b, fu = o.show("MM23 csv", "https://www.ons.gov.uk/file?uri=/economy/inflationandpriceindices/datasets/consumerpriceindices/current/mm23.csv", n=0, timeout=120)
+    st, ct, b, fu, dt = fetch("https://www.ons.gov.uk/file?uri=/economy/inflationandpriceindices/datasets/consumerpriceindices/current/mm23.csv", timeout=120)
     try:
         rd = list(csv.reader(io.StringIO(txt(b))))
         titles, cdids = rd[0], rd[1]
-        av = [(c, t) for c, t in zip(cdids, titles) if "ave price" in t.lower() or "average price" in t.lower()]
-        o("   MM23 columns:", len(titles), "| avg-price columns:", len(av))
-        for c, t in av[:40]:
-            o("     ", c, "|", t)
-        o("   last rows first col:", [r[0] for r in rd[-3:]])
+        av = [i for i, t in enumerate(titles) if "ave price" in t.lower()]
+        monthly = [r for r in rd if re.match(r"^\d{4} [A-Z]{3}$", r[0] or "")]
+        o("   MM23 monthly rows:", len(monthly), "first", monthly[0][0], "last", monthly[-1][0])
+        lastp = Counter()
+        for i in av:
+            last = None
+            for r in monthly:
+                if i < len(r) and r[i].strip():
+                    last = (r[0], r[i])
+            lastp[last[0] if last else None] += 1
+            if any(k in titles[i].lower() for k in KEYS):
+                o("     ", cdids[i], "|", titles[i][:70], "| last:", last)
+        o("   last-period histogram of the", len(av), "avg-price cols:", lastp.most_common(8))
     except Exception as e:  # noqa: BLE001
-        o("   mm23 parse failed", e)
-    for q in ("shopping prices comparison tool", "average prices"):
-        st, ct, b, fu = o.show(f"ONS search/data '{q}'", "https://www.ons.gov.uk/search/data?q=" + urllib.parse.quote(q), n=0)
-        try:
-            j = json.loads(b)
-            res = j.get("result", {}).get("results", []) or j.get("results", [])
-            for r in res[:10]:
-                desc = r.get("description", {})
-                o("     ", r.get("type"), "|", desc.get("title"), "|", r.get("uri"), "|", desc.get("releaseDate"))
-        except Exception as e:  # noqa: BLE001
-            o("   not json", e, txt(b[:200]))
-    st, ct, b, fu = o.show("dp search api", "https://api.beta.ons.gov.uk/v1/search?q=shopping%20prices%20comparison%20tool&limit=10", n=0)
-    try:
-        j = json.loads(b)
-        for it in j.get("items", [])[:10]:
-            o("     ", it.get("type"), "|", it.get("title"), "|", it.get("uri"), "|", it.get("release_date"))
-    except Exception as e:  # noqa: BLE001
-        o("   dp search fail", e, txt(b[:200]))
+        o("   mm23 fail", type(e).__name__, e)
+    st, ct, b, fu = o.show("shopping tool adhoc", "https://www.ons.gov.uk/economy/inflationandpriceindices/adhocs/2724shoppingpricescomparisontooldatadownloadbeforethe2025update", n=0)
+    h = txt(b)
+    o("   title:", title_of(h))
+    o.links(h, r'/file\?uri=[^"\s]+', n=6)
+    for m in re.finditer(r"(discontinu|no longer|2025 update|replaced)[^<]{0,250}", h, flags=re.I):
+        o("     ctx:", strip(m.group(0))[:250])
+        break
+    st, ct, b, fu = o.show("shopping tool article", "https://www.ons.gov.uk/economy/inflationandpriceindices/articles/shoppingpricescomparisontool/2023-05-03", n=0)
+    h = txt(b)
+    o("   title:", title_of(h))
+    o.links(h, r'href="[^"]*(?:dataset|file\?uri|visualisations)[^"]*"', n=10)
     return o
 
 
-# ---------------------------------------------------------------- Japan
-def japan():
-    o = Out("JAPAN Retail Price Survey (小売物価統計調査)")
-    for u in ("https://www.stat.go.jp/data/kouri/doukou/index.html", "https://www.stat.go.jp/data/kouri/doukou/3.html",
-              "https://www.stat.go.jp/data/kouri/index.html"):
-        st, ct, b, fu = o.show("stat.go.jp", u, n=0)
-        h = txt(b)
-        o("   title:", title_of(h))
-        o.links(h, r'href="[^"]+\.(?:xlsx?|csv|zip)"', n=15, label="file links")
-        o.links(h, r'href="[^"]*e-stat[^"]*"', n=10, label="e-stat links")
-    st, ct, b, fu = o.show("e-Stat file list", "https://www.e-stat.go.jp/stat-search/files?page=1&toukei=00200571", n=0, timeout=45)
+# ---------------------------------------------------------------- France round 2
+def france2():
+    o = Out("FRANCE2 stopped prix-moyens series for staple items")
+    st, ct, b, fu, dt = fetch("https://bdm.insee.fr/series/sdmx/data/IPC-PM-2015?lastNObservations=1", timeout=90)
+    root = ET.fromstring(b)
+    ser = [el for el in root.iter() if el.tag.split("}")[-1] == "Series"]
+    fr = ["oeuf", "œuf", "lait", "sucre", "riz", "farine", "poulet", "huile", "pain", "beurre", "pomme", "banane", "tomate", "porc", "boeuf", "bœuf"]
+    for s in ser:
+        if s.get("FREQ") != "M" or s.get("SERIE_ARRETEE") != "TRUE":
+            continue
+        t = (s.get("TITLE_FR") or "").lower()
+        if any(k in t for k in fr):
+            obs = [x for x in s if x.tag.split("}")[-1] == "Obs"]
+            o(f"     {s.get('IDBANK')} | {s.get('TITLE_FR')[:110]} | last {obs[-1].get('TIME_PERIOD') if obs else None}")
+    o.show("datastructure via api.insee.fr", "https://api.insee.fr/series/BDM/V1/datastructure/FR1/IPC-PM-2015", n=200, timeout=40)
+    return o
+
+
+# ---------------------------------------------------------------- Japan round 2
+def japan2():
+    o = Out("JAPAN2 stat.go.jp zuhyou xlsx + e-Stat datalist")
+    st, ct, b, fu, dt = fetch("https://www.stat.go.jp/data/kouri/doukou/3.html")
     h = txt(b)
-    o("   title:", title_of(h))
+    for fn in ("202609.xlsx", "202608.xlsx", "kubu_chouki.xls", "shinkyu.xlsx"):
+        i = h.find(fn)
+        if i >= 0:
+            o(f"   context {fn}:", strip(h[max(0, i - 700): i + 60])[-500:])
+    allx = re.findall(r'href="(/data/kouri/doukou/zuhyou/[^"]+)"', h)
+    o("   all zuhyou files:", len(allx), sorted(set(allx))[-30:])
+    for fn in ("202609.xlsx", "202608.xlsx", "kubu_chouki.xls"):
+        st, ct, b, fu = o.show("zuhyou", "https://www.stat.go.jp/data/kouri/doukou/zuhyou/" + fn, n=0, timeout=90)
+        if st != 200:
+            continue
+        try:
+            rows = xl_rows(b, fn, limit_sheets=2, max_rows=1500)
+            sheets = Counter(s for s, _ in rows)
+            o("   sheets/rows:", dict(sheets))
+            for s, r in rows[:12]:
+                o("     top:", s, "|", compact(r))
+            shown = 0
+            for s, r in rows:
+                line = compact(r, 18)
+                if any(k in line for k in JP_KEYS):
+                    o("     hit:", s, "|", line)
+                    shown += 1
+                    if shown > 30:
+                        break
+        except Exception as e:  # noqa: BLE001
+            o("   xl parse fail", type(e).__name__, e)
+    st, ct, b, fu = o.show("e-Stat datalist", "https://www.e-stat.go.jp/stat-search/files?page=1&layout=datalist&toukei=00200571&tstat=000000680001&cycle=1&tclass1val=0", n=0, timeout=60)
+    h = txt(b)
     ids = []
     for m in re.finditer(r"statInfId=(\d{12})", h):
         if m.group(1) not in ids:
             ids.append(m.group(1))
-    o("   statInfIds:", len(ids), ids[:15])
-    for m in list(re.finditer(r'stat-search/files\?[^"]*tclass\d?=[^"]*', h))[:12]:
-        o("     drill:", m.group(0)[:200])
-    st, ct, b, fu = o.show("e-Stat API no appId", "https://api.e-stat.go.jp/rest/3.0/app/json/getStatsList?statsCode=00200571&limit=3", n=400)
-    st, ct, b, fu = o.show("e-Stat database list", "https://www.e-stat.go.jp/stat-search/database?page=1&toukei=00200571", n=0, timeout=45)
-    h = txt(b)
-    o.links(h, r"statdisp_id=\d+", n=10, label="statdisp ids")
-    o.links(h, r'<span class="stat-title-name[^"]*">[^<]+', n=10, label="titles")
+    o("   statInfIds:", len(ids), ids[:10])
+    for m in list(re.finditer(r'tclass\d=\d+[^"]*"[^>]*>([^<]{2,80})<', h))[:20]:
+        o("     drill:", m.group(0)[:160])
     return o
 
 
-# ---------------------------------------------------------------- Germany
-def germany():
-    o = Out("GERMANY Destatis GENESIS average prices?")
-    o.show("GENESIS find GET GAST", "https://www-genesis.destatis.de/genesisWS/rest/2020/find/find?username=GAST&password=GAST&term=Durchschnittspreise&category=tables&pagelength=20&language=de", n=900)
-    o.show("GENESIS find POST GAST", "https://www-genesis.destatis.de/genesisWS/rest/2020/find/find",
-           n=900, data=urllib.parse.urlencode({"term": "Durchschnittspreise", "category": "tables", "pagelength": "20", "language": "de"}).encode(),
-           headers={"username": "GAST", "password": "GAST", "Content-Type": "application/x-www-form-urlencoded"})
-    return o
-
-
-# ---------------------------------------------------------------- Mexico
-def mexico():
-    o = Out("MEXICO INEGI precios promedio / PROFECO QQP")
-    for u in ("https://www.inegi.org.mx/app/preciospromedio/", "https://www.inegi.org.mx/programas/inpc/2018/",
-              "https://datos.profeco.gob.mx/datos_abiertos/qqp.php", "https://www.profeco.gob.mx/precios/canasta/default.aspx"):
-        st, ct, b, fu = o.show("page", u, n=0, timeout=40)
-        h = txt(b)
-        o("   title:", title_of(h))
-        o.links(h, r'(?:href|src)="[^"]*(?:\.zip|\.csv|\.xlsx?|precio[^"]*|api[^"]*|datosabiertos[^"]*)"', n=25)
-    st, ct, b, fu = o.show("datos.gob.mx CKAN search", "https://www.datos.gob.mx/api/3/action/package_search?q=quien%20es%20quien%20precios&rows=5", n=0)
-    try:
-        j = json.loads(b)
-        for p in j["result"]["results"]:
-            o("     pkg", p.get("name"), "|", p.get("title"), "|", p.get("metadata_modified"))
-            for r in p.get("resources", [])[:6]:
-                o("        res", r.get("format"), r.get("url"))
-    except Exception as e:  # noqa: BLE001
-        o("   ckan fail", e, txt(b[:200]))
-    o.show("INEGI BIE API no token", "https://www.inegi.org.mx/app/api/indicadores/desarrolladores/jsonxml/INDICATOR/628194/es/0700/false/BIE/2.0/notoken?type=json", n=300)
-    return o
-
-
-# ---------------------------------------------------------------- India
-def india():
-    o = Out("INDIA DoCA Price Monitoring Cell")
-    for u in ("https://fcainfoweb.nic.in/reports/report_menu_web.aspx", "https://fcainfoweb.nic.in/pmsver2/reports/report_menu_web.aspx",
-              "https://consumeraffairs.nic.in/price-monitoring-cell/price-monitoring-cell", "https://doca.gov.in/price/"):
-        st, ct, b, fu = o.show("page", u, n=0, timeout=40)
-        h = txt(b)
-        o("   title:", title_of(h), "| __VIEWSTATE:", "__VIEWSTATE" in h)
-        opts = re.findall(r'<option[^>]*value="([^"]*)"[^>]*>([^<]*)', h)
-        o("   options:", opts[:40])
-        o("   inputs:", re.findall(r'<input[^>]*name="([^"]+)"', h)[:25])
-        o.links(h, r'href="[^"]*(?:report|price|\.pdf|\.xls)[^"]*"', n=20)
-    o.show("data.gov.in sample-key mandi", "https://api.data.gov.in/resource/9ef84268-d588-465a-a308-a864a43d0070?api-key=579b464db66ec23bdd000001cdd3946e44ce4aad7209ff7b23ac571b&format=json&limit=2", n=700)
-    return o
-
-
-# ---------------------------------------------------------------- Korea
-def korea():
-    o = Out("KOREA KAMIS / KOSIS / price.go.kr")
-    o.show("KAMIS dailySalesList test key", "https://www.kamis.or.kr/service/price/xml.do?action=dailySalesList&p_cert_key=111&p_cert_id=222&p_returntype=json", n=700)
-    o.show("KAMIS dailyPriceByCategoryList retail", "https://www.kamis.or.kr/service/price/xml.do?action=dailyPriceByCategoryList&p_product_cls_code=01&p_country_code=1101&p_regday=2026-09-30&p_convert_kg_yn=N&p_item_category_code=100&p_cert_key=111&p_cert_id=222&p_returntype=json", n=700)
-    st, ct, b, fu = o.show("KAMIS openapi list", "https://www.kamis.or.kr/customer/reference/openapi_list.do", n=0)
-    h = txt(b)
-    o("   title:", title_of(h))
-    o.links(h, r"action=[A-Za-z]+", n=30)
-    o.show("KOSIS no key", "https://kosis.kr/openapi/statisticsList.do?method=getList&vwCd=MT_ZTITLE&parentListId=&format=json&jsonVD=Y", n=300)
-    o.show("price.go.kr", "https://www.price.go.kr/tprice/portal/main/main.do", n=150)
-    return o
-
-
-# ---------------------------------------------------------------- Brazil
-def brazil():
-    o = Out("BRAZIL DIEESE cesta basica / IBGE")
-    for u in ("https://www.dieese.org.br/cesta/", "https://www.dieese.org.br/cesta/produto"):
-        st, ct, b, fu = o.show("DIEESE", u, n=0, timeout=40)
-        h = txt(b)
-        o("   title:", title_of(h))
-        o.links(h, r'(?:href|action|src)="[^"]*(?:cesta|xls|csv|export|json)[^"]*"', n=30)
-        o("   options:", re.findall(r'<option[^>]*value="([^"]*)"[^>]*>([^<]*)', h)[:40])
-    o.show("SIDRA IPCA 7060 food", "https://apisidra.ibge.gov.br/values/t/7060/n1/all/v/63/p/last%201/c315/7170", n=500)
-    return o
-
-
-# ---------------------------------------------------------------- FAO FPMA
-def fao():
-    o = Out("FAO GIEWS FPMA tool")
+# ---------------------------------------------------------------- FAO round 2
+def fao2():
+    o = Out("FAO2 FPMA tool JS discovery")
     base = "https://fpma.fao.org/giews/fpmat4/global/"
     st, ct, b, fu = o.show("FPMA html", base, n=0)
     h = txt(b)
@@ -389,118 +275,196 @@ def fao():
     urls = Counter()
     ctx = []
     for s in scripts:
-        st2, ct2, js, fu2 = fetch(urllib.parse.urljoin(base, s), timeout=45)
+        st2, ct2, js, fu2, dt2 = fetch(urllib.parse.urljoin(base, s), timeout=45)
         js = txt(js)
+        o("   js", s, st2, len(js))
         for m in re.finditer(r"""["'`]((?:https?://|/)[^"'`\s]{3,200})["'`]""", js):
             v = m.group(1)
-            if any(k in v.lower() for k in ("api", "fpma", "giews", "price", "serie")):
+            if any(k in v.lower() for k in ("api", "fpma", "giews", "price", "serie", "v4", "v1")):
                 urls[v] += 1
-        for m in re.finditer(r"api/v\d", js):
-            ctx.append(js[max(0, m.start() - 120): m.end() + 160].replace("\n", " "))
-    o("   url-like strings:", list(urls)[:80])
-    for c in ctx[:25]:
+        for m in re.finditer(r"(api/v\d|price_module|apiUrl|baseUrl|environment)", js):
+            ctx.append(js[max(0, m.start() - 150): m.end() + 200].replace("\n", " "))
+    o("   url-like strings:", list(urls)[:100])
+    for c in ctx[:30]:
         o("     ctx:", c)
-    for u in ("https://fpma.fao.org/giews/v4/price_module/api/v1/",
-              "https://fpma.fao.org/giews/v4/price_module/api/v1/FpmaSerieDomestic/?country_iso3=IND&page_size=3",
-              "https://fpma.fao.org/giews/v4/price_module/api/v1/FpmaSeriesDomestic/?iso3_country_code=IND",
-              "https://fpma.fao.org/giews/fpmat4/api/v1/"):
-        o.show("guess", u, n=400)
-    for iso in ("india", "mexico", "brazil", "china"):
-        st, ct, b, fu = o.show(f"HDX WFP {iso}", f"https://data.humdata.org/api/3/action/package_show?id=wfp-food-prices-for-{iso}", n=0)
-        try:
-            r = json.loads(b)["result"]
-            o("     ", r.get("title"), "| modified", r.get("metadata_modified"), "|", [x.get("url") for x in r.get("resources", [])][:3])
-        except Exception as e:  # noqa: BLE001
-            o("     fail", e, txt(b[:150]))
     return o
 
 
-# ---------------------------------------------------------------- Australia
-def australia():
-    o = Out("AUSTRALIA ABS")
-    st, ct, b, fu = o.show("ABS dataflows", "https://data.api.abs.gov.au/rest/dataflow/ABS?detail=allstubs", n=0, timeout=60)
+# ---------------------------------------------------------------- Mexico round 2
+def mexico2():
+    o = Out("MEXICO2 PROFECO QQP file layout + INEGI preciospromedio form")
+    st, ct, b, fu = o.show("CKAN package_show 2026", "https://www.datos.gob.mx/api/3/action/package_show?id=programa_quien_es_quien_precios_2026", n=0)
+    try:
+        p = json.loads(b)["result"]
+        o("   org:", (p.get("organization") or {}).get("title"), "| license:", p.get("license_title"), "| modified:", p.get("metadata_modified"))
+        o("   notes:", strip(p.get("notes") or "")[:600])
+        res = p.get("resources", [])
+        o("   n resources:", len(res))
+        for r in res[:40]:
+            o("     ", r.get("name"), "|", r.get("format"), "|", r.get("url"), "|", (r.get("description") or "")[:80])
+        url = res[0]["url"] if res else None
+    except Exception as e:  # noqa: BLE001
+        o("   fail", e)
+        url = None
+    if url:
+        st, ct, b, fu = o.show("QQP csv first 64KB", url, n=0, headers={"Range": "bytes=0-65535"}, timeout=60)
+        t = txt(b)
+        lines = t.splitlines()
+        o("   first lines:")
+        for ln in lines[:8]:
+            o("     ", ln[:300])
+        hits = [ln for ln in lines if re.search(r"HUEVO|LECHE|TORTILLA|ARROZ|FRIJOL|POLLO|AZUCAR|ACEITE|PAN ", ln, flags=re.I)]
+        o("   staple hits:", len(hits))
+        for ln in hits[:12]:
+            o("     ", ln[:300])
+    st, ct, b, fu = o.show("INEGI preciospromedio", "https://www.inegi.org.mx/app/preciospromedio/", n=0)
     h = txt(b)
-    flows = re.findall(r'<structure:Dataflow[^>]*id="([^"]+)"[^>]*>.*?<common:Name xml:lang="en">([^<]+)</common:Name>', h, flags=re.S)
-    if not flows:
-        flows = re.findall(r'id="([^"]+)"[^>]*>\s*<com(?:mon)?:Name[^>]*>([^<]+)<', h)
-    o("   n flows:", len(flows))
-    for i, nm in flows:
-        if re.search(r"price|retail", nm, flags=re.I):
-            o("     ", i, "|", nm)
+    o("   forms:", re.findall(r"<form[^>]*>", h)[:3])
+    o("   selects:", re.findall(r'<select[^>]*(?:id|name)="([^"]+)"', h)[:20])
+    o("   options:", re.findall(r'<option[^>]*value="([^"]*)"[^>]*>([^<]*)', h)[:60])
+    o("   inputs:", re.findall(r'<input[^>]*name="([^"]+)"', h)[:30])
+    o("   text:", strip(re.sub(r"<script.*?</script>", " ", h, flags=re.S))[:1500])
     return o
 
 
-# ---------------------------------------------------------------- extras
-def extras():
-    o = Out("EXTRA candidates: NZ, Ireland, Singapore, Malaysia, South Africa, Russia")
-    st, ct, b, fu = o.show("StatsNZ csv list", "https://www.stats.govt.nz/large-datasets/csv-files-for-download/", n=0)
+# ---------------------------------------------------------------- misc round 2
+def misc2():
+    o = Out("MISC2 Germany GENESIS new host, India captcha, Korea retry, Brazil DIEESE form, ABS")
+    o.show("GENESIS new host find", "https://genesis.destatis.de/genesisWS/rest/2020/find/find",
+           n=1200, data=urllib.parse.urlencode({"term": "Durchschnittspreise", "category": "tables", "pagelength": "20", "language": "de"}).encode(),
+           headers={"username": "GAST", "password": "GAST", "Content-Type": "application/x-www-form-urlencoded"}, timeout=60)
+    st, ct, b, fu = o.show("fcainfoweb", "https://fcainfoweb.nic.in/reports/report_menu_web.aspx", n=0)
     h = txt(b)
-    sp = o.links(h, r'href="[^"]*selected-price-index[^"]*\.csv"', n=5)
-    if sp:
-        u = urllib.parse.urljoin("https://www.stats.govt.nz/", sp[0][6:-1])
-        st, ct, b, fu = o.show("StatsNZ SPI csv", u, n=0, timeout=120)
-        try:
-            rows = list(csv.DictReader(io.StringIO(txt(b))))
-            o("   rows", len(rows), "cols", list(rows[0].keys()))
-            ap = [r for r in rows if (r.get("Series_reference") or "").startswith("CPIM.SAP")]
-            lat = max(r["Period"] for r in ap) if ap else None
-            o("   CPIM.SAP rows", len(ap), "latest", lat, "distinct", len({r["Series_reference"] for r in ap}))
-            for r in ap:
-                if r["Period"] == lat and any(k in (r.get("Series_title_1") or "").lower() for k in KEYS):
-                    o("     ", r["Series_reference"], "|", r.get("Series_title_1"), "|", r.get("Data_value"), r.get("UNITS"))
-        except Exception as e:  # noqa: BLE001
-            o("   nz parse fail", e)
-    st, ct, b, fu = o.show("CSO Ireland CPM12", "https://ws.cso.ie/public/api.restful/PxStat.Data.Cube_API.ReadDataset/CPM12/JSON-stat/2.0/en", n=0, timeout=60)
-    try:
-        j = json.loads(b)
-        o("   label:", j.get("label"), "| updated:", j.get("updated"), "| ids:", j.get("id"), "| size:", j.get("size"))
-        for d in j.get("id", []):
-            lab = j["dimension"][d]["category"].get("label", {})
-            o(f"   dim {d} ({j['dimension'][d].get('label')}):", list(lab.values())[:60] if len(lab) < 400 else (list(lab.values())[:5], "...", list(lab.values())[-5:]))
-    except Exception as e:  # noqa: BLE001
-        o("   cso fail", e, txt(b[:200]))
-    st, ct, b, fu = o.show("SingStat search", "https://tablebuilder.singstat.gov.sg/api/table/resourceid?keyword=average%20retail%20prices&searchOption=all", n=0)
-    try:
-        j = json.loads(b)
-        recs = j.get("Data", {}).get("records", [])
-        for r in recs[:10]:
-            o("     ", r.get("id"), "|", r.get("title"), "|", r.get("frequency"))
-        if recs:
-            st2, ct2, b2, fu2 = o.show("SingStat tabledata", f"https://tablebuilder.singstat.gov.sg/api/table/tabledata/{recs[0]['id']}?limit=200", n=0)
-            jj = json.loads(b2)
-            dat = jj.get("Data", {})
-            o("     title:", dat.get("title"), "| dataLastUpdated:", dat.get("dataLastUpdated"))
-            for row in dat.get("row", [])[:60]:
-                cols = row.get("columns", [])
-                o("       ", row.get("rowText"), "|", row.get("uoM"), "|", cols[-1] if cols else None)
-    except Exception as e:  # noqa: BLE001
-        o("   singstat fail", e, txt(b[:200]))
-    for u in ("https://storage.data.gov.my/pricecatcher/lookup_item.parquet", "https://storage.data.gov.my/pricecatcher/lookup_item.csv",
-              "https://storage.data.gov.my/pricecatcher/pricecatcher_2026-09.parquet", "https://storage.data.gov.my/pricecatcher/pricecatcher_2026-08.parquet"):
-        st, ct, b, fu = o.show("Malaysia PriceCatcher", u, n=0, timeout=90)
-        if st == 200 and u.endswith("lookup_item.csv"):
-            lines = txt(b).splitlines()
-            o("   header:", lines[0], "| n:", len(lines))
-            for ln in lines[1:]:
-                if any(k in ln.lower() for k in ("beras", "telur", "susu", "roti", "ayam", "daging", "gula", "minyak", "kentang", "tomato", "pisang", "epal", "tepung")):
-                    o("     ", ln[:160])
-        if st == 200 and u.endswith(".parquet") and "lookup" not in u:
+    i = h.lower().find("captcha")
+    o("   captcha ctx:", strip(h[max(0, i - 400): i + 400]) if i >= 0 else None)
+    o.show("data.gov.in home", "https://www.data.gov.in/", n=120)
+    o.show("KAMIS http retry", "http://www.kamis.or.kr/service/price/xml.do?action=dailySalesList&p_cert_key=111&p_cert_id=222&p_returntype=json", n=500, timeout=60)
+    o.show("KAMIS home", "https://www.kamis.or.kr/customer/main/main.do", n=120, timeout=60)
+    st, ct, b, fu = o.show("DIEESE cesta", "https://www.dieese.org.br/cesta/", n=0, timeout=40)
+    h = txt(b)
+    o("   forms:", re.findall(r"<form[^>]*>", h)[:4])
+    o("   inputs:", re.findall(r'<input[^>]*>', h)[:20])
+    o("   selects:", re.findall(r'<select[^>]*>', h)[:8])
+    o("   scripts:", re.findall(r'<script[^>]*src="([^"]+)"', h)[:10])
+    o("   inline js:", [strip(x)[:300] for x in re.findall(r"<script[^>]*>(.*?)</script>", h, flags=re.S) if x.strip()][:4])
+    for u in ("https://www.abs.gov.au/statistics/economy/price-indexes-and-inflation/average-retail-prices-selected-items-eight-capital-cities",
+              "https://www.abs.gov.au/ausstats/abs@.nsf/mf/6403.0.55.001"):
+        st, ct, b, fu = o.show("ABS avg retail prices", u, n=0, timeout=40)
+        h = txt(b)
+        o("   title:", title_of(h))
+        for m in re.finditer(r"(ceased|discontinu|final issue|last issue|no longer)[^<]{0,200}", h, flags=re.I):
+            o("     ctx:", strip(m.group(0))[:220])
+            break
+    return o
+
+
+# ---------------------------------------------------------------- extras round 2
+def extras2():
+    o = Out("EXTRAS2 NZ release page, CSO latest, SingStat monthly, StatsSA zip, Malaysia premise")
+    st, ct, b, fu = o.show("StatsNZ SPI release", "https://www.stats.govt.nz/information-releases/selected-price-indexes-august-2026/", n=0)
+    h = txt(b)
+    o("   title:", title_of(h))
+    csvs = o.links(h, r'href="[^"]+\.(?:csv|xlsx|zip)"', n=10)
+    for c in csvs[:3]:
+        if "csv" in c.lower():
+            u = urllib.parse.urljoin("https://www.stats.govt.nz/", c[6:-1])
+            st, ct, b, fu = o.show("NZ csv", u, n=0, timeout=120)
             try:
-                import pyarrow.parquet as pq
-                t = pq.read_table(io.BytesIO(b))
-                o("   parquet rows", t.num_rows, "schema", t.schema.names, "date range", min(t.column("date").to_pylist()), max(t.column("date").to_pylist()))
+                rows = list(csv.DictReader(io.StringIO(txt(b))))
+                o("   rows", len(rows), "cols", list(rows[0].keys()))
+                refs = Counter((r.get("Series_reference") or "")[:8] for r in rows)
+                o("   series prefixes:", refs.most_common(10))
+                ap = [r for r in rows if (r.get("Series_reference") or "").startswith("CPIM.SAP")]
+                if ap:
+                    lat = max(r["Period"] for r in ap)
+                    o("   CPIM.SAP latest", lat, "n series", len({r["Series_reference"] for r in ap}))
+                    for r in ap:
+                        if r["Period"] == lat and any(k in (r.get("Series_title_1") or "").lower() for k in KEYS):
+                            o("     ", r["Series_reference"], "|", r.get("Series_title_1"), "|", r.get("Data_value"), r.get("UNITS"))
             except Exception as e:  # noqa: BLE001
-                o("   parquet read fail", e)
-    st, ct, b, fu = o.show("StatsSA P0141", "https://www.statssa.gov.za/?page_id=1854&PPN=P0141", n=0, timeout=45)
-    h = txt(b)
-    o.links(h, r'href="[^"]*(?:[Aa]verage|xlsx?)[^"]*"', n=15)
-    o.show("Rosstat price page", "https://rosstat.gov.ru/statistics/price", n=150)
-    o.show("fedstat 31448", "https://fedstat.ru/indicator/31448", n=150)
+                o("   nz csv fail", e)
+            break
+    st, ct, b, fu = o.show("CSO CPM12", "https://ws.cso.ie/public/api.restful/PxStat.Data.Cube_API.ReadDataset/CPM12/JSON-stat/2.0/en", n=0, timeout=60)
+    try:
+        j = json.loads(b)
+        tdim = j["dimension"]["TLIST(M1)"]["category"]
+        tl = list(tdim["label"].values())
+        idim = j["dimension"]["C02363V03422"]["category"]
+        il = list(idim["label"].values())
+        vals = j["value"]
+        nt, ni = len(tl), len(il)
+        o("   months", nt, "last", tl[-1], "| items", ni, "| source note:", strip(str(j.get("note", ""))[:400]))
+        for k in range(ni):
+            v = vals[(nt - 1) * ni + k] if isinstance(vals, list) else vals.get(str((nt - 1) * ni + k))
+            if any(x in il[k].lower() for x in KEYS):
+                o("     ", il[k], "|", tl[-1], v)
+    except Exception as e:  # noqa: BLE001
+        o("   cso fail", type(e).__name__, e)
+    st, ct, b, fu = o.show("SingStat monthly", "https://tablebuilder.singstat.gov.sg/api/table/tabledata/M213761?limit=300&sortBy=key%20desc", n=0, timeout=60)
+    try:
+        dat = json.loads(b).get("Data", {})
+        o("   title:", dat.get("title"), "| lastUpdated:", dat.get("dataLastUpdated"), "| source:", dat.get("datasource"), "| footnote:", strip(str(dat.get("footnote")))[:300])
+        for row in dat.get("row", [])[:70]:
+            cols = row.get("columns", [])
+            keys_sorted = sorted(cols, key=lambda c: c.get("key"))
+            o("     ", row.get("rowText"), "|", keys_sorted[-1] if keys_sorted else None, "| n", len(cols))
+    except Exception as e:  # noqa: BLE001
+        o("   singstat fail", e)
+    u = "https://www.statssa.gov.za/timeseriesdata/Excel/P0141%20-%20CPI%20Average%20Prices%20All%20urban%20(202608).zip"
+    st, ct, b, fu = o.show("StatsSA zip", u, n=0, timeout=90)
+    try:
+        z = zipfile.ZipFile(io.BytesIO(b))
+        o("   zip members:", z.namelist())
+        nm = z.namelist()[0]
+        rows = xl_rows(z.read(nm), nm, limit_sheets=1, max_rows=600)
+        for s, r in rows[:6]:
+            o("     top:", compact(r, 20))
+        o("   n rows", len(rows))
+        sh = 0
+        for s, r in rows:
+            line = compact(r, 8)
+            if any(k in line.lower() for k in KEYS):
+                vals = [c for c in r if c not in (None, "")]
+                o("     hit:", line[:160], "| last vals:", vals[-3:])
+                sh += 1
+                if sh > 40:
+                    break
+    except Exception as e:  # noqa: BLE001
+        o("   statssa fail", type(e).__name__, e)
+    for f in ("lookup_premise.csv",):
+        st, ct, b, fu = o.show("Malaysia " + f, "https://storage.data.gov.my/pricecatcher/" + f, n=0)
+        lines = txt(b).splitlines()
+        o("   header:", lines[:1], "n", len(lines))
+        try:
+            rd = list(csv.DictReader(io.StringIO(txt(b))))
+            o("   premise_type:", Counter(r.get("premise_type") for r in rd).most_common(12))
+        except Exception as e:  # noqa: BLE001
+            o("   fail", e)
+    try:
+        import pyarrow.parquet as pq
+        st, ct, b, fu, dt = fetch("https://storage.data.gov.my/pricecatcher/pricecatcher_2026-08.parquet", timeout=90)
+        t = pq.read_table(io.BytesIO(b)).to_pydict()
+        st2, ct2, b2, fu2, dt2 = fetch("https://storage.data.gov.my/pricecatcher/lookup_item.csv")
+        lk = {r["item_code"]: r for r in csv.DictReader(io.StringIO(txt(b2)))}
+        by = defaultdict(list)
+        for ic, pr in zip(t["item_code"], t["price"]):
+            by[str(ic)].append(pr)
+        for code in ("1", "2", "118", "1109", "224", "272", "904", "992", "917", "918", "114", "160", "18", "1370", "1381"):
+            ps = by.get(code)
+            if ps:
+                o("     MY", code, lk.get(code, {}).get("item"), lk.get(code, {}).get("unit"), "| n", len(ps), "| median", round(statistics.median(ps), 2))
+        sug = [c for c, r in lk.items() if "GULA" in r["item"].upper()][:6]
+        for c in sug:
+            ps = by.get(c)
+            o("     MY sugar", c, lk[c]["item"], lk[c]["unit"], "| n", len(ps) if ps else 0, "| median", round(statistics.median(ps), 2) if ps else None)
+    except Exception as e:  # noqa: BLE001
+        o("   MY parquet fail", type(e).__name__, e)
+    o.show("data.gov.my catalogue pricecatcher", "https://api.data.gov.my/data-catalogue?id=pricecatcher&limit=2", n=300)
     return o
 
 
 if __name__ == "__main__":
-    fns = [canada, france, uk, japan, germany, mexico, india, korea, brazil, fao, australia, extras]
+    fns = [uk2, france2, japan2, fao2, mexico2, misc2, extras2]
     with ThreadPoolExecutor(max_workers=len(fns)) as ex:
         futs = [ex.submit(f) for f in fns]
         for f, fu in zip(fns, futs):

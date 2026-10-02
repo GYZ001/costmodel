@@ -45,12 +45,12 @@
   "id": "record_gates",
   "title": "货币单位逐年核对（恒等关系）",
   "status": "pass",
-  "detail": "未能证明与世界银行本币序列同一货币单位的输入不参与计算，原因见剔除记录。健康饮食成本：4 个经济体（BGR, LBR, PSE, SLE）；货币代码：1 个经济体（SLV）；官方汇率：24 个经济体（AGO, BDI, BGR, CYP, EST, GIB, GRC, GUM, HRV, IRN, LBN, LBR…）；购买力平价：20 个经济体（ATG, CYM, DMA, GRD, GUY, JAM, KNA, LBR, LCA, MMR, NGA, SSD…）；工资：50 个经济体（AND, ARE, ARG, BGR, BHR, CUB, CUW, CYP, CZE, DNK, EST, GHA…）"
+  "detail": "未能证明与世界银行本币序列同一货币单位的输入不参与计算，原因见剔除记录。area：10 个经济体（COK, FLK, GGY, JEY, MSR, NIU, REU, SHN, TKL, WLF）；健康饮食成本：28 个经济体（ABW, ARG, BGR, BHS, BMU, COD, CUW, CYM, GMB, GNQ, KNA, LBR…）；官方汇率：24 个经济体（AGO, BDI, BGR, CYP, EST, GIB, GRC, HRV, IRN, LBN, LBR, LTU…）；购买力平价：12 个经济体（BRB, GUY, LBR, MMR, SSD, SUR, SXM, TCA, UGA, VEN, VGB, ZWE）；工资：58 个经济体（AND, ARE, ARG, AZE, BGR, BHR, CUB, CUW, CYP, CZE, DNK, EST…）"
  },
  {
   "id": "identity_chain",
   "title": "恒等式：克金/小时 × 每克金购买力 = PPP 实际时薪",
   "status": "pass",
-  "detail": "2765 条记录，最大相对误差 4.2e-16"
+  "detail": "2745 条记录，最大相对误差 4.2e-16"
  }
 ]

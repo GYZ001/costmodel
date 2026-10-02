@@ -28,8 +28,9 @@ MIGRANT_TITLE = re.compile(r"^(\d{4})年农民工监测调查报告$")
 ECONOMY_TITLE = re.compile(r"国民经济")
 
 WAGE_RE = {
-    "cn_wage_nonprivate": re.compile(r"全国城镇非私营单位就业人员年平均工资\s*(\d+)\s*元，比上年增加\s*(\d+)\s*元，名义增长\s*(?:\[\d+\])?\s*([\d.]+)\s*%"),
-    "cn_wage_private": re.compile(r"全国城镇私营单位就业人员年平均工资\s*(\d+)\s*元，比上年增加\s*(\d+)\s*元，名义增长\s*(?:\[\d+\])?\s*([\d.]+)\s*%"),
+    # Wording varies slightly by year ("年平均工资为 120698 元" vs "年平均工资 129441 元"; optional footnote markers).
+    "cn_wage_nonprivate": re.compile(r"全国城镇非私营单位就业人员年平均工资\s*为?\s*(\d+)\s*元\s*，\s*比上年增加\s*(\d+)\s*元\s*，\s*名义增长\s*(?:\[\d+\])?\s*([\d.]+)\s*%"),
+    "cn_wage_private": re.compile(r"全国城镇私营单位就业人员年平均工资\s*为?\s*(\d+)\s*元\s*，\s*比上年增加\s*(\d+)\s*元\s*，\s*名义增长\s*(?:\[\d+\])?\s*([\d.]+)\s*%"),
 }
 POSITION_RE = re.compile(
     r"规模以上企业就业人员年平均工资为\s*(\d+)\s*元，其中，中层及以上管理人员\s*(\d+)\s*元，专业技术人员\s*(\d+)\s*元，"
@@ -37,7 +38,7 @@ POSITION_RE = re.compile(
 )
 POSITION_KEYS = ["cn_wage_large_ent", "cn_wage_large_ent_managers", "cn_wage_large_ent_professionals",
                  "cn_wage_large_ent_clerks", "cn_wage_large_ent_services", "cn_wage_large_ent_production"]
-MIGRANT_RE = re.compile(r"农民工月均收入\s*(\d+)\s*元，比上年增加\s*(\d+)\s*元，增长\s*([\d.]+)\s*%")
+MIGRANT_RE = re.compile(r"农民工月均收入\s*为?\s*(\d+)\s*元\s*，\s*比上年增加\s*(\d+)\s*元\s*，\s*增长\s*([\d.]+)\s*%")
 HOURS_RE = re.compile(r"全国企业就业人员周平均工作时间为\s*([\d.]+)\s*小时")
 HOURS_MONTH_RE = re.compile(r"(\d{1,2})\s*月份，全国城镇调查失业率")
 
@@ -57,7 +58,7 @@ def page_text(html: str) -> str:
     return re.sub(r"\s+", " ", text)
 
 
-def discover(f: Fetcher, pages: int = 36) -> tuple[list[Release], list[dict]]:
+def discover(f: Fetcher, pages: int = 64) -> tuple[list[Release], list[dict]]:
     """Wanted releases, plus an index of every listed release whose title mentions
     价格 (prices) - the evidence for which price statistics NBS currently publishes."""
     seen: dict[str, Release] = {}

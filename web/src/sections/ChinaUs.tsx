@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import type { Scope } from "../App";
-import { countryName, fmt, minutes, money, sig } from "../lib";
+import { countryName, fmt, minutes, sig } from "../lib";
 
 export function ChinaUs({ ds }: Scope) {
   const L = ds.latest;

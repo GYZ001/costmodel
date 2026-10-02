@@ -57,3 +57,12 @@ def test_chain_identity():
     pli = ppp / fx
     assert abs(w["hourly_gold_g"] * (gold_usd_g / pli) - w["hourly_ppp"]) < 1e-12
     assert abs(w["minutes_per_cohd_day"] - 12.6 / 60 * 60) < 1e-12
+
+
+def test_nbs_wage_release_older_wording():
+    html = ("<p>2023年，全国城镇非私营单位就业人员年平均工资为120698元，比上年增加6669元，名义增长5.8%，扣除价格因素实际增长5.5%。</p>"
+            "<p>2023年，全国城镇私营单位就业人员年平均工资为68340元，比上年增加3103元，名义增长4.8%，扣除价格因素实际增长4.5%。</p>")
+    obs = {(o.series, o.period): o.value for o in nbs.parse_release(html, "2023年城镇单位就业人员年平均工资情况", "nbs/release/202405/t20240520_1")}
+    assert obs[("cn_wage_nonprivate", "2023")] == 120698
+    assert obs[("cn_wage_nonprivate__implied_prev", "2022")] == 114029
+    assert obs[("cn_wage_private", "2023")] == 68340

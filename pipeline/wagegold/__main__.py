@@ -17,7 +17,7 @@ from . import build, validate
 from .config import GRAMS_PER_TROY_OUNCE, SITE_DATA_DIR
 from .fetch import Fetcher, FetchError
 from .model import Store
-from .sources import bls, ecb, fred, ilostat, imf, nbs, pinksheet, worldbank
+from .sources import bls, ecb, fred, ilostat, imf, nbs, oecd, pinksheet, worldbank
 from .sources_meta import describe
 
 
@@ -55,6 +55,7 @@ def main(argv=None) -> int:
         ("worldbank food prices for nutrition", lambda: worldbank.collect_fpn(f), True),
         ("ecb exchange rates", lambda: ecb.collect(f), False),
         ("fred", lambda: fred.collect(f), False),
+        ("oecd average wages", lambda: oecd.collect(f), False),
         ("bls", lambda: bls.collect(f, today), True),
         ("nbs", lambda: nbs.collect(f), True),
     ):
@@ -68,7 +69,13 @@ def main(argv=None) -> int:
         ilo_dic = ilo[1]
 
     if problems:
-        print("\nRequired sources failed; nothing written.\n  " + "\n  ".join(problems), file=sys.stderr)
+        # Keep what was fetched (each snapshot passed its own content check) so the
+        # failure can be investigated offline; the website dataset is not touched.
+        f.save_manifest()
+        from .config import DATA_DIR
+        report = [{"id": "sources", "title": "必需数据源", "status": "fail", "detail": "；".join(problems)}]
+        (DATA_DIR / "checks.json").write_text(json.dumps(report, ensure_ascii=False, indent=1) + "\n", encoding="utf-8")
+        print("\nRequired sources failed; website dataset not written.\n  " + "\n  ".join(problems), file=sys.stderr)
         return 1
 
     years = [str(y) for y in range(2000, today.year + 1)]

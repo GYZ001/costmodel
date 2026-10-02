@@ -46,7 +46,8 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add data web/public/data
+          git add -A data
+          if [ -d web/public/data ]; then git add -A web/public/data; fi
           if git diff --cached --quiet; then
             echo "数据无变化"
             exit 0

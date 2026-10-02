@@ -1,8 +1,56 @@
 [
  {
-  "id": "sources",
-  "title": "必需数据源",
-  "status": "fail",
-  "detail": "nbs: ValueError: conflicting values for ('cn_weekly_hours_enterprise', 'CHN', '2023-02'): 47.9 (nbs/release/202303/t20230315_1937190) vs 46.7 (nbs/release/202302/t20230203_1901402)"
+  "id": "gold_wb_vs_imf",
+  "title": "金价：世界银行 Pink Sheet vs IMF PCPS 月均价",
+  "status": "pass",
+  "detail": "320 个重叠月份，最大偏差 0.74%（2011-12：世行 1,640.0，IMF 1,652.3）"
+ },
+ {
+  "id": "gold_fresh",
+  "title": "金价数据新鲜度",
+  "status": "pass",
+  "detail": "最新月份 2026-08，距今 2 个月"
+ },
+ {
+  "id": "fx_ecb_vs_h10",
+  "title": "汇率：ECB 参考汇率（交叉）vs 美联储 H.10 月均",
+  "status": "pass",
+  "detail": "1692 个国家-月份对比，最大偏差 0.57%（ZAF 2017-12：ECB 交叉汇率 13.1670，美联储 H.10 13.0918）"
+ },
+ {
+  "id": "bls_vs_fred",
+  "title": "美国时薪：BLS API vs FRED 转载",
+  "status": "pass",
+  "detail": "246 个月份对比，最大偏差 0.00%（BLS 修订后 FRED 可能晚一天同步）"
+ },
+ {
+  "id": "nbs_internal",
+  "title": "国家统计局工资：前后年份与增速自洽",
+  "status": "pass",
+  "detail": "cn_wage_nonprivate 2024：本年发布 124110，次年发布反推 124110；cn_wage_nonprivate 2023：本年发布 120698，次年发布反推 120698；cn_wage_nonprivate 2025 增速：公布 4.3%，计算 4.30%；cn_wage_nonprivate 2024 增速：公布 2.8%，计算 2.83%；cn_wage_nonprivate 2023 增速：公布 5.8%，计算 5.85%；cn_wage_private 2024：本年发布 69476，次年发布反推 69476；cn_wage_private 2023：本年发布 68340，次年发布反推 68340；cn_wage_private 2025 增速：公布 3.0%，计算 3.04%；cn_wage_private 2024 增速：公布 1.7%，计算 1.66%；cn_wage_private 2023 增速：公布 4.8%，计算 4.76%；cn_migrant_monthly 2024：本年发布 4961，次年发布反推 4961；cn_migrant_monthly 2023：本年发布 4780，次年发布反推 4780；cn_migrant_monthly 2022：本年发布 4615，次年发布反推 4615；cn_migrant_monthly 2021：本年发布 4432，次年发布反推 4432；cn_migrant_monthly 2025 增速：公布 2.3%，计算 2.30%；cn_migrant_monthly 2024 增速：公布 3.8%，计算 3.79%；cn_migrant_monthly 2023 增速：公布 3.6%，计算 3.58%；cn_migrant_monthly 2022 增速：公布 4.1%，计算 4.13%；cn_migrant_monthly 2021 增速：公布 8.8%，计算 8.84%"
+ },
+ {
+  "id": "cn_ilo_nbs",
+  "title": "中国：ILOSTAT 月薪 = 国家统计局私营单位年薪 ÷ 12",
+  "status": "pass",
+  "detail": "重叠年份 2022；最大偏差 0.008%（2022：ILOSTAT×12 = 65,232，国家统计局 65,237）"
+ },
+ {
+  "id": "us_ppp_1",
+  "title": "美国 PPP 恒等于 1（国际元以美元为基准）",
+  "status": "pass",
+  "detail": "检查 26 个年份"
+ },
+ {
+  "id": "record_gates",
+  "title": "记录级一致性：跨数据集货币单位与汇率核对",
+  "status": "pass",
+  "detail": "不一致的记录已剔除并在下表列出原因。健康饮食成本：1 个经济体（SLE）；汇率：2 个经济体（ISL, THA）；购买力平价：6 个经济体（BGR, HRV, LBN, LBR, SYR, ZWE）；工资：26 个经济体（AZE, BGR, CHL, COL, CYP, CZE, DNK, EST, GIB, GUM, HRV, HUN…）"
+ },
+ {
+  "id": "identity_chain",
+  "title": "恒等式：克金/小时 × 每克金购买力 = PPP 实际时薪",
+  "status": "pass",
+  "detail": "3026 条记录，最大相对误差 4.3e-16"
  }
 ]

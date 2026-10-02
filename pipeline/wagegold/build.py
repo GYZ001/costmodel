@@ -44,6 +44,7 @@ class WageVariant:
     series_key: str = ""  # publisher's series, e.g. "ILOSTAT ilo_monthly_mean@BA:463"
     notes_sig: list[str] = field(default_factory=list)  # labels of the notes that define what the figure measures
     quote: str = ""  # the publisher's own definitions, verbatim in its language (caveat holds this project's notes)
+    quote_lang: str | None = None  # language of the quote (BCP 47), e.g. "zh" for NBS
 
 
 # --------------------------------------------------------------------------------------
@@ -1067,7 +1068,7 @@ def china_variants(store: Store, units: UnitGraph, year: str, definitions: dict)
             hours_week=hours["mean"] if hours else None,
             method=M("d.method.cn", h=hours["mean"]) if hours else no_hours,
             snapshots=[o.snapshot] + (hours["snapshots"] if hours else []),
-            caveat=notes, quote=quote, restricted=True, currency="CNY",
+            caveat=notes, quote=quote, quote_lang="zh" if quote else None, restricted=True, currency="CNY",
             series_id=f"NBS {series}", source_id="NBS", series_key=f"NBS {series}",
         ))
     o = store.get("cn_migrant_monthly", "CHN", year)
@@ -1080,7 +1081,7 @@ def china_variants(store: Store, units: UnitGraph, year: str, definitions: dict)
             method=M("d.method.cn_migrant", h=hours["mean"]) if hours else no_hours,
             snapshots=[o.snapshot] + (hours["snapshots"] if hours else []),
             caveat=[hours_note, M("d.cav.cn_migrant_hours")] if hours else [],
-            quote=excerpts_quote([definitions.get(o.snapshot, {}).get("definition")]),
+            quote=(q := excerpts_quote([definitions.get(o.snapshot, {}).get("definition")])), quote_lang="zh" if q else None,
             restricted=True, currency="CNY", series_id="NBS cn_migrant_monthly", source_id="NBS",
             series_key="NBS cn_migrant_monthly",
         ))

@@ -1,14 +1,15 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import type { Dataset } from "./types";
-import { bestYear, countryName, fmt, wageYears, type View } from "./lib";
-import { ChainSection } from "./sections/Chain";
+import { useI18n } from "./i18n";
+import { LANGS } from "./i18n/langs";
+import { bestYear, byName, countryName, wageYears, type View } from "./lib";
+import { HowItWorks } from "./sections/HowItWorks";
 import { GoldPerHour } from "./sections/GoldPerHour";
 import { GoldBuys } from "./sections/GoldBuys";
 import { RealWage } from "./sections/RealWage";
 import { PriceStructure } from "./sections/PriceStructure";
 import { GoldRuler } from "./sections/GoldRuler";
-import { ChinaUs } from "./sections/ChinaUs";
-import { Claims } from "./sections/Claims";
+import { Profiles } from "./sections/Profiles";
 import { Methods } from "./sections/Methods";
 
 export type Group = "g20" | "all";
@@ -18,13 +19,13 @@ export interface Scope {
   year: string;
   view: View;
   group: Group;
+  /** Economies the reader chose to focus on (none by default). */
   picks: string[];
   /** Each picked economy keeps the categorical colour slot it was given when picked (0–7). */
   slotOf: Record<string, number>;
   togglePick: (iso3: string) => void;
 }
 
-const DEFAULT_PICKS = ["CHN", "USA", "JPN", "DEU", "IND", "BRA"];
 const MAX_PICKS = 8; // one per categorical series colour
 
 interface Pick { iso: string; slot: number }
@@ -37,16 +38,30 @@ function toggle(cur: Pick[], iso: string): Pick[] {
   return [...kept, { iso, slot }];
 }
 
+/** Focus economies from the address (?focus=ISO,ISO), so a view can be shared. */
+function picksFromUrl(ds: Dataset): Pick[] {
+  const raw = new URLSearchParams(location.search).get("focus") ?? "";
+  return raw.split(",").filter((c) => ds.countries[c]).reduce(toggle, [] as Pick[]);
+}
+
 export default function App({ ds }: { ds: Dataset }) {
+  const i = useI18n();
   const [view, setView] = useState<View>("hourly");
   const best = useMemo(() => bestYear(ds, view), [ds, view]);
   const [yearPick, setYearPick] = useState<string | null>(null);
   const year = yearPick ?? best;
   const [group, setGroup] = useState<Group>("g20");
-  const [picked, setPicked] = useState<Pick[]>(() => DEFAULT_PICKS.filter((c) => ds.countries[c]).reduce(toggle, [] as Pick[]));
+  const [picked, setPicked] = useState<Pick[]>(() => picksFromUrl(ds));
   const togglePick = (iso3: string) => setPicked((cur) => toggle(cur, iso3));
   const picks = useMemo(() => picked.map((p) => p.iso), [picked]);
   const slotOf = useMemo(() => Object.fromEntries(picked.map((p) => [p.iso, p.slot])), [picked]);
+
+  useEffect(() => {
+    const url = new URL(location.href);
+    if (picks.length) url.searchParams.set("focus", picks.join(","));
+    else url.searchParams.delete("focus");
+    history.replaceState(null, "", url);
+  }, [picks]);
 
   const years = useMemo(() => {
     const ys = new Set<string>();
@@ -61,20 +76,23 @@ export default function App({ ds }: { ds: Dataset }) {
         .filter(([iso, c]) => (group === "all" ? picks.includes(iso) : c.g20 || picks.includes(iso)))
         .filter(([, c]) => !wageYears(c, view).includes(year))
         .map(([, c]) => {
+          const name = countryName(i, c);
           const ys = wageYears(c, view);
-          if (view === "hourly" && wageYears(c, "monthly").includes(year)) return `${countryName(c)}（该年无同口径时薪，可切换“按月薪”）`;
+          if (view === "hourly" && wageYears(c, "monthly").includes(year)) return i.t("missing.monthly_only", { name });
           const medianNow = c.years[year]?.wages.some((w) => w.concept === "median" && (view === "hourly" ? w.hourly_gold_g : w.monthly_gold_g));
           const ms = view === "hourly" ? wageYears(c, "monthly") : [];
           if (ys.length) {
-            const later = ms.length && ms[0] > ys[0] ? `；平均月薪最近 ${ms[0]} 年` : "";
-            return `${countryName(c)}（${medianNow ? "该年只有中位数；" : ""}平均${view === "hourly" ? "时薪" : "月薪"}最近 ${ys[0]} 年${later}）`;
+            const latest = i.t(view === "hourly" ? "missing.latest_hourly" : "missing.latest_monthly", { year: ys[0] });
+            const later = ms.length && ms[0] > ys[0] ? i.t("missing.latest_monthly", { year: ms[0] }) : null;
+            return i.t("missing.item", { name, detail: i.j([...(medianNow ? [i.t("missing.median_only_now")] : []), latest, ...(later ? [later] : [])]) });
           }
-          if (ms.length) return `${countryName(c)}（无同口径时薪；平均月薪最近 ${ms[0]} 年）`;
+          if (ms.length) return i.t("missing.item", { name, detail: i.j([i.t("missing.no_hourly"), i.t("missing.latest_monthly", { year: ms[0] })]) });
           // Economies whose verified figures are all medians have no primary (average) figure.
           const med = Object.keys(c.years).filter((y) => c.years[y].wages.some((w) => w.concept === "median" && (w.hourly_gold_g || w.monthly_gold_g))).sort();
-          return `${countryName(c)}${med.length ? `（只有中位数，没有平均工资；中位数最近 ${med[med.length - 1]} 年）` : "（无可核对工资数据）"}`;
-        }),
-    [ds, group, picks, view, year],
+          return i.t("missing.item", { name, detail: med.length ? i.t("missing.median_only", { year: med[med.length - 1] }) : i.t("missing.none") });
+        })
+        .sort(byName(i)),
+    [ds, group, picks, view, year, i],
   );
   const checks = ds.checks.filter((c) => c.status !== "info"); // "info" rows are overviews, not checks
   const passed = checks.filter((c) => c.status === "pass").length;
@@ -84,119 +102,113 @@ export default function App({ ds }: { ds: Dataset }) {
   return (
     <>
       <header className="top wrap">
-        <h1>一小时的劳动，能换多少黄金、买多少东西？</h1>
-        <p className="lede">
-          把各国的时薪先换成<strong>黄金克数</strong>，再看这些黄金在<strong>当地</strong>能买到多少东西。
-          全部数字来自世界银行、国际劳工组织、OECD、美国劳工统计局、国家统计局等官方发布，原始文件逐个存档、可追溯、可复算。
-        </p>
+        <div className="langbar">
+          <label>
+            <span className="sr-only">{i.t("app.language")}</span>
+            <select value={i.lang.code} onChange={(e) => i.setLang(e.target.value)} aria-label={i.t("app.language")}>
+              {LANGS.map((l) => <option key={l.code} value={l.code} lang={l.code}>{l.name}</option>)}
+            </select>
+          </label>
+        </div>
+        <h1>{i.t("app.title")}</h1>
+        <p className="lede">{i.t("app.lede")}</p>
         <div className="toolbar">
           <span className="badge">
             <span className="dot" style={{ background: "var(--gold)" }} />
-            最新金价 {g.period}：{fmt(g.usd_oz, 0)} 美元/盎司 ≈ {fmt(g.usd_g, 1)} 美元/克
+            {i.t("app.gold_badge", { period: g.period, oz: i.n(g.usd_oz, "int"), g: i.n(g.usd_g, "d1") })}
           </span>
           <span className="badge">
             <span className="dot" style={{ background: failed ? "var(--critical)" : "var(--good)" }} />
-            交叉校验 {passed}/{checks.length} 通过
+            {i.t("app.checks_badge", { passed: i.n(passed, "int"), total: i.n(checks.length, "int") })}
           </span>
-          <span className="badge">数据生成于 {new Date(ds.generated_at).toLocaleString("zh-CN", { hour12: false })}</span>
-          {ds.stale.length > 0 && <span className="badge">⚠ {ds.stale.length} 个来源本次未更新，沿用上次快照</span>}
+          <span className="badge">
+            {i.t("app.generated", { time: new Date(ds.generated_at).toLocaleString(i.lang.locale, { dateStyle: "medium", timeStyle: "short" }) })}
+          </span>
+          {ds.stale.length > 0 && <span className="badge">⚠ {i.t("app.stale", { n: i.n(ds.stale.length, "int") })}</span>}
         </div>
       </header>
 
-      <nav className="sections" aria-label="章节">
+      <nav className="sections" aria-label={i.t("nav.label")}>
         <div className="wrap">
-          <a href="#chain">三步换算</a>
-          <a href="#gold">劳动→黄金</a>
-          <a href="#buys">黄金→商品</a>
-          <a href="#real">真实购买力</a>
-          <a href="#structure">什么贵什么便宜</a>
-          <a href="#ruler">黄金这把尺子</a>
-          <a href="#cnus">中美细看</a>
-          <a href="#claims">核对之前的说法</a>
-          <a href="#method">方法与来源</a>
+          <a href="#how">{i.t("nav.how")}</a>
+          <a href="#gold">{i.t("nav.gold")}</a>
+          <a href="#buys">{i.t("nav.buys")}</a>
+          <a href="#real">{i.t("nav.real")}</a>
+          <a href="#structure">{i.t("nav.structure")}</a>
+          <a href="#ruler">{i.t("nav.ruler")}</a>
+          <a href="#profiles">{i.t("nav.profiles")}</a>
+          <a href="#method">{i.t("nav.method")}</a>
         </div>
       </nav>
 
       <main className="wrap">
-        <section className="block" aria-label="全局筛选">
+        <section className="block" aria-label={i.t("controls.label")}>
           <div className="controls" style={{ marginBottom: 0 }}>
-            <span className="seg" role="group" aria-label="工资口径">
-              <button aria-pressed={view === "hourly"} onClick={() => setView("hourly")}>按时薪</button>
-              <button aria-pressed={view === "monthly"} onClick={() => setView("monthly")}>按月薪（不需工时假设）</button>
+            <span className="seg" role="group" aria-label={i.t("controls.view")}>
+              <button aria-pressed={view === "hourly"} onClick={() => setView("hourly")}>{i.t("controls.hourly")}</button>
+              <button aria-pressed={view === "monthly"} onClick={() => setView("monthly")}>{i.t("controls.monthly")}</button>
             </span>
             <label>
-              参考年份{" "}
-              <select value={year} onChange={(e) => setYearPick(e.target.value)} title="默认年份：至少三分之二的 G20 成员有数据的最近年份">
+              {i.t("controls.year")}{" "}
+              <select value={year} onChange={(e) => setYearPick(e.target.value)} title={i.t("controls.year_default_title")}>
                 {years.map((y) => (
-                  <option key={y} value={y}>
-                    {y} 年{y === best ? "（默认）" : ""}
-                  </option>
+                  <option key={y} value={y}>{i.t(y === best ? "controls.year_default" : "controls.year_option", { year: y })}</option>
                 ))}
               </select>
             </label>
-            <span className="seg" role="group" aria-label="经济体范围">
-              <button aria-pressed={group === "g20"} onClick={() => setGroup("g20")}>二十国集团（G20）成员</button>
-              <button aria-pressed={group === "all"} onClick={() => setGroup("all")}>全部有数据的经济体</button>
+            <span className="seg" role="group" aria-label={i.t("controls.group")}>
+              <button aria-pressed={group === "g20"} onClick={() => setGroup("g20")}>{i.t("controls.g20")}</button>
+              <button aria-pressed={group === "all"} onClick={() => setGroup("all")}>{i.t("controls.all")}</button>
             </span>
           </div>
           <div className="controls" style={{ marginTop: 10 }}>
-            <span>重点对比：</span>
+            <span>{i.t("controls.focus")}</span>
             <div className="chips">
               {picks.map((iso) => (
-                <button key={iso} className="chip" aria-pressed="true" onClick={() => togglePick(iso)} title="点击移除">
-                  {countryName(ds.countries[iso])} <span className="x">×</span>
+                <button key={iso} className="chip" aria-pressed="true" onClick={() => togglePick(iso)} title={i.t("controls.remove")}>
+                  <span className="sw" style={{ background: `var(--s${slotOf[iso] + 1})`, borderRadius: "50%" }} />
+                  {countryName(i, ds.countries[iso])} <span className="x" aria-hidden>×</span>
                 </button>
               ))}
               <AddCountry ds={ds} picks={picks} onAdd={togglePick} />
             </div>
           </div>
           <p className="small muted" style={{ margin: "8px 0 0" }}>
-            所有经济体都用同一参考年份的工资、该年平均汇率、该年平均金价和该年物价——金价几年内能翻倍，混用年份会让“克金工资”失真。
-            默认年份是至少三分之二的 G20 成员有数据的最近年份（{best} 年）。
-            {missing.length > 0 && <> 该年缺少可核对工资数据：{missing.join("、")}。</>}
+            {picks.length === 0 ? i.t("controls.focus_hint_empty") : i.t("controls.focus_hint", { max: i.n(MAX_PICKS, "int") })}
+            {" "}{i.t("controls.same_year", { year: best })}
+            {missing.length > 0 && <> {i.t("controls.missing", { list: i.j(missing, "enum") })}</>}
           </p>
         </section>
 
-        <ChainSection {...scope} />
+        <HowItWorks {...scope} />
         <GoldPerHour {...scope} />
         <GoldBuys {...scope} />
         <RealWage {...scope} />
         <PriceStructure {...scope} />
         <GoldRuler {...scope} />
-        <ChinaUs {...scope} />
-        <Claims ds={ds} />
+        <Profiles {...scope} />
         <Methods ds={ds} />
       </main>
       <footer className="wrap">
-        数据与代码：<a href="https://github.com/GYZ001/costmodel">github.com/GYZ001/costmodel</a> ·
-        数据集由 GitHub Actions 从官方来源重新抓取并校验（管道代码更新时或手动触发；合并到默认分支后每天自动运行）；任何数字都可以在“方法与来源”中找到原始文件与校验和。
+        {i.t("app.footer_code")} <a href="https://github.com/GYZ001/costmodel">github.com/GYZ001/costmodel</a> · {i.t("app.footer")}
       </footer>
     </>
   );
 }
 
 function AddCountry({ ds, picks, onAdd }: { ds: Dataset; picks: string[]; onAdd: (iso: string) => void }) {
-  const options = useMemo(
-    () =>
-      Object.entries(ds.countries)
-        .filter(([iso]) => !picks.includes(iso))
-        .sort((a, b) => countryName(a[1]).localeCompare(countryName(b[1]), "zh-CN")),
-    [ds, picks],
-  );
+  const i = useI18n();
+  const options = useMemo(() => {
+    const cmp = byName(i);
+    return Object.entries(ds.countries)
+      .filter(([iso]) => !picks.includes(iso))
+      .map(([iso, c]) => [iso, countryName(i, c)] as const)
+      .sort((a, b) => cmp(a[1], b[1]));
+  }, [ds, picks, i]);
   return (
-    <select
-      value=""
-      aria-label="添加经济体"
-      onChange={(e) => {
-        if (e.target.value) onAdd(e.target.value);
-      }}
-    >
-      <option value="">＋ 添加经济体…</option>
-      {options.map(([iso, c]) => (
-        <option key={iso} value={iso}>
-          {countryName(c)}
-        </option>
-      ))}
+    <select value="" aria-label={i.t("controls.add")} onChange={(e) => e.target.value && onAdd(e.target.value)}>
+      <option value="">{i.t("controls.add_option")}</option>
+      {options.map(([iso, name]) => <option key={iso} value={iso}>{name}</option>)}
     </select>
   );
 }

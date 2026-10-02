@@ -2,8 +2,9 @@
 // from a catalog of templates.  No dependencies, so scripts can run it under Node.
 //
 // Template tokens: "{name}" or "{name:format}".
-//   numbers: num (≤6 significant digits), num4, int, d1, d2, p1 (≥1 decimal), pct2, pct3,
-//            sci1, factor (×r or ÷1/r, 3 significant digits)
+//   numbers: num (≤6 significant digits), num4, sig2, sig3 (≤n significant digits), int,
+//            d0…d6 (fixed decimals), p1 (≥1 decimal), pct0…pct3 (ratio as percent), sci1,
+//            factor (×r or ÷1/r, 3 significant digits)
 //   lists:   list (sentence separator, default), enum (enumeration), comma
 //   strings are inserted as they are; nested messages are rendered in the same language.
 
@@ -36,22 +37,20 @@ function numberFormat(locale: string, key: string, opts: Intl.NumberFormatOption
 
 export function formatNumber(x: number, fmt: string, locale: string): string {
   if (!Number.isFinite(x)) return "—";
+  let m: RegExpMatchArray | null;
+  if (fmt === "int") return numberFormat(locale, fmt, { maximumFractionDigits: 0 }).format(x);
+  if ((m = fmt.match(/^d(\d)$/))) {
+    const d = Number(m[1]);
+    return numberFormat(locale, fmt, { minimumFractionDigits: d, maximumFractionDigits: d }).format(x);
+  }
+  if ((m = fmt.match(/^pct(\d)$/))) {
+    const d = Number(m[1]);
+    return numberFormat(locale, fmt, { style: "percent", minimumFractionDigits: d, maximumFractionDigits: d }).format(x);
+  }
+  if ((m = fmt.match(/^sig(\d)$/))) return sig(x, Number(m[1]), locale);
   switch (fmt) {
-    case "int":
-      return numberFormat(locale, fmt, { maximumFractionDigits: 0 }).format(x);
-    case "d1":
-    case "d2":
-    case "d4": {
-      const d = Number(fmt.slice(1));
-      return numberFormat(locale, fmt, { minimumFractionDigits: d, maximumFractionDigits: d }).format(x);
-    }
     case "p1":
       return Math.round(x * 10) / 10 === x ? formatNumber(x, "d1", locale) : formatNumber(x, "num", locale);
-    case "pct2":
-    case "pct3": {
-      const d = Number(fmt.slice(3));
-      return numberFormat(locale, fmt, { style: "percent", minimumFractionDigits: d, maximumFractionDigits: d }).format(x);
-    }
     case "sci1":
       return x.toExponential(1).replace("e+", "e");
     case "factor":

@@ -1,20 +1,28 @@
 // Shape of public/data/dataset.json, produced by pipeline/wagegold/__main__.py.
+// Text about the data is published as language-neutral messages (Msg, rendered with the
+// reader's catalog); plain strings are codes or text quoted verbatim from a publisher.
+import type { Msg, Param } from "./i18n/render";
+
+export type Part = Param;
 
 export interface Wage {
   role: "primary" | "typical" | null; // hourly view
   mrole: "primary" | "typical" | null; // monthly view
   key: string;
-  label: string;
+  label: Msg;
   /** Label for the hourly view when the hourly figure is derived from a monthly one. */
-  label_hourly: string | null;
+  label_hourly: Msg | null;
   concept: "mean" | "median";
-  source: string;
-  method: string;
-  /** Notes that qualify the figure: ILOSTAT's own note labels (English, verbatim), and this
-   *  project's notes (e.g. a level shift against adjacent years, how hours were applied). */
-  caveat: string;
-  /** The publisher's own definitions, quoted verbatim (NBS releases); empty otherwise. */
+  /** A message, or the publisher's own name for its survey (verbatim). */
+  source: Msg | string;
+  method: Msg;
+  /** Notes that qualify the figure: this project's notes (messages) and ILOSTAT's own note
+   *  labels (English, verbatim). */
+  caveat: Part[];
+  /** The publisher's own definitions, quoted verbatim in its language (NBS releases: Chinese); empty otherwise. */
   quote: string;
+  /** Language of the quote (BCP 47), e.g. "zh". */
+  quote_lang: string | null;
   /** Publisher and survey, e.g. "ILOSTAT BA:463", "OECD", "NBS", "BLS". */
   source_id: string;
   /** Coverage limited, as the publisher states (e.g. urban units, private sector, full-time workers only). */
@@ -39,8 +47,8 @@ export interface Wage {
 
 export interface Switch {
   year: string;
-  label: string;
-  source: string;
+  label: Msg;
+  source: Msg | string;
   /** source: another publisher series; notes: the same series with different notes on what it measures */
   kind: "source" | "notes";
   only_before: string[];
@@ -70,6 +78,7 @@ export interface CountryYear {
 
 export interface Country {
   name_en: string;
+  /** The World Bank's Chinese name (fallback for zh when the browser has no name for iso2). */
   name_zh: string;
   iso2: string;
   region: string;
@@ -80,31 +89,12 @@ export interface Country {
   years: Record<string, CountryYear>;
 }
 
-export interface UsItemRow {
-  period: string;
-  price_bls_unit: number;
-  price: number;
-  minutes: number | null;
-  gold_mg: number | null;
-  preliminary: boolean;
-  /** The same month's average hourly earnings is still marked preliminary by BLS. */
-  wage_preliminary: boolean;
-}
-
-export interface UsItem {
-  label: string;
-  bls_unit: string;
-  unit: string;
-  series_id: string;
-  rows: UsItemRow[];
-}
-
 export interface Check {
+  /** named by the catalog key check.<id> */
   id: string;
-  title: string;
   /** info: an overview, not a pass/fail check */
   status: "pass" | "warn" | "fail" | "info";
-  detail: string;
+  detail: Msg;
 }
 
 export interface SnapshotInfo {
@@ -120,18 +110,16 @@ export interface SnapshotInfo {
 
 export interface SourceInfo {
   prefix: string;
-  publisher: string;
-  title: string;
+  /** catalog keys src.<id>.publisher / .title / .license / .use */
+  id: string;
   landing: string;
-  license: string;
-  use: string;
   snapshots: SnapshotInfo[];
 }
 
 export interface Dataset {
   generated_at: string;
   constants: {
-    grams_per_troy_ounce: number; weeks_per_month: number; assumed_hours_cn: number;
+    grams_per_troy_ounce: number; weeks_per_month: number;
     /** bound for currency units; for one figure in two time units; for figures of different concepts */
     max_factor: number; time_factor: number; unit_gap: number;
     /** By yardstick (hfce = household consumption per head, gdp = GDP per head) and years
@@ -147,50 +135,19 @@ export interface Dataset {
     source_updated: string | null;
   };
   countries: Record<string, Country>;
-  icp2021_pli_us: Record<string, Record<string, number>>;
-  /** [month, US$ per hour, grams of gold per hour, BLS marks the value preliminary] */
-  us_monthly: Record<"us_ahe_pns_sa" | "us_ahe_all_sa", [string, number, number, boolean][]>;
-  us_items: Record<string, UsItem>;
-  cn_hours_monthly: [string, number][];
+  /** ICP 2021 category price level indices as ICP publishes them (world = 100). */
+  icp2021_pli: Record<string, Record<string, number>>;
   /** [year, monthly wage in LCU, grams of gold, source line, series breaks before this point, why] */
   wage_gold_history: Record<string, {
-    label: string; source_id: string; restricted: boolean;
-    /** ILOSTAT's coverage notes and remarks on the drawn records (English, verbatim) */
-    notes: string[];
-    points: [string, number, number, string, boolean, string][];
+    label: Msg; source_id: string; restricted: boolean;
+    /** ILOSTAT's coverage notes and remarks on the drawn records (English, verbatim; with years when not all) */
+    notes: Part[];
+    points: [string, number, number, Msg | string, boolean, Part][];
   }>;
   /** ILOSTAT survey mean monthly earnings ÷ OECD's FTE wage, same economy and year: range over all such pairs. */
   oecd_vs_survey: { n: number; min: number; min_at: [string, string]; max: number; max_at: [string, string] } | null;
-  latest: {
-    period: string;
-    gold_usd_oz: number;
-    gold_usd_g: number;
-    cny_per_usd: number;
-    gold_cny_g: number;
-    us_ahe: number;
-    us_ahe_preliminary: boolean;
-    us_gold_g_per_hour: number;
-    cn: { series: string; label: string; wage_year: string; annual: number; basis: "assumed" | "actual"; hours_year: number; hours_months: string[] | null; hourly: number; gold_g_per_hour: number }[];
-  };
-  fx_recent_ecb: Record<string, [string, number][]>;
-  nbs_price_releases: {
-    built_at: string;
-    listing: string;
-    from: string | null;
-    to: string | null;
-    groups: { kind: string; count: number; first: string; last: string; example: string }[];
-  } | null;
-  /** This month's year-on-year CPI sentences, quoted verbatim from archived NBS releases
-   *  (the monthly CPI release, and the CPI paragraph of the monthly economy release). */
-  cn_cpi_yoy: {
-    period: string; kind: "cpi" | "economy"; title: string; url: string; snapshot: string; sha256: string;
-    /** text = the sentence verbatim; yoy = its clauses that report this month's year-on-year change */
-    sentences: { text: string; yoy: string[] }[];
-  }[];
-  /** Months BLS lists without a value, with BLS's own footnote. */
-  bls_unavailable: { period: string; note: string; series: string[] }[];
-  /** kind: unit / missing / notes / check / area (see build.UnitGraph._exclude) */
-  exclusions: { area: string; year: string; scope: string; kind: string; detail: string }[];
+  /** kind: unit / identity / missing / notes / check / area (see build.UnitGraph._exclude); year "*" = every year */
+  exclusions: { area: string; year: string; scope: string; kind: string; detail: Part }[];
   checks: Check[];
   sources: SourceInfo[];
   stale: string[];

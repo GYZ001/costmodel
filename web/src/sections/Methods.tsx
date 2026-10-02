@@ -1,109 +1,100 @@
+import { useMemo } from "react";
 import type { Dataset } from "../types";
-import { countryName, fmt, levelBoundsText } from "../lib";
+import { useI18n } from "../i18n";
+import { byName, countryName, levelBoundsText } from "../lib";
 
-const KIND: Record<string, string> = {
-  unit: "无法证明同一货币单位",
-  identity: "恒等关系不成立（货币单位相同，原因不明）",
-  missing: "发布方未发布",
-  notes: "按发布方注释不属于当年名义平均 / 中位工资，或观测状态为不可靠",
-  check: "数量级 / 时间单位 / 工时核对不通过",
-  area: "地区代码无法对应",
+/** Catalog key naming each kind of excluded input (dataset.exclusions[].scope). */
+export const SCOPE_KEYS: Record<string, string> = {
+  fx: "scope.fx",
+  ppp: "scope.ppp",
+  cohd: "scope.cohd",
+  currency: "scope.currency",
+  hours: "scope.hours",
+  area: "scope.area",
+  "wage:cn": "scope.wage_cn",
+  "wage:bls": "scope.wage_bls",
+  "wage:oecd": "scope.wage_oecd",
+  "wage:ilo_monthly_mean": "scope.ilo_monthly_mean",
+  "wage:ilo_monthly_median": "scope.ilo_monthly_median",
+  "wage:ilo_hourly_mean": "scope.ilo_hourly_mean",
+  "wage:ilo_hourly_median": "scope.ilo_hourly_median",
 };
-
-const SCOPE: Record<string, string> = {
-  fx: "官方汇率",
-  ppp: "购买力平价",
-  cohd: "健康饮食成本",
-  currency: "货币代码",
-  hours: "工时（ILOSTAT）",
-  area: "地区代码",
-  "wage:cn": "工资（国家统计局）",
-  "wage:bls": "工资（美国劳工统计局）",
-  "wage:oecd": "工资（OECD）",
-  "wage:ilo_monthly_mean": "工资（ILOSTAT 平均月薪）",
-  "wage:ilo_monthly_median": "工资（ILOSTAT 中位月薪）",
-  "wage:ilo_hourly_mean": "工资（ILOSTAT 平均时薪）",
-  "wage:ilo_hourly_median": "工资（ILOSTAT 中位时薪）",
-};
-
-/** One row per economy, data item and kind of reason: the excluded years and the first reason given. */
-function groupExclusions(ds: Dataset) {
-  const groups = new Map<string, { area: string; scope: string; kind: string; years: string[]; detail: string }>();
-  for (const e of ds.exclusions) {
-    const k = `${e.area}|${e.scope}|${e.kind}`;
-    const g = groups.get(k) ?? { area: e.area, scope: e.scope, kind: e.kind, years: [], detail: e.detail };
-    g.years.push(e.year);
-    groups.set(k, g);
-  }
-  return [...groups.values()].sort((a, b) => a.area.localeCompare(b.area) || a.scope.localeCompare(b.scope) || a.kind.localeCompare(b.kind));
-}
-
-function yearSpan(ys: string[]): string {
-  const s = [...ys].sort();
-  return s.length === 1 ? s[0] : `${s[0]}–${s[s.length - 1]}（${s.length} 年）`;
-}
 
 // The branch the site and its dataset were built from (set by the Pages build, .github/workflows/pages.yml).
 const BRANCH: string = import.meta.env.VITE_DATA_BRANCH || "main";
 
 export function Methods({ ds }: { ds: Dataset }) {
+  const i = useI18n();
   const repo = `https://github.com/GYZ001/costmodel/blob/${BRANCH}/`;
+  const k = ds.constants;
+  const name = (iso: string) => (ds.countries[iso] ? countryName(i, ds.countries[iso]) : iso);
+  /** One row per economy, data item and kind of reason: the excluded years and the first reason given. */
+  const groups = useMemo(() => {
+    const m = new Map<string, { area: string; scope: string; kind: string; years: string[]; detail: string }>();
+    for (const e of ds.exclusions) {
+      const key = `${e.area}|${e.scope}|${e.kind}`;
+      const g = m.get(key) ?? { area: e.area, scope: e.scope, kind: e.kind, years: [], detail: i.r(e.detail) };
+      g.years.push(e.year);
+      m.set(key, g);
+    }
+    const cmp = byName(i);
+    return [...m.values()].sort((a, b) => cmp(name(a.area), name(b.area)) || a.scope.localeCompare(b.scope) || a.kind.localeCompare(b.kind));
+  }, [ds, i]);
+  const span = (ys: string[]) => {
+    if (ys.includes("*")) return i.t("excl.all_years");
+    const s = [...ys].sort();
+    return s.length === 1 ? s[0] : i.t("excl.span", { first: s[0], last: s[s.length - 1], n: i.n(s.length, "int") });
+  };
+  const li = (key: string, params?: Record<string, string>) => <li>{i.t(key, params)}</li>;
+
   return (
     <section className="block" id="method">
-      <h2>方法与来源</h2>
-      <p className="sub">每个数字都能追溯到官方发布的原始文件。数据管道的代码、原始快照和校验结果都在仓库里。</p>
+      <h2>{i.t("m.title")}</h2>
+      <p className="sub">{i.t("m.sub")}</p>
 
       <div className="grid2">
         <div className="card">
-          <h3>计算公式</h3>
-          <ul className="small" style={{ paddingLeft: 18, margin: "6px 0" }}>
-            <li>当地金价（本币/克）= 当年国际金价年均（美元/盎司）÷ 31.1034768 × 当年平均汇率（本币/美元）</li>
-            <li>① 每小时可换黄金（克）= 时薪（本币）÷ 当地金价</li>
-            <li>② 1 克黄金可买健康饮食（天）= 当地金价 ÷ 一人一天最低成本健康饮食（本币）</li>
-            <li>② 1 克黄金的购买力（美国物价下的美元）= 美元金价（每克）÷ 居民消费价格水平（PPP ÷ 汇率）</li>
-            <li>③ 购买力平价时薪 = 时薪 ÷ 居民消费 PPP = ① × ②（管道里对每条记录都做了这个恒等式校验）</li>
-            <li>OECD 数据：时薪 = 全职当量平均年薪 ÷（全职雇员通常周工时 × 52）</li>
-            <li>ILOSTAT 只有月薪的经济体：时薪 = 月薪 ÷（同一调查的每周实际工时 × 52 ÷ 12）；同一调查没有工时的，只用于月薪口径</li>
-            <li>中国：时薪 = 年工资 ÷ 12 ÷（企业就业人员周平均工作时间 × 52 ÷ 12），工时取本项目存档的该年各月数值的平均（不少于 6 个月，否则不折算时薪）</li>
+          <h3>{i.t("m.formulas")}</h3>
+          <ul className="small list">
+            {li("m.f_gold")}
+            {li("m.f_step1")}
+            {li("m.f_step2_diet")}
+            {li("m.f_step2_intl")}
+            {li("m.f_step3")}
+            {li("m.f_oecd")}
+            {li("m.f_ilo")}
+            {li("m.f_nso")}
           </ul>
         </div>
         <div className="card">
-          <h3>需要注意的口径差异</h3>
-          <ul className="small" style={{ paddingLeft: 18, margin: "6px 0" }}>
-            <li>平均工资通常高于中位数（少数高收入者把平均拉高）。橙点是与条形同一调查发布的中位数；条形来自 OECD 或该调查没有中位数时不画，以免把不同来源的数字当成同一个分布。</li>
-            <li>ILOSTAT 汇总各国官方来源（劳动力调查、企业调查、行政记录），口径因国而异。发布方对每条记录的注释（如只覆盖城镇、只含私营部门、税后、只含全职）原文显示在悬停提示和数据表里；注释表明只覆盖部分雇员的记录在标签上注明“覆盖范围有限”。
-              选用顺序：OECD → ILOSTAT 覆盖全国全体雇员的记录 → 国家统计机构自己的数据（覆盖范围按其原文说明）→ ILOSTAT 覆盖范围有限的记录。</li>
-            <li>ILOSTAT 注明为“实际值”（按某基期价格）、不是平均或中位工资（如最低工资）、时间单位与指标不符、或观测状态为“不可靠”的记录，不参与计算；其他注释（如“使用时须谨慎”）原文显示。</li>
-            <li>数量级和时间单位：同一调查的月薪与时薪，按该调查实测工时折算应相差不超过 ×/÷{fmt(ds.constants.time_factor, 2)}（“周”与“月”之比 {fmt(ds.constants.unit_gap, 2)} 的对数中点），且月薪 ÷ 时薪在 1 到 744 小时之间；
-              该调查没有工时的，用该年其他来源每周工时的中位数（含 OECD 全职雇员通常工时）折算，相差达到 ×/÷{fmt(ds.constants.unit_gap, 2)} 才认为有误。
-              不同来源的同一种平均数（或中位数）：相差在 ×/÷{fmt(ds.constants.time_factor, 2)} 以内互相佐证；达到 ×/÷{fmt(ds.constants.unit_gap, 2)}（一个“周”与“月”之差）认为其中有单位或数量级错误；
-              介于两者之间时，口径差异和时间单位错误无法区分，数字保留，说明中注明无法确认。
-              一个月的工资高于人均全年 GDP、或低于人均一周的居民消费的，视为时间单位或数量级无法确定，同一调查同一时间单位的数字都不用。
-              一个数字的数量级只能由其他来源佐证（同一调查的月薪和时薪来自同一批数据）；对不上又无法判断是哪一个时，一并不用。</li>
-            <li>同一来源两个年份之间的变化，分别与同期名义人均居民消费和名义人均 GDP（世界银行本币值 ÷ 人口）的变化相比；
-              偏离超过 OECD 同口径平均工资在同样年数或更短时间内相对同一参照出现过的最大偏离
-              （以人均居民消费为参照：{levelBoundsText(ds, "hfce")}；以人均 GDP 为参照：{levelBoundsText(ds, "gdp")}），
-              且对每个可用的参照都超出时，说明中注明“口径或数量级可能有变化”，历年曲线在那里断开；
-              口径注释不同或注明序列中断的两年，相差超过 ×/÷{fmt(ds.constants.time_factor, 2)} 才注明。</li>
-            <li>中国没有覆盖全体雇员的单一平均工资；国家统计局发布的城镇非私营单位、城镇私营单位、规模以上企业和农民工四种口径都列出（见“中美细看”），统计范围按其原文说明。</li>
-            <li>“最低成本健康饮食”只覆盖食物，并且选的是最便宜的可得食物，不代表普通家庭的实际开销；住房、医疗、教育、社保等决定生活质量的大项不在食物篮子里，请结合“什么贵什么便宜”和购买力平价看。</li>
-            <li>所有经济体都用同一参考年份的工资、汇率、金价和物价；该年没有可核对工资数据的经济体不出现在图中。页面顶部列出缺数据的 G20 成员（选“全部”时列出缺数据的重点对比经济体）。</li>
-            <li>按月薪比较不需要任何工时假设；按时薪比较依赖工时数据，没有同口径工时的经济体只出现在按月薪的视图里。</li>
+          <h3>{i.t("m.concepts")}</h3>
+          <ul className="small list">
+            {li("m.c_median")}
+            {li("m.c_ilostat")}
+            {li("m.c_nso")}
+            {li("m.c_excluded_notes")}
+            {li("m.c_time_units", { tf: i.n(k.time_factor, "d2"), ug: i.n(k.unit_gap, "d2") })}
+            {li("m.c_continuity", { tf: i.n(k.time_factor, "d2"), hfce: levelBoundsText(i, ds, "hfce"), gdp: levelBoundsText(i, ds, "gdp") })}
+            {li("m.c_diet")}
+            {li("m.c_intl_dollar")}
+            {li("m.c_same_year")}
+            {li("m.c_monthly_view")}
+            {li("m.c_translation")}
           </ul>
         </div>
       </div>
 
       <div className="card">
-        <h3>交叉校验（每次刷新自动运行，任何一项失败都不会发布新数据）</h3>
+        <h3>{i.t("m.checks")}</h3>
         <div className="table-scroll" style={{ maxHeight: "none" }}>
           <table className="data">
-            <thead><tr><th className="l">校验</th><th className="l nw">结果</th><th className="l">详情</th></tr></thead>
+            <thead><tr><th className="l">{i.t("m.check")}</th><th className="l nw">{i.t("m.result")}</th><th className="l">{i.t("m.detail")}</th></tr></thead>
             <tbody>
               {ds.checks.map((c) => (
                 <tr key={c.id}>
-                  <td className="l" style={{ minWidth: 200 }}>{c.title}</td>
-                  <td className={`l nw status-${c.status}`}>{c.status === "pass" ? "✓ 通过" : c.status === "warn" ? "! 提示" : c.status === "info" ? "ⓘ 概况" : "✗ 失败"}</td>
-                  <td className="l small ink2" style={{ minWidth: 360 }}>{c.detail}</td>
+                  <td className="l" style={{ minWidth: 200 }}>{i.t(`check.${c.id}`)}</td>
+                  <td className={`l nw status-${c.status}`}>{i.t(`status.${c.status}`)}</td>
+                  <td className="l small ink2" style={{ minWidth: 360 }}>{i.r(c.detail)}</td>
                 </tr>
               ))}
             </tbody>
@@ -112,31 +103,25 @@ export function Methods({ ds }: { ds: Dataset }) {
       </div>
 
       <div className="card">
-        <h3>剔除的记录（{ds.exclusions.length} 条）</h3>
+        <h3>{i.t("m.excl_title", { n: i.n(ds.exclusions.length, "int") })}</h3>
         <p className="small ink2" style={{ margin: "0 0 8px" }}>
-          每个数字都要把一家机构的数（工资）除以另一家机构的数（汇率、购买力平价、饮食成本），两者必须是同一种货币单位。
-          2000 年（本数据最早的年份）以来，各国非等值的货币改值或欧元转换中倍数最小的是 1.42（拉脱维亚 2014 年加入欧元），
-          所以在本数据的年份里，“相差不超过 ×/÷{fmt(ds.constants.max_factor, 1)}”就能证明同一单位，但不证明是同一个数。
-          汇率和购买力平价只由世界银行自己的数据证明：官方汇率与“GDP 本币值 ÷ 美元值”、购买力平价与“居民消费本币值 ÷ 国际元值”相差不超过 ×/÷{fmt(ds.constants.max_factor, 1)}；
-          世界银行缺这两项时，用 ICP 2021 的居民消费价格水平（没有货币单位）× 官方汇率核对 2021 年的购买力平价；
-          该年没有可核对的数据时，沿用相邻年份的核对（数值变化不超过 ×/÷{fmt(ds.constants.max_factor, 1)}，单位不可能在其间改变）；
-          该年恒等关系不成立、但数值与已证明的年份逐年相差都不到 ×/÷{fmt(ds.constants.max_factor, 1)} 的，货币单位相同，不一致另有原因（原因不明），该年也不用。
-          工资和饮食成本再与已证明的汇率或购买力平价对上：ILOSTAT 工资 ÷ 汇率（或 ÷ 购买力平价）要与 ILOSTAT 自己发布的美元（或 PPP）换算值相符；
-          健康饮食成本的本币值 ÷ PPP 值要与购买力平价相符；OECD 不变价本币工资 ÷ PPP 美元值要与基期的购买力平价相符；国家统计机构标明的货币要与已证明的货币一致。
-          证明不了的输入不参与计算。判断只看数值，不针对任何特定国家；每条剔除的种类、原因与数字如下。
+          {i.t("m.excl_units", { mf: i.n(k.max_factor, "d1") })}{" "}
+          {i.t("m.excl_rates", { mf: i.n(k.max_factor, "d1") })}{" "}
+          {i.t("m.excl_joins")}{" "}
+          {i.t("m.excl_rule")}
         </p>
         <details>
-          <summary>按经济体查看</summary>
+          <summary>{i.t("m.excl_by_economy")}</summary>
           <div className="table-scroll">
             <table className="data">
-              <thead><tr><th className="l">经济体</th><th className="l">数据</th><th className="l">种类</th><th className="l">年份</th><th className="l">原因（首条）</th></tr></thead>
+              <thead><tr><th className="l">{i.t("col.economy")}</th><th className="l">{i.t("m.excl_item")}</th><th className="l">{i.t("m.excl_kind")}</th><th className="l">{i.t("m.excl_years")}</th><th className="l">{i.t("m.excl_reason")}</th></tr></thead>
               <tbody>
-                {groupExclusions(ds).map((g) => (
+                {groups.map((g) => (
                   <tr key={`${g.area}|${g.scope}|${g.kind}`}>
-                    <td className="l">{ds.countries[g.area] ? countryName(ds.countries[g.area]) : g.area}</td>
-                    <td className="l small">{SCOPE[g.scope] ?? g.scope}</td>
-                    <td className="l small nw">{KIND[g.kind] ?? g.kind}</td>
-                    <td className="l small">{yearSpan(g.years)}</td>
+                    <td className="l">{name(g.area)}</td>
+                    <td className="l small">{i.t(SCOPE_KEYS[g.scope] ?? "scope.other", { scope: g.scope })}</td>
+                    <td className="l small">{i.t(`kind.${g.kind}`)}</td>
+                    <td className="l small">{span(g.years)}</td>
                     <td className="l small ink2" style={{ minWidth: 320 }}>{g.detail}</td>
                   </tr>
                 ))}
@@ -147,30 +132,30 @@ export function Methods({ ds }: { ds: Dataset }) {
       </div>
 
       <div className="card">
-        <h3>数据来源与原始快照</h3>
+        <h3>{i.t("m.sources")}</h3>
         <div className="table-scroll" style={{ maxHeight: "none" }}>
           <table className="data">
-            <thead><tr><th className="l">发布机构 / 数据集</th><th className="l">用途</th><th className="l">许可</th><th>快照</th></tr></thead>
+            <thead><tr><th className="l">{i.t("m.src_publisher")}</th><th className="l">{i.t("m.src_use")}</th><th className="l">{i.t("m.src_license")}</th><th>{i.t("m.src_snapshots")}</th></tr></thead>
             <tbody>
               {ds.sources.map((s) => (
                 <tr key={s.prefix}>
                   <td className="l">
-                    <div>{s.publisher}</div>
-                    <div className="small"><a href={s.landing}>{s.title}</a></div>
+                    <div>{i.t(`src.${s.id}.publisher`)}</div>
+                    <div className="small"><a href={s.landing}>{i.t(`src.${s.id}.title`)}</a></div>
                   </td>
-                  <td className="l small ink2">{s.use}</td>
-                  <td className="l small">{s.license}</td>
+                  <td className="l small ink2">{i.t(`src.${s.id}.use`)}</td>
+                  <td className="l small">{i.t(`src.${s.id}.license`)}</td>
                   <td className="small">
                     <details>
-                      <summary>{s.snapshots.length} 个文件 · 最近抓取 {latest(s.snapshots.map((x) => x.retrieved_at))}</summary>
+                      <summary>{i.t("m.src_files", { n: i.n(s.snapshots.length, "int"), date: latest(s.snapshots.map((x) => x.retrieved_at)) })}</summary>
                       <table className="data" style={{ marginTop: 6 }}>
                         <tbody>
                           {s.snapshots.map((x) => (
                             <tr key={x.key}>
-                              <td className="l"><a href={repo + x.path}>{x.path.replace("data/raw/", "")}</a>{x.status === "stale" ? " ⚠ 本次未更新" : ""}</td>
-                              <td className="l"><a href={x.url}>原始地址</a></td>
+                              <td className="l"><a href={repo + x.path}>{x.path.replace("data/raw/", "")}</a>{x.status === "stale" ? ` ⚠ ${i.t("m.src_stale")}` : ""}</td>
+                              <td className="l"><a href={x.url}>{i.t("m.src_original")}</a></td>
                               <td className="l mono" title={x.sha256}>{x.sha256.slice(0, 12)}…</td>
-                              <td>{x.retrieved_at.replace("T", " ").replace("+00:00", " UTC")}</td>
+                              <td dir="ltr">{x.retrieved_at.replace("T", " ").replace("+00:00", " UTC")}</td>
                             </tr>
                           ))}
                         </tbody>
@@ -182,12 +167,7 @@ export function Methods({ ds }: { ds: Dataset }) {
             </tbody>
           </table>
         </div>
-        <p className="note">
-          快照 = 发布机构返回的原始字节，未做任何修改；SHA-256 可用于核对文件未被改动。
-          刷新方式：数据管道代码有改动并推送时自动运行；也可在仓库 Actions 页面选择 “data-refresh”，点击 “Run workflow” 手动运行；工作流合并到默认分支后，还会每天 07:23（UTC）自动运行（GitHub 只按默认分支上的定时设置运行）。
-          “数据来源与原始快照”只列本次生成数据集时读取的文件；仓库里还保留着以前用过的快照，便于审计。
-          原始文件链接指向构建本页的分支 {BRANCH}。
-        </p>
+        <p className="note">{i.t("m.src_note", { branch: BRANCH })}</p>
       </div>
     </section>
   );

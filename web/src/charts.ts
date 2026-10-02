@@ -1,6 +1,9 @@
 import type { EChartsCoreOption } from "echarts/core";
 import { escapeHtml, palette } from "./lib";
 
+/** "label: value" in the reader's language (the separator differs, e.g. "：" in Chinese). */
+export type KV = (label: string, value: string) => string;
+
 export interface RankItem {
   id: string;
   name: string;
@@ -12,7 +15,7 @@ export interface RankItem {
 }
 
 const AXIS_FONT = 12;
-const FONT = 'system-ui, -apple-system, "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif';
+const FONT = 'system-ui, -apple-system, "Segoe UI", Roboto, "Noto Sans", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Hiragino Kaku Gothic ProN", "Yu Gothic", "Apple SD Gothic Neo", "Malgun Gothic", "Noto Sans Arabic", "Noto Sans Devanagari", sans-serif';
 
 function baseText(p: ReturnType<typeof palette>) {
   return { color: p.ink2, fontSize: AXIS_FONT, fontFamily: FONT };
@@ -29,6 +32,7 @@ function categoryAxis(p: ReturnType<typeof palette>, names: string[], highlighte
     type: "category" as const,
     data: names,
     inverse,
+    triggerEvent: true,
     axisLine: { lineStyle: { color: p.axis } },
     axisTick: { show: false },
     axisLabel: {
@@ -60,12 +64,15 @@ export function rankingOption(opts: {
   valueName: string;
   secondaryName?: string;
   format: (v: number) => string;
-  refLine?: { value: number; label: string };
+  kv: KV;
 }): EChartsCoreOption {
   const p = palette();
   const items = [...opts.items].sort((a, b) => a.value - b.value); // bottom→top in category axis
   const names = items.map((i) => i.name);
   const byName = new Map(items.map((i) => [i.name, i]));
+  // With no economy in focus every bar is drawn alike (and labelled when there are few).
+  const anyFocus = items.some((i) => i.highlight);
+  const labelled = (i: RankItem | undefined) => !!i && (i.highlight || (!anyFocus && items.length <= 25));
   return {
     animation: false,
     grid: { left: labelWidth(names), right: 72, top: 8, bottom: 28, containLabel: false },
@@ -86,9 +93,9 @@ export function rankingOption(opts: {
         const it = byName.get(params[0].name);
         if (!it) return "";
         const sec = it.secondary != null && opts.secondaryName
-          ? `<div>${escapeHtml(opts.secondaryName)}：<b>${escapeHtml(opts.format(it.secondary))}</b></div>` : "";
+          ? `<div>${escapeHtml(opts.kv(opts.secondaryName, opts.format(it.secondary)))}</div>` : "";
         return `<div style="font-weight:600;margin-bottom:2px">${escapeHtml(it.name)}</div>` +
-          `<div>${escapeHtml(opts.valueName)}：<b>${escapeHtml(opts.format(it.value))}</b></div>${sec}` +
+          `<div><b>${escapeHtml(opts.kv(opts.valueName, opts.format(it.value)))}</b></div>${sec}` +
           it.tip.map((t) => `<div style="color:${p.ink2}">${escapeHtml(t)}</div>`).join("");
       },
     },
@@ -100,24 +107,15 @@ export function rankingOption(opts: {
         barCategoryGap: "30%",
         data: items.map((i) => ({
           value: i.value,
-          itemStyle: { color: i.highlight ? p.accent : p.deemph, borderRadius: [0, 4, 4, 0] },
+          itemStyle: { color: i.highlight || !anyFocus ? p.accent : p.deemph, borderRadius: [0, 4, 4, 0] },
         })),
         label: {
           show: true,
           position: "right",
           color: p.ink2,
           fontSize: 11.5,
-          formatter: (d: { name: string; value: number }) => (byName.get(d.name)?.highlight ? opts.format(d.value) : ""),
+          formatter: (d: { name: string; value: number }) => (labelled(byName.get(d.name)) ? opts.format(d.value) : ""),
         },
-        markLine: opts.refLine
-          ? {
-              symbol: "none",
-              silent: true,
-              lineStyle: { color: p.ink2, width: 1, type: "solid" },
-              label: { formatter: opts.refLine.label, color: p.ink2, fontSize: 11 },
-              data: [{ xAxis: opts.refLine.value }],
-            }
-          : undefined,
       },
       ...(opts.secondaryName
         ? [
@@ -139,17 +137,20 @@ export function rankingHeight(n: number): number {
   return Math.max(160, n * 20 + 56);
 }
 
-/** Dumbbell on a log axis: market-exchange-rate gap vs purchasing-power gap, relative to a reference = 100. */
+/** Dumbbell on a log axis: two values per economy in the same unit (e.g. a wage at market
+ *  exchange rates and at purchasing power parity). */
 export function dumbbellOption(opts: {
   rows: { name: string; a: number; b: number; highlight: boolean; tip: string[] }[];
   aName: string;
   bName: string;
+  format: (v: number) => string;
+  kv: KV;
 }): EChartsCoreOption {
   const p = palette();
   const rows = [...opts.rows].sort((x, y) => x.b - y.b);
   const names = rows.map((r) => r.name);
   const byName = new Map(rows.map((r) => [r.name, r]));
-  const fmtv = (v: number) => (v >= 10 ? v.toFixed(0) : v.toFixed(1));
+  const fmtv = opts.format;
   return {
     animation: false,
     grid: { left: labelWidth(names), right: 24, top: 8, bottom: 28, containLabel: false },
@@ -170,15 +171,15 @@ export function dumbbellOption(opts: {
         const r = byName.get(params[0].name);
         if (!r) return "";
         return `<div style="font-weight:600;margin-bottom:2px">${escapeHtml(r.name)}</div>` +
-          `<div>${escapeHtml(opts.aName)}：<b>${fmtv(r.a)}</b></div>` +
-          `<div>${escapeHtml(opts.bName)}：<b>${fmtv(r.b)}</b></div>` +
+          `<div>${escapeHtml(opts.kv(opts.aName, fmtv(r.a)))}</div>` +
+          `<div><b>${escapeHtml(opts.kv(opts.bName, fmtv(r.b)))}</b></div>` +
           r.tip.map((t) => `<div style="color:${p.ink2}">${escapeHtml(t)}</div>`).join("");
       },
     },
     series: [
       {
         type: "custom",
-        name: "连线",
+        name: "",
         silent: true,
         renderItem: (_params: unknown, api: any) => {
           const i = api.value(0);
@@ -215,6 +216,8 @@ export function stackedOption(opts: {
   rows: { name: string; parts: number[]; highlight: boolean; total: number; tip: string[] }[];
   partNames: string[];
   format: (v: number) => string;
+  totalName: string;
+  kv: KV;
 }): EChartsCoreOption {
   const p = palette();
   const rows = [...opts.rows].sort((a, b) => b.total - a.total);
@@ -239,9 +242,9 @@ export function stackedOption(opts: {
         const r = byName.get(params[0].name);
         if (!r) return "";
         const lines = opts.partNames
-          .map((pn, i) => `<div><span style="display:inline-block;width:14px;height:2px;background:${p.series[i]};vertical-align:4px;margin-right:6px"></span>${escapeHtml(pn)}：<b>${escapeHtml(opts.format(r.parts[i]))}</b></div>`)
+          .map((pn, i) => `<div><span style="display:inline-block;width:14px;height:2px;background:${p.series[i]};vertical-align:4px;margin-inline-end:6px"></span>${escapeHtml(opts.kv(pn, opts.format(r.parts[i])))}</div>`)
           .join("");
-        return `<div style="font-weight:600;margin-bottom:2px">${escapeHtml(r.name)}　合计 ${escapeHtml(opts.format(r.total))}</div>${lines}` +
+        return `<div style="font-weight:600;margin-bottom:2px">${escapeHtml(r.name)}</div><div><b>${escapeHtml(opts.kv(opts.totalName, opts.format(r.total)))}</b></div>${lines}` +
           r.tip.map((t) => `<div style="color:${p.ink2}">${escapeHtml(t)}</div>`).join("");
       },
     },
@@ -257,25 +260,28 @@ export function stackedOption(opts: {
   };
 }
 
-/** Heatmap of price levels relative to the United States (=1) with a diverging blue↔red scale on log ratio. */
+/** Heatmap of price levels relative to a base (ratio 1 = same as the base), on a diverging
+ *  blue↔red scale of the log ratio. */
 export function heatmapOption(opts: {
   rows: string[];
   cols: string[];
-  values: [number, number, number | null][]; // col, row, value
+  values: [number, number, number | null][]; // col, row, ratio to the base
   highlightRows: Set<string>;
+  label: (ratio: number) => string;
+  tip: (ratio: number) => string;
 }): EChartsCoreOption {
   const p = palette();
   const data = opts.values.filter((v) => v[2] !== null).map(([c, r, v]) => [c, r, Math.log2(v as number), v]);
   return {
     animation: false,
-    grid: { left: labelWidth(opts.rows), right: 8, top: 44, bottom: 8, containLabel: false },
+    grid: { left: labelWidth(opts.rows), right: 8, top: 48, bottom: 8, containLabel: false },
     xAxis: {
       type: "category",
       data: opts.cols,
       position: "top",
       axisLine: { show: false },
       axisTick: { show: false },
-      axisLabel: { ...baseText(p), interval: 0, rotate: 0, width: 64, overflow: "break", lineHeight: 14 },
+      axisLabel: { ...baseText(p), interval: 0, rotate: 0, width: 66, overflow: "break", lineHeight: 14 },
       splitArea: { show: false },
     },
     yAxis: { ...categoryAxis(p, opts.rows, (n) => opts.highlightRows.has(n), true), axisLine: { show: false } },
@@ -291,7 +297,7 @@ export function heatmapOption(opts: {
       formatter: (d: { data: [number, number, number, number] }) => {
         const [c, r, , v] = d.data;
         return `<div style="font-weight:600">${escapeHtml(opts.rows[r])} · ${escapeHtml(opts.cols[c])}</div>` +
-          `<div>价格水平 = 美国的 <b>${v.toFixed(2)}</b> 倍</div>`;
+          `<div>${escapeHtml(opts.tip(v))}</div>`;
       },
     },
     series: [
@@ -302,7 +308,7 @@ export function heatmapOption(opts: {
         label: {
           show: true,
           fontSize: 11,
-          formatter: (d: { data: [number, number, number, number] }) => d.data[3].toFixed(2),
+          formatter: (d: { data: [number, number, number, number] }) => opts.label(d.data[3]),
           color: p.ink,
         },
         emphasis: { itemStyle: { borderColor: p.ink, borderWidth: 1 } },
@@ -328,7 +334,7 @@ export function linesOption(opts: {
       axisLine: { lineStyle: { color: p.axis } },
       axisTick: { show: false },
       splitLine: { show: false },
-      axisLabel: baseText(p),
+      axisLabel: opts.xType === "category" ? baseText(p) : { ...baseText(p), formatter: "{yyyy}" },
       boundaryGap: opts.xType === "category" ? false : undefined,
     },
     yAxis: {

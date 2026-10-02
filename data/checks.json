@@ -1,56 +1,400 @@
 [
  {
   "id": "gold_wb_vs_imf",
-  "title": "金价：世界银行 Pink Sheet vs IMF PCPS 月均价",
   "status": "pass",
-  "detail": "416 个重叠月份，最大偏差 0.74%（2011-12：世行 1,640.0，IMF 1,652.3）"
+  "detail": {
+   "k": "c.gold",
+   "p": {
+    "n": 416,
+    "d": 0.0074475060101208725,
+    "month": "2011-12",
+    "wb": 1640.0,
+    "imf": 1652.305555555556
+   }
+  }
  },
  {
   "id": "gold_fresh",
-  "title": "金价数据新鲜度",
   "status": "pass",
-  "detail": "最新月份 2026-08，距今 2 个月"
- },
- {
-  "id": "fx_ecb_vs_h10",
-  "title": "汇率：ECB 参考汇率（交叉）vs 美联储 H.10 月均",
-  "status": "pass",
-  "detail": "3960 个国家-月份对比，最大偏差 1.73%（BRA 2000-01：ECB 交叉汇率 1.7744，美联储 H.10 1.8057）；阈值 3%（两者是同一市场汇率在不同时点的定价）"
+  "detail": {
+   "k": "c.gold_fresh",
+   "p": {
+    "month": "2026-08",
+    "lag": 2
+   }
+  }
  },
  {
   "id": "bls_vs_fred",
-  "title": "美国时薪：BLS API vs FRED 转载",
   "status": "pass",
-  "detail": "998 个月份对比，最大偏差 0.00%（BLS 修订后 FRED 可能晚一天同步）"
+  "detail": {
+   "k": "c.bls_fred",
+   "p": {
+    "n": 246,
+    "d": 0.0,
+    "worst": ""
+   }
+  }
  },
  {
   "id": "nbs_internal",
-  "title": "国家统计局工资：前后年份与增速自洽",
   "status": "pass",
-  "detail": "cn_wage_nonprivate 2021：本年发布 106837，次年发布反推 106837；cn_wage_nonprivate 2022：本年发布 114029，次年发布反推 114029；cn_wage_nonprivate 2023：本年发布 120698，次年发布反推 120698；cn_wage_nonprivate 2024：本年发布 124110，次年发布反推 124110；cn_wage_nonprivate 2021 增速：公布 9.7%，计算 9.71%；cn_wage_nonprivate 2022 增速：公布 6.7%，计算 6.73%；cn_wage_nonprivate 2023 增速：公布 5.8%，计算 5.85%；cn_wage_nonprivate 2024 增速：公布 2.8%，计算 2.83%；cn_wage_nonprivate 2025 增速：公布 4.3%，计算 4.30%；cn_wage_private 2021：本年发布 62884，次年发布反推 62884；cn_wage_private 2022：本年发布 65237，次年发布反推 65237；cn_wage_private 2023：本年发布 68340，次年发布反推 68340；cn_wage_private 2024：本年发布 69476，次年发布反推 69476；cn_wage_private 2021 增速：公布 8.9%，计算 8.93%；cn_wage_private 2022 增速：公布 3.7%，计算 3.74%；cn_wage_private 2023 增速：公布 4.8%，计算 4.76%；cn_wage_private 2024 增速：公布 1.7%，计算 1.66%；cn_wage_private 2025 增速：公布 3.0%，计算 3.04%；cn_migrant_monthly 2021：本年发布 4432，次年发布反推 4432；cn_migrant_monthly 2022：本年发布 4615，次年发布反推 4615；cn_migrant_monthly 2023：本年发布 4780，次年发布反推 4780；cn_migrant_monthly 2024：本年发布 4961，次年发布反推 4961；cn_migrant_monthly 2021 增速：公布 8.8%，计算 8.84%；cn_migrant_monthly 2022 增速：公布 4.1%，计算 4.13%；cn_migrant_monthly 2023 增速：公布 3.6%，计算 3.58%；cn_migrant_monthly 2024 增速：公布 3.8%，计算 3.79%；cn_migrant_monthly 2025 增速：公布 2.3%，计算 2.30%"
+  "detail": {
+   "k": "c.list",
+   "p": {
+    "items": [
+     {
+      "k": "c.nbs.level",
+      "p": {
+       "series": "cn_wage_nonprivate",
+       "year": "2021",
+       "direct": 106837,
+       "implied": 106837
+      }
+     },
+     {
+      "k": "c.nbs.level",
+      "p": {
+       "series": "cn_wage_nonprivate",
+       "year": "2022",
+       "direct": 114029,
+       "implied": 114029
+      }
+     },
+     {
+      "k": "c.nbs.level",
+      "p": {
+       "series": "cn_wage_nonprivate",
+       "year": "2023",
+       "direct": 120698,
+       "implied": 120698
+      }
+     },
+     {
+      "k": "c.nbs.level",
+      "p": {
+       "series": "cn_wage_nonprivate",
+       "year": "2024",
+       "direct": 124110,
+       "implied": 124110
+      }
+     },
+     {
+      "k": "c.nbs.growth",
+      "p": {
+       "series": "cn_wage_nonprivate",
+       "year": "2021",
+       "published": 9.7,
+       "calc": 9.712566364411224
+      }
+     },
+     {
+      "k": "c.nbs.growth",
+      "p": {
+       "series": "cn_wage_nonprivate",
+       "year": "2022",
+       "published": 6.7,
+       "calc": 6.731750236341338
+      }
+     },
+     {
+      "k": "c.nbs.growth",
+      "p": {
+       "series": "cn_wage_nonprivate",
+       "year": "2023",
+       "published": 5.8,
+       "calc": 5.848512220575475
+      }
+     },
+     {
+      "k": "c.nbs.growth",
+      "p": {
+       "series": "cn_wage_nonprivate",
+       "year": "2024",
+       "published": 2.8,
+       "calc": 2.8268902550166564
+      }
+     },
+     {
+      "k": "c.nbs.growth",
+      "p": {
+       "series": "cn_wage_nonprivate",
+       "year": "2025",
+       "published": 4.3,
+       "calc": 4.2953831278704335
+      }
+     },
+     {
+      "k": "c.nbs.level",
+      "p": {
+       "series": "cn_wage_private",
+       "year": "2021",
+       "direct": 62884,
+       "implied": 62884
+      }
+     },
+     {
+      "k": "c.nbs.level",
+      "p": {
+       "series": "cn_wage_private",
+       "year": "2022",
+       "direct": 65237,
+       "implied": 65237
+      }
+     },
+     {
+      "k": "c.nbs.level",
+      "p": {
+       "series": "cn_wage_private",
+       "year": "2023",
+       "direct": 68340,
+       "implied": 68340
+      }
+     },
+     {
+      "k": "c.nbs.level",
+      "p": {
+       "series": "cn_wage_private",
+       "year": "2024",
+       "direct": 69476,
+       "implied": 69476
+      }
+     },
+     {
+      "k": "c.nbs.growth",
+      "p": {
+       "series": "cn_wage_private",
+       "year": "2021",
+       "published": 8.9,
+       "calc": 8.933428031943457
+      }
+     },
+     {
+      "k": "c.nbs.growth",
+      "p": {
+       "series": "cn_wage_private",
+       "year": "2022",
+       "published": 3.7,
+       "calc": 3.7418103174098327
+      }
+     },
+     {
+      "k": "c.nbs.growth",
+      "p": {
+       "series": "cn_wage_private",
+       "year": "2023",
+       "published": 4.8,
+       "calc": 4.75650321136778
+      }
+     },
+     {
+      "k": "c.nbs.growth",
+      "p": {
+       "series": "cn_wage_private",
+       "year": "2024",
+       "published": 1.7,
+       "calc": 1.662276851038924
+      }
+     },
+     {
+      "k": "c.nbs.growth",
+      "p": {
+       "series": "cn_wage_private",
+       "year": "2025",
+       "published": 3.0,
+       "calc": 3.0427773619667198
+      }
+     },
+     {
+      "k": "c.nbs.level",
+      "p": {
+       "series": "cn_migrant_monthly",
+       "year": "2021",
+       "direct": 4432,
+       "implied": 4432
+      }
+     },
+     {
+      "k": "c.nbs.level",
+      "p": {
+       "series": "cn_migrant_monthly",
+       "year": "2022",
+       "direct": 4615,
+       "implied": 4615
+      }
+     },
+     {
+      "k": "c.nbs.level",
+      "p": {
+       "series": "cn_migrant_monthly",
+       "year": "2023",
+       "direct": 4780,
+       "implied": 4780
+      }
+     },
+     {
+      "k": "c.nbs.level",
+      "p": {
+       "series": "cn_migrant_monthly",
+       "year": "2024",
+       "direct": 4961,
+       "implied": 4961
+      }
+     },
+     {
+      "k": "c.nbs.growth",
+      "p": {
+       "series": "cn_migrant_monthly",
+       "year": "2021",
+       "published": 8.8,
+       "calc": 8.840864440078589
+      }
+     },
+     {
+      "k": "c.nbs.growth",
+      "p": {
+       "series": "cn_migrant_monthly",
+       "year": "2022",
+       "published": 4.1,
+       "calc": 4.129061371841147
+      }
+     },
+     {
+      "k": "c.nbs.growth",
+      "p": {
+       "series": "cn_migrant_monthly",
+       "year": "2023",
+       "published": 3.6,
+       "calc": 3.5752979414951147
+      }
+     },
+     {
+      "k": "c.nbs.growth",
+      "p": {
+       "series": "cn_migrant_monthly",
+       "year": "2024",
+       "published": 3.8,
+       "calc": 3.7866108786610786
+      }
+     },
+     {
+      "k": "c.nbs.growth",
+      "p": {
+       "series": "cn_migrant_monthly",
+       "year": "2025",
+       "published": 2.3,
+       "calc": 2.297923805684343
+      }
+     }
+    ]
+   }
+  }
  },
  {
   "id": "cn_ilo_nbs",
-  "title": "中国：历年图中的 ILOSTAT 月薪 = 国家统计局私营单位年薪 ÷ 12",
   "status": "pass",
-  "detail": "ILOSTAT FX:216；重叠年份 2020, 2021, 2022；最大偏差 0.008%（2022：ILOSTAT×12 = 65,232，国家统计局 65,237）"
+  "detail": {
+   "k": "c.cn_ilo",
+   "p": {
+    "source": "ILOSTAT FX:216",
+    "years": "2020, 2021, 2022",
+    "d": 7.66436224841731e-05,
+    "year": "2022",
+    "ilo": 65232.0,
+    "nbs": 65237
+   }
+  }
  },
  {
   "id": "us_ppp_1",
-  "title": "美国 PPP 恒等于 1（国际元以美元为基准）",
   "status": "pass",
-  "detail": "检查 26 个年份"
+  "detail": {
+   "k": "c.years_checked",
+   "p": {
+    "n": 26
+   }
+  }
  },
  {
   "id": "record_gates",
-  "title": "不参与计算的输入（按原因）",
   "status": "info",
-  "detail": "原因和数字逐条列在剔除记录中。无法证明同一货币单位：61 个经济体（ABW, AND, ARG, BGR, BHS, BMU, BRB, COD, CUB, CUW, CYM, CYP…）；恒等关系不成立（货币单位相同，原因不明）：8 个经济体（AGO, BDI, GUY, IRN, LBN, SDN, SUR, UGA）；发布方未发布该年数值：57 个经济体（ABW, ALB, AND, ARG, BHS, BIH, BMU, COD, CUB, CUW, CYM, ETH…）；按发布方的注释不属于当年名义平均或中位工资，或观测状态为不可靠：13 个经济体（ARE, AZE, BHR, CUW, GRC, GUM, MLT, QAT, SAU, SYC, YEM, ZAF…）；数量级、时间单位或工时核对不通过：8 个经济体（EGY, FIN, ISL, NRU, PRY, SLB, SVK, ZAF）；地区代码无法对应：10 个经济体（COK, FLK, GGY, JEY, MSR, NIU, REU, SHN, TKL, WLF）"
+  "detail": {
+   "k": "c.gates",
+   "p": {
+    "groups": [
+     {
+      "k": "c.gates.kind",
+      "p": {
+       "kind": {
+        "k": "kind.unit"
+       },
+       "n": 61,
+       "areas": "ABW, AND, ARG, BGR, BHS, BMU, BRB, COD, CUB, CUW, CYM, CYP…"
+      }
+     },
+     {
+      "k": "c.gates.kind",
+      "p": {
+       "kind": {
+        "k": "kind.identity"
+       },
+       "n": 8,
+       "areas": "AGO, BDI, GUY, IRN, LBN, SDN, SUR, UGA"
+      }
+     },
+     {
+      "k": "c.gates.kind",
+      "p": {
+       "kind": {
+        "k": "kind.missing"
+       },
+       "n": 57,
+       "areas": "ABW, ALB, AND, ARG, BHS, BIH, BMU, COD, CUB, CUW, CYM, ETH…"
+      }
+     },
+     {
+      "k": "c.gates.kind",
+      "p": {
+       "kind": {
+        "k": "kind.notes"
+       },
+       "n": 13,
+       "areas": "ARE, AZE, BHR, CUW, GRC, GUM, MLT, QAT, SAU, SYC, YEM, ZAF…"
+      }
+     },
+     {
+      "k": "c.gates.kind",
+      "p": {
+       "kind": {
+        "k": "kind.check"
+       },
+       "n": 8,
+       "areas": "EGY, FIN, ISL, NRU, PRY, SLB, SVK, ZAF"
+      }
+     },
+     {
+      "k": "c.gates.kind",
+      "p": {
+       "kind": {
+        "k": "kind.area"
+       },
+       "n": 10,
+       "areas": "COK, FLK, GGY, JEY, MSR, NIU, REU, SHN, TKL, WLF"
+      }
+     }
+    ]
+   }
+  }
  },
  {
   "id": "identity_chain",
-  "title": "恒等式：克金/小时 × 每克金购买力 = PPP 实际时薪",
   "status": "pass",
-  "detail": "2744 条记录，最大相对误差 4.2e-16"
+  "detail": {
+   "k": "c.identity",
+   "p": {
+    "n": 2744,
+    "worst": 4.2449106795145886e-16
+   }
+  }
  }
 ]

@@ -243,6 +243,9 @@ def test_nbs_split_wage_releases():
     html = "<p>2022年，全国城镇非私营单位就业人员年平均工资为114029元，比上年增加7192元，名义增长6.7%，扣除价格因素实际增长4.6%。</p>"
     obs = {(o.series, o.period): o.value for o in nbs.parse_release(html, "2022年城镇非私营单位就业人员年平均工资114029元", "nbs/x")}
     assert obs == {("cn_wage_nonprivate", "2022"): 114029, ("cn_wage_nonprivate__implied_prev", "2021"): 106837}
+    html = "<p>2022年全国规模以上企业就业人员年平均工资为92492元，比上年名义增长5.0%。</p>"
+    obs = {(o.series, o.period): o.value for o in nbs.parse_release(html, "2022年规模以上企业就业人员年平均工资情况", "nbs/z")}
+    assert obs == {("cn_wage_large_ent", "2022"): 92492}
     try:  # a large-enterprise release without its sentence is an error, not silently empty
         nbs.parse_release("<p>无关内容</p>", "2022年规模以上企业就业人员年平均工资情况", "nbs/y")
     except ValueError:

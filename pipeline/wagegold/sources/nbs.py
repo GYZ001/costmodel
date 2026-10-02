@@ -63,9 +63,12 @@ WAGE_RE = {
     "cn_wage_nonprivate": re.compile(r"全国城镇非私营单位就业人员年平均工资\s*为?\s*(\d+)\s*元\s*，\s*比上年增加\s*(\d+)\s*元\s*，\s*名义增长\s*(?:\[\d+\])?\s*([\d.]+)\s*%"),
     "cn_wage_private": re.compile(r"全国城镇私营单位就业人员年平均工资\s*为?\s*(\d+)\s*元\s*，\s*比上年增加\s*(\d+)\s*元\s*，\s*名义增长\s*(?:\[\d+\])?\s*([\d.]+)\s*%"),
 }
+# Headline of the large-enterprise average, in the combined releases ("规模以上企业就业
+# 人员年平均工资为98096元") and the separate 2021/2022 ones ("全国规模以上企业…为92492元").
+LARGE_ENT_RE = re.compile(r"规模以上企业就业人员年平均工资\s*为\s*(\d+)\s*元")
 COMPARABLE_RE = re.compile(r"\s*，\s*按可比口径\s*(?:\[\d+\])?\s*增长\s*([\d.]+)\s*%")
 POSITION_RE = re.compile(
-    r"规模以上企业就业人员年平均工资为\s*(\d+)\s*元，其中，中层及以上管理人员\s*(\d+)\s*元，专业技术人员\s*(\d+)\s*元，"
+    r"规模以上企业就业人员年平均工资为\s*(\d+)\s*元，其中，?\s*中层及以上管理人员\s*(\d+)\s*元，专业技术人员\s*(\d+)\s*元，"
     r"办事人员和有关人员\s*(\d+)\s*元，社会生产服务和生活服务人员\s*(\d+)\s*元，生产制造及有关人员\s*(\d+)\s*元"
 )
 POSITION_KEYS = ["cn_wage_large_ent", "cn_wage_large_ent_managers", "cn_wage_large_ent_professionals",
@@ -376,11 +379,15 @@ def parse_release(html: str, title: str, snapshot: str) -> list[Obs]:
             # "名义增长2.8%，按可比口径增长2.6%": NBS flags a change in statistical coverage.
             if comp := COMPARABLE_RE.match(text, hit.end()):
                 out.append(Obs(f"{series}__comparable_growth", "CHN", str(year), float(comp.group(1)), snapshot))
+        if hit := LARGE_ENT_RE.search(text):
+            out.append(Obs("cn_wage_large_ent", "CHN", str(year), int(hit.group(1)), snapshot))
+        elif LARGE_ENT_TITLE.match(title):
+            raise ValueError(f"{snapshot}: no large-enterprise wage sentence")
+        # By position (in a sentence only in the combined releases; the store checks that
+        # its total equals the headline figure).
         if hit := POSITION_RE.search(text):
             for key, v in zip(POSITION_KEYS, hit.groups()):
                 out.append(Obs(key, "CHN", str(year), int(v), snapshot))
-        elif LARGE_ENT_TITLE.match(title):
-            raise ValueError(f"{snapshot}: no large-enterprise wage sentence")
     elif m := MIGRANT_TITLE.match(title):
         year = int(m.group(1))
         hit = MIGRANT_RE.search(text)

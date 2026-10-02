@@ -280,7 +280,7 @@ def test_units_hours_with_scale_error_are_not_used():
 def test_restricts_reads_coverage_labels():
     assert not build.restricts("S4", "Geographical coverage: Total national")
     assert build.restricts("S4", "Geographical coverage: Total national, excluding some areas")
-    assert build.restricts("S4", "Geographical coverage: Total national, excluding overseas territories")
+    assert not build.restricts("S4", "Geographical coverage: Total national, excluding overseas territories")
     assert build.restricts("S4", "Geographical coverage: Urban areas only")
     assert not build.restricts("S4", "Geographical coverage: Not applicable")
     assert build.restricts("T3", "Age coverage - maximum age: 64 years old")

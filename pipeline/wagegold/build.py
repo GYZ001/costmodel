@@ -1,9 +1,9 @@
 """Turn parsed observations into the dataset the website renders.
 
-Every figure derived from the source data is computed here (and unit-tested); the
-browser only adds display arithmetic on top (ratios, quantiles, index lines, US-dollar
-values at the market rate).  Every derived figure is computed from
-inputs of the SAME period: a year's average wage is converted with that year's
+Every figure derived from the source data is computed here (its rules and checks are
+unit-tested); the browser only adds display arithmetic on top (ratios, quantiles,
+index lines, US-dollar values at the market rate).  Every derived figure is computed
+from inputs of the SAME period: a year's average wage is converted with that year's
 average exchange rate and that year's average gold price, and compared with
 that year's prices.
 """
@@ -89,9 +89,9 @@ def gold_tables(store: Store) -> dict:
 #          PPP ÷ WDI exchange rate = ICP's household price level relative to the US (a
 #          ratio without currency unit, so it cannot share a unit error with WDI)
 #
-# or, in a year without any of these, by carrying over an adjacent year's proof (in
-# either direction) when the value moved by less than MAX_FACTOR: its unit cannot have
-# changed in between.
+# or, in a year without any of these, by carrying over an adjacent year's check (in
+# either direction) when the value moved by less than MAX_FACTOR: its unit is taken not
+# to have changed in between.
 #
 # Other inputs are then attached to a proven F or P:
 #
@@ -113,15 +113,18 @@ def gold_tables(store: Store) -> dict:
 # else is left out with the reason and the numbers (dataset["exclusions"]).
 # --------------------------------------------------------------------------------------
 
-# A currency-unit mismatch shows up as a fixed conversion factor.  The smallest one
-# among the redenominations and euro changeovers since 2000 is Latvia's
+# A currency-unit mismatch shows up as a fixed conversion factor.  Since 2002 the
+# smallest one among the redenominations and euro changeovers is Latvia's
 # 1 EUR = 0.702804 LVL (×1.42); every other is ×1.7 or more (Cyprus ×1.71, BGN ×1.96,
-# HRK ×7.53, redenominations ×5 to ×1,000,000).  So two numbers whose ratio lies
-# within ×/÷1.4 cannot differ by a currency unit, and anything outside cannot be
+# HRK ×7.53, redenominations ×5 to ×1,000,000).  In 2000-2001 the Irish pound
+# (1 EUR = 0.787564 IEP, ×1.27) was still in use, which the bound cannot tell from the
+# euro.  Two numbers whose ratio lies within ×/÷1.4 are taken to be in the same unit -
+# a unit difference would need another difference in the opposite direction to hide
+# inside the bound, which the check cannot rule out - and anything outside cannot be
 # trusted to be in the same unit.  Differences inside the bound are not unit errors:
 # PPP vintages, fiscal-year conversion (the World Bank converts fiscal-year national
 # accounts at fiscal-year average rates: Australia, Egypt, …), publishers' own rates.
-# The bound proves a UNIT, not that two exchange rates are the same rate: where the
+# The bound is about the UNIT, not about two exchange rates being the same rate: where the
 # official rate and the factor the World Bank applied to GDP differ, both are published
 # (fx, fx_gdp_factor) and the page states the difference.
 MAX_FACTOR = 1.4
@@ -200,7 +203,8 @@ def restricts(prefix: str, label: str) -> bool:
     """Whether a coverage note limits a figure to part of a country's employees, read from
     ILOSTAT's label.  Every area, establishment-size, sector, activity, reference-group,
     population, working-time or maximum-age note does, except those stating the full
-    scope - the whole national territory (with no area excluded), all employees (or all
+    scope - the whole national territory (with no area excluded but overseas territories),
+    all employees (or all
     employment), full- and part-time workers, full-time equivalents (which re-weight all
     employees rather than select some), establishments of every size (the smaller ones
     by a sample) - and the exclusions every household survey has (people in institutions
@@ -210,7 +214,9 @@ def restricts(prefix: str, label: str) -> bool:
     employees are counted; a maximum age leaves employed people out."""
     text = label.split(":", 1)[-1].strip().lower()
     if prefix == "S4":
-        return text not in ("total national", "not applicable")
+        # Overseas territories are economies of their own in the World Bank's list (the
+        # totals every figure is divided by), so leaving them out leaves the economy whole.
+        return text not in ("total national", "total national, excluding overseas territories", "not applicable")
     if prefix == "S9":
         return not (text == "employees" or text.startswith("total"))
     if prefix == "T12":
@@ -998,9 +1004,11 @@ def ilo_variants(store: Store, units: UnitGraph, area: str, year: str, ilo_dic: 
         if monthly:
             # Hours only from the same survey (same ILOSTAT source) as the earnings, and
             # only hours that passed UnitGraph._hours.
-            # The survey's own hourly figure, if ILOSTAT publishes one, makes a derived one
-            # redundant; another survey's hourly figure does not.
-            same_survey_hourly = direct is not None and direct.source == monthly.source
+            # The survey's own usable hourly figure, if ILOSTAT publishes one, makes a
+            # derived one redundant (whether or not it is the hourly figure chosen); another
+            # survey's hourly figure does not.
+            same_survey_hourly = any(r.unit == "hour" and r.concept == concept and r.source == monthly.source
+                                     for r in usable.get(year, []))
             hours = hours_by_source.get(monthly.source)
             hours_obs = store.get(f"ilo_weekly_hours@{monthly.source}", units.ilo_area(area), year) if hours else None
             derive = hours is not None and not same_survey_hourly

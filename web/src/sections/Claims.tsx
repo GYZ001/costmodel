@@ -1,5 +1,5 @@
 import type { Dataset } from "../types";
-import { fmt, primaryWage, sig, wageYears } from "../lib";
+import { fmt, foodGroupYears, primaryWage, sig, wageYears } from "../lib";
 
 type Verdict = "ok" | "bad" | "mid";
 
@@ -145,7 +145,7 @@ export function Claims({ ds }: { ds: Dataset }) {
       verdict: "mid",
       label: np.ac && np.ac.hours_year > 2000 ? "算术对，工时偏少" : "算术对",
       why: <>{fmt(np.st.annual, 0)} ÷ 2,000 = {fmt(np.st.hourly, 1)}，{fmt(pv.st.annual, 0)} ÷ 2,000 = {fmt(pv.st.hourly, 1)}。2,000 小时是原文采用的折算假设，本项目没有存档关于法定年工作日的文件，不判断它是否为法定标准。
-        {np.ac && pv.ac && weekly && <> 国家统计局月度劳动力调查的“企业就业人员周平均工作时间”，{SAID.cnWageYear} 年本项目存档的 {np.ac.hours_months?.length ?? 0} 个月平均为 {fmt(weekly, 1)} 小时，
+        {np.ac && pv.ac && weekly && <> 国家统计局月度发布的“全国企业就业人员周平均工作时间”，{SAID.cnWageYear} 年本项目存档的 {np.ac.hours_months?.length ?? 0} 个月平均为 {fmt(weekly, 1)} 小时，
           折合一年约 {fmt(np.ac.hours_year, 0)} 小时；按调查工时算，非私营约 {fmt(np.ac.hourly, 1)} 元/小时、私营约 {fmt(pv.ac.hourly, 1)} 元/小时，
           比按 2,000 小时算{np.ac.hours_year > 2000 ? "低" : "高"} {fmt(Math.abs(1 - 2000 / np.ac.hours_year) * 100, 0)}%。
           （该工时是全部企业就业人员的平均，并非分别对应非私营、私营单位。）</>}</>,
@@ -210,7 +210,7 @@ export function Claims({ ds }: { ds: Dataset }) {
         “明显”没有可核对的标准，这里只看是否低于美国。
         {r21 != null && rLast != null && cohdLastYear !== "2021" && <> 2021 年之后的变化：世界银行公布的一人一天最低成本健康饮食（本币），2021 年到 {cohdLastYear} 年中国 {signed(cnChg)}、美国 {signed(usChg)}；
           人民币年均汇率从 {fmt(cy("2021")?.fx, 3)} 变为 {fmt(cy(cohdLastYear)?.fx, 3)} 元/美元。两者合起来，按当年汇率折算的中国 ÷ 美国从 {fmt(r21, 2)} 变为 {fmt(rLast, 2)}。
-          存档数据里只有 2021 年有六类食物的分项，其他年份只有总额；本项目只存档了 ICP 2021 的结果，所以今天各类食品的确切价差本项目给不出。</>}</>,
+          存档数据里只有 {foodGroupYears(ds).join("、")} 年有六类食物的分项，其他年份只有总额；本项目只存档了 ICP 2021 的结果，所以今天各类食品的确切价差本项目给不出。</>}</>,
     });
   }
 

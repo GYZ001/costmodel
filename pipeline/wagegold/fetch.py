@@ -155,8 +155,9 @@ class Fetcher:
         out = []
         for key in sorted(self.manifest):
             if key.startswith(prefix):
-                snap = self._previous(key)
+                snap = self.used.get(key) or self._previous(key)
                 if snap is not None:
+                    self.used[key] = snap  # read by this run: part of its provenance
                     out.append(snap)
         return out
 

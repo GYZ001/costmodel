@@ -58,10 +58,12 @@ def economy_month(title: str) -> int | None:
             return month(m)
     return None
 
+# "…年平均工资为 X 元，比上年增加（减少）Y 元，名义增长（下降）Z%" - wording varies slightly by
+# year ("为 120698 元" vs "129441 元"; optional footnote markers).
+_CHANGE = r"\s*元\s*，\s*比上年(增加|减少)\s*(\d+)\s*元\s*，\s*名义(增长|下降)\s*(?:\[\d+\])?\s*([\d.]+)\s*%"
 WAGE_RE = {
-    # Wording varies slightly by year ("年平均工资为 120698 元" vs "年平均工资 129441 元"; optional footnote markers).
-    "cn_wage_nonprivate": re.compile(r"全国城镇非私营单位就业人员年平均工资\s*为?\s*(\d+)\s*元\s*，\s*比上年增加\s*(\d+)\s*元\s*，\s*名义增长\s*(?:\[\d+\])?\s*([\d.]+)\s*%"),
-    "cn_wage_private": re.compile(r"全国城镇私营单位就业人员年平均工资\s*为?\s*(\d+)\s*元\s*，\s*比上年增加\s*(\d+)\s*元\s*，\s*名义增长\s*(?:\[\d+\])?\s*([\d.]+)\s*%"),
+    "cn_wage_nonprivate": re.compile(r"全国城镇非私营单位就业人员年平均工资\s*为?\s*(\d+)" + _CHANGE),
+    "cn_wage_private": re.compile(r"全国城镇私营单位就业人员年平均工资\s*为?\s*(\d+)" + _CHANGE),
 }
 # Headline of the large-enterprise average, in the combined releases ("规模以上企业就业
 # 人员年平均工资为98096元") and the separate 2021/2022 ones ("全国规模以上企业…为92492元").
@@ -76,7 +78,8 @@ POSITION_RE = re.compile(
 )
 POSITION_KEYS = ["cn_wage_large_ent", "cn_wage_large_ent_managers", "cn_wage_large_ent_professionals",
                  "cn_wage_large_ent_clerks", "cn_wage_large_ent_services", "cn_wage_large_ent_production"]
-MIGRANT_RE = re.compile(r"农民工月均收入\s*为?\s*(\d+)\s*元\s*，\s*比上年增加\s*(\d+)\s*元\s*，\s*增长\s*([\d.]+)\s*%")
+MIGRANT_RE = re.compile(r"农民工月均收入\s*为?\s*(\d+)\s*元\s*，\s*比上年(增加|减少)\s*(\d+)\s*元\s*，\s*(增长|下降)\s*([\d.]+)\s*%")
+MIGRANT_DEF_RE = re.compile(r"(农民工月均收入[：:]指[^。]+。)")
 HOURS_RE = re.compile(r"全国企业就业人员周平均工作时间为\s*([\d.]+)\s*小时")
 PUBDATE_META_RE = re.compile(r'name="PubDate"\s+content="(\d{4})/(\d{2})/(\d{2})')
 PUBDATE_TEXT_RE = re.compile(r"(20\d\d)/(\d\d)/(\d\d) \d\d:\d\d")
@@ -160,6 +163,10 @@ def collect(f: Fetcher) -> list[Obs]:
             # A published release does not change, so an existing snapshot is reused as is.
             snap = f.get(rel.key, rel.url, ext="html", check=_check_release(rel.title), immutable=True)
             snaps.append((snap, rel.title))
+        # Releases that have moved beyond the listing pages scanned stay in the archive and
+        # are still used (as the offline rebuild does).
+        seen = {snap.key for snap, _t in snaps}
+        snaps += [(snap, _title_of(snap)) for snap in f.committed("nbs/release/") if snap.key not in seen]
     out: list[Obs] = []
     for snap, title in snaps:
         out += parse_release(snap.read().decode("utf-8", "replace"), title, snap.key)
@@ -204,10 +211,17 @@ def write_wage_definitions(snaps: list[tuple[Snapshot, str]]) -> None:
         if not m:
             continue
         row = {"title": title, "url": snap.url, "year": m.group(1)}
-        if not MIGRANT_TITLE.match(title):
-            text = re.sub(r"\s+", "", body_text(snap.read().decode("utf-8", "replace")))
+        text = re.sub(r"\s+", "", body_text(snap.read().decode("utf-8", "replace")))
+        if MIGRANT_TITLE.match(title):
+            hit = MIGRANT_DEF_RE.search(text)
+            row["definition"] = hit.group(1) if hit else None
+        else:
+            # A release about one measure (2021, 2022) describes only that measure.
+            part = WAGE_PART_TITLE.match(title)
+            only = (["cn_wage_nonprivate" if part.group(2) == "非私营" else "cn_wage_private"] if part
+                    else ["cn_wage_large_ent"] if LARGE_ENT_TITLE.match(title) else None)
             scope = SCOPE_RE.search(text)
-            row["scope"] = [{"text": x + "。", "series": scope_series(x)}
+            row["scope"] = [{"text": x + "。", "series": only or scope_series(x)}
                             for x in (scope.group(1).split("。") if scope else []) if x]
             for k, rx in DEFINITIONS.items():
                 hit = rx.search(text)
@@ -227,24 +241,29 @@ def wage_definitions() -> dict:
     return json.loads(path.read_text(encoding="utf-8")) if path.exists() else {}
 
 
-def body_text(html: str) -> str:
+def body_text(html: str, tables: bool = True) -> str:
     """Text of the release body without page chrome.  Release pages carry the
     article twice - a desktop copy ('txt-content') followed by a mobile copy
-    ('mobile-content') - so the desktop copy is taken, up to where the mobile one starts."""
+    ('mobile-content') - so the desktop copy is taken, up to where the mobile one starts.
+    With tables=False, data tables are left out (their cells are not prose)."""
     i = html.find('class="txt-content"')
-    if i < 0:
-        return page_text(html, paragraphs=True)
-    j = html.find('class="mobile-content', i)
-    return page_text(html[html.index(">", i) + 1 : j if j >= 0 else len(html)], paragraphs=True)
+    j = html.find('class="mobile-content', i) if i >= 0 else -1
+    body = html if i < 0 else html[html.index(">", i) + 1 : j if j >= 0 else len(html)]
+    if not tables:
+        body = re.sub(r"<table\b.*?</table\s*>", "\n", body, flags=re.S | re.I)
+    return page_text(body, paragraphs=True)
 
 
 # Period phrases that open a statement: a single month ("8月份", "2026年8月份"), several
 # months ("4、5月份") or a cumulative period ("1—8月份", "1—8月平均", "上半年", "一季度",
 # "前三季度", "全年").
 PERIOD_RE = re.compile(r"\d{1,2}\s*[—–-]\s*\d{1,2}\s*月|上半年|下半年|[一二三四]季度|前三季度|全年|\d{1,2}(?:\s*、\s*\d{1,2})*\s*月份")
-# A clause giving another period's value in passing ("上月为下降2.0%"); what follows is
-# again about the period named before it.
-ASIDE_RE = re.compile(r"上月为|上年同期为|去年同期为")
+# A clause giving another period's value in passing ("上月为下降2.0%"), or describing how
+# a rate moved ("涨幅与上月持平", "涨幅比上月扩大0.3个百分点") rather than a price change;
+# what follows is again about the period named before it.
+ASIDE_RE = re.compile(r"上月为|上年同期为|去年同期为|涨幅|降幅|涨跌幅")
+# A price change: a rise or fall by a percentage, or "持平" (unchanged).
+CHANGE_RE = re.compile(r"(上涨|下降|增长|下跌|回落)\s*[\d.]+\s*%|持平")
 HEADING_RE = re.compile(r"^[一二三四五六七八九十]+、")
 
 
@@ -283,8 +302,9 @@ def yoy_sentences(text: str, month: int, topic: str | None = None) -> list[dict]
     only the second clause is February's.  Both are therefore tracked clause by clause
     (clauses end at "，", "；" and "。"); a clause naming two periods or two comparisons
     is ambiguous, and so is what inherits from it, until a single one is named again.
-    A change is a percentage or "持平" (unchanged, 0%).  Sentences end at "。" and at
-    paragraph ends (a heading is its own paragraph).
+    A change is a rise or fall by a percentage, or "持平" (unchanged, 0%); clauses about
+    how a rate moved ("涨幅与上月持平") are not price changes.  Sentences end at "。" and at
+    paragraph ends; numbered headings are not statements and reset what is inherited.
 
     With ``topic`` (e.g. "居民消费价格"), only text inside that topic is kept: it starts
     at a sentence naming the topic and ends at the next numbered heading ("八、…") or
@@ -297,17 +317,24 @@ def yoy_sentences(text: str, month: int, topic: str | None = None) -> list[dict]
         sentence = re.sub(r"\s+", "", raw)
         if not sentence:
             continue
+        heading = bool(HEADING_RE.match(sentence))
         if topic is not None:
             if topic in sentence:
                 inside = True
-            elif HEADING_RE.match(sentence) or "工业生产者" in sentence:
+            elif heading or "工业生产者" in sentence:
                 inside = False
+        if heading:
+            # A numbered heading starts a new section: nothing is inherited across it.  A
+            # heading on its own (no figure) is a title, not a statement for a period.
+            period = comparison = None
+            if not re.search(r"\d\s*%", sentence):
+                continue
         hits = []
         for clause in re.split(r"(?<=[，；])", sentence):
             period = _period(clause) or period
             comparison = _comparison(clause) or comparison
             if (inside and period == f"month:{month}" and comparison == "yoy" and not ASIDE_RE.search(clause)
-                    and ("%" in clause or "持平" in clause)):
+                    and CHANGE_RE.search(clause)):
                 hits.append(clause.rstrip("，；。"))
         if hits:
             out.append({"text": sentence, "yoy": hits})
@@ -327,11 +354,11 @@ def write_cpi_quotes(snaps: list[tuple[Snapshot, str]]) -> None:
         html = snap.read().decode("utf-8", "replace")
         if m := CPI_TITLE.match(title):
             kind, period = "cpi", f"{m.group(1)}-{int(m.group(2)):02d}"
-            sentences = yoy_sentences(body_text(html), int(m.group(2)))
+            sentences = yoy_sentences(body_text(html, tables=False), int(m.group(2)))
         elif is_economy_release(title) and HOURS_RE.search(page_text(html)):
             year, month = reference_month(html, page_text(html))
             kind, period = "economy", f"{year}-{month:02d}"
-            sentences = yoy_sentences(body_text(html), month, topic="居民消费价格")
+            sentences = yoy_sentences(body_text(html, tables=False), month, topic="居民消费价格")
         else:
             continue
         if sentences:
@@ -406,6 +433,13 @@ def _check_release(title: str):
     return check
 
 
+def _signed(hit: re.Match) -> tuple[int, int, float]:
+    """(value, change on the previous year, growth %) from a WAGE_RE / MIGRANT_RE match,
+    with the sign NBS's wording gives (增加/减少, 增长/下降)."""
+    value, up, change, rise, pct = hit.groups()
+    return int(value), int(change) * (1 if up == "增加" else -1), float(pct) * (1 if rise == "增长" else -1)
+
+
 def _comparable(series: str, year: int, text: str, hit: re.Match, snapshot: str) -> list[Obs]:
     """The comparable-basis growth NBS states in the same sentence as a headline figure."""
     sentence = text[hit.start():text.find("。", hit.start())]
@@ -426,7 +460,7 @@ def parse_release(html: str, title: str, snapshot: str) -> list[Obs]:
             hit = rx.search(text)
             if not hit:
                 raise ValueError(f"{snapshot}: no match for {series}")
-            value, increase, growth = int(hit.group(1)), int(hit.group(2)), float(hit.group(3))
+            value, increase, growth = _signed(hit)
             out.append(Obs(series, "CHN", str(year), value, snapshot, note=f"growth_pct={growth}"))
             # Kept apart from the direct series: validate.py checks it against the previous year's own release.
             out.append(Obs(f"{series}__implied_prev", "CHN", str(year - 1), value - increase, snapshot))
@@ -454,7 +488,7 @@ def parse_release(html: str, title: str, snapshot: str) -> list[Obs]:
         hit = MIGRANT_RE.search(text)
         if not hit:
             raise ValueError(f"{snapshot}: no migrant-worker income sentence")
-        value, increase, growth = int(hit.group(1)), int(hit.group(2)), float(hit.group(3))
+        value, increase, growth = _signed(hit)
         out.append(Obs("cn_migrant_monthly", "CHN", str(year), value, snapshot, note=f"growth_pct={growth}"))
         out.append(Obs("cn_migrant_monthly__implied_prev", "CHN", str(year - 1), value - increase, snapshot))
     elif is_economy_release(title):

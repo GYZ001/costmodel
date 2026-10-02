@@ -95,12 +95,16 @@ export function GoldRuler({ ds, picks, slotOf }: Scope) {
         </div>
         <Chart option={histOpt} height={360} ariaLabel="重点经济体月薪折合黄金克数" />
         <p className="note">
-          每年的月薪用当年平均金价和平均汇率折算。口径：{hist.map((s) => `${s.name}＝${ds.wage_gold_history[s.iso].label}`).join("；")}。
+          每年的月薪用当年平均金价和平均汇率折算。口径：{hist.map((s) => {
+            const h = ds.wage_gold_history[s.iso];
+            return `${s.name}＝${h.label}${h.notes.length ? `（ILOSTAT 注释：${h.notes.join("；")}）` : ""}`;
+          }).join("；")}。
+          每个经济体用一条序列：OECD 全职当量工资或 ILOSTAT 某一调查的平均月薪中，不受覆盖范围限制的年份最多的一条（至少 3 年）。
           折线在这些地方断开，不把可能不可比的两个数连成一条线：发布方注明序列中断或口径、覆盖范围变化（如 ILOSTAT 的“Break in series”、国家统计局的“可比口径”）；
-          ILOSTAT 对数值的口径注释前后不同；同一来源相邻两点的变化与同期名义人均收入（世界银行居民消费或 GDP 除以人口）的变化相差超过 1.4 倍，或无法核对。
+          ILOSTAT 对数值的口径注释前后不同；同一来源相邻两点的变化与同期名义人均收入（世界银行居民消费或 GDP 除以人口）的变化相差超过 {fmt(ds.constants.level_bound, 2)} 倍（OECD 平均工资序列中出现过的最大偏离），或无法核对。
           孤立的点（前后都断开）画成圆点。
           {breaks.length > 0 && <> 所选经济体的断开处：{breaks.join("；")}。</>}
-          {noHistory.length > 0 && <> 没有同一来源 3 年以上可核对的月薪序列：{noHistory.join("、")}。</>}
+          {noHistory.length > 0 && <> 没有同一来源 3 年以上可核对的平均工资序列（OECD 或 ILOSTAT 平均月薪）：{noHistory.join("、")}。</>}
         </p>
       </div>
     </section>

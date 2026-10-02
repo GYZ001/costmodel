@@ -161,6 +161,25 @@ def test_cpi_other_months_and_unchanged():
     assert _yoy(text, 6) == ["全国居民消费价格同比持平", "城市持平", "农村下降0.2%"]
 
 
+def test_cpi_headings_tables_and_rate_comparisons_are_not_changes():
+    # 2025-07 economy release: a bold heading, then the paragraph; "涨幅与上月持平" compares rates.
+    text = ("全国城镇调查失业率为5.2%。\n七、居民消费价格同比持平，核心CPI连续回升\n"
+            "7月份，全国居民消费价格（CPI）同比持平，涨幅与上月持平；环比上涨0.4%。")
+    assert _yoy(text, 7, topic="居民消费价格") == ["全国居民消费价格（CPI）同比持平"]
+    # Table cells of the CPI release ("同比涨跌幅（%）") are not prose.
+    html = ('<div class="txt-content"><p>2026年8月份，全国居民消费价格同比上涨0.8%。</p>'
+            "<table><tr><td>2026年8月份居民消费价格主要数据</td><td>同比涨跌幅</td><td>（%）</td></tr></table></div>")
+    assert _yoy(nbs.body_text(html, tables=False), 8) == ["全国居民消费价格同比上涨0.8%"]
+
+
+def test_nbs_decline_wording():
+    html = "<p>2027年，全国城镇私营单位就业人员年平均工资为71000元，比上年减少590元，名义下降0.8%。</p>"
+    title = "2027年城镇私营单位就业人员年平均工资71000元"
+    obs = {(o.series, o.period): (o.value, o.note) for o in nbs.parse_release(html, title, "nbs/x")}
+    assert obs[("cn_wage_private", "2027")] == (71000, "growth_pct=-0.8")
+    assert obs[("cn_wage_private__implied_prev", "2026")] == (71590, "")
+
+
 def test_economy_release_cpi_sentences_stay_in_cpi_paragraph():
     # Wording of the NBS release of 2026-09-15 ("8月份国民经济…"); the heading is its own paragraph.
     text = ("全国企业就业人员周平均工作时间为48.2小时。\n七、居民消费价格温和回升，工业生产者价格同比涨幅扩大\n8月份，"
@@ -199,7 +218,7 @@ def _wdi(area, year, fx, ppp, lcu_unit_fx=None):
     """WDI rows for one economy-year; lcu_unit_fx = the conversion factor in WDI's LCU unit."""
     f = lcu_unit_fx if lcu_unit_fx is not None else fx
     return [("fx_lcu_usd", area, year, fx, "s"), ("ppp_hfce", area, year, ppp, "s"),
-            ("gdp_lcu", area, year, f * 1000, "s"), ("gdp_usd", area, year, 1000.0, "s"),
+            ("gdp_lcu", area, year, f * 1e12, "s"), ("gdp_usd", area, year, 1e12, "s"),
             ("hfce_lcu", area, year, ppp * 500, "s"), ("hfce_intl", area, year, 500.0, "s")]
 
 
@@ -350,10 +369,73 @@ def test_history_breaks_at_level_shift_and_primary_switch_is_marked():
     pts = build.wage_gold_history(s, gold, meta, DIC, u)["AAA"]["points"]
     assert [p[4] for p in pts] == [False, False, False, True] and "×/÷1.4" in pts[3][5]
     assert "相邻年份的变化超出" in build.ilo_variants(s, u, "AAA", "2024", DIC)[0].caveat
-    recs = {"2023": {"wages": [{"role": None, "mrole": "primary", "series_id": "A", "label": "a", "source": "x"}]},
-            "2024": {"wages": [{"role": None, "mrole": "primary", "series_id": "B", "label": "b", "source": "y"}]}}
+    w = lambda sid, key, notes, label: {"role": None, "mrole": "primary", "series_id": sid, "series_key": key,  # noqa: E731
+                                        "notes_sig": notes, "label": label, "source": "x"}
+    recs = {"2022": {"wages": [w("A", "A", [], "a")]}, "2023": {"wages": [w("A n1", "A", ["n1"], "a")]},
+            "2024": {"wages": [w("B", "B", [], "b")]}}
     build.mark_switches(recs)
-    assert recs["2024"]["wages"][0]["mrole_switch"] == {"year": "2023", "label": "a", "source": "x"}
+    assert recs["2023"]["wages"][0]["mrole_switch"] == {"year": "2022", "label": "a", "source": "x", "kind": "notes",
+                                                        "only_before": [], "only_now": ["n1"]}
+    assert recs["2024"]["wages"][0]["mrole_switch"]["kind"] == "source"
+
+
+def test_units_concept_gap_is_not_a_time_unit_error():
+    # MEX 2001: an LFS mean monthly wage is 0.44 of OECD's full-time-equivalent wage and
+    # no other figure exists that year - a difference of concept, not of time unit.
+    s = _store(*_wdi("AAA", "2001", 9.34, 6.0),
+               Obs("ilo_monthly_mean@X:1", "AAA", "2001", 3320.05, "s", "T8:127 T9:133"),
+               Obs("ilo_monthly_mean_usd@X:1", "AAA", "2001", 355.4, "s"),
+               Obs("oecd_avg_annual_wage", "AAA", "2001", 91411.8, "s", "AAD"),
+               Obs("oecd_avg_annual_wage_q", "AAA", "2001", 91411.8, "s", "AAD 2001"),
+               Obs("oecd_avg_annual_wage_q_usdppp", "AAA", "2001", 91411.8 / 6.0, "s", "USD_PPP 2001"),
+               Obs("oecd_usual_weekly_hours_ft", "AAA", "2001", 47.5, "s"))
+    u = build.UnitGraph(s, DIC, ["2001"], META)
+    assert [v.key for v in build.ilo_variants(s, u, "AAA", "2001", DIC)] == ["ilo_mean_monthly"]
+
+
+def test_units_hours_with_scale_error_are_not_used():
+    # BLR BA:13362: 39 hours a week for years, then 3.89 - not used to derive an hourly wage.
+    years = ["2023", "2024", "2025"]
+    rows = [r for y in years for r in _wdi("AAA", y, 3.0, 1.2)]
+    obs = [Obs("ilo_weekly_hours@X:1", "AAA", y, h, "s") for y, h in zip(years, (39.2, 39.3, 3.89))]
+    obs += [Obs("ilo_monthly_mean@X:1", "AAA", "2025", 2000.0, "s", "T8:127 T9:133"),
+            Obs("ilo_monthly_mean_usd@X:1", "AAA", "2025", 2000.0 / 3.0, "s")]
+    s = _store(*rows, *obs)
+    u = build.UnitGraph(s, DIC, years, META)
+    v = build.ilo_variants(s, u, "AAA", "2025", DIC)[0]
+    assert v.hourly_lcu is None and any(e["scope"] == "hours" and e["year"] == "2025" for e in u.log)
+
+
+def test_restricts_reads_coverage_labels():
+    assert not build.restricts("T12", "Working time arrangement coverage: Full-time equivalents")
+    assert not build.restricts("T12", "Working time arrangement coverage: Full-time and part time workers")
+    assert build.restricts("T12", "Working time arrangement coverage: Full-time workers")
+    assert not build.restricts("S9", "Reference group coverage: Total employment")
+    assert build.restricts("S9", "Reference group coverage: Insured persons")
+    assert not build.restricts("S5", "Population coverage: Excluding both institutional population and armed forces and/or conscripts")
+    assert build.restricts("S5", "Population coverage: Nationals only")
+
+
+def test_median_shown_only_from_the_primary_source():
+    wages = [{"key": "oecd_fte", "restricted": False, "hourly_lcu": 10.0, "monthly_lcu": 1700.0, "source_id": "OECD",
+              "role": None, "mrole": None},
+             {"key": "ilo_median_monthly", "restricted": False, "hourly_lcu": None, "monthly_lcu": 1500.0,
+              "source_id": "ILOSTAT X:1", "role": None, "mrole": None},
+             {"key": "ilo_mean_monthly", "restricted": False, "hourly_lcu": None, "monthly_lcu": 1800.0,
+              "source_id": "ILOSTAT X:1", "role": None, "mrole": None}]
+    build.mark_roles(wages)
+    assert [w["mrole"] for w in wages] == ["primary", None, None]
+
+
+def test_prove_identity_failure_next_to_a_proven_year_is_unknown():
+    # GUY 2005: the PPP identity fails (×2.5) although the PPP moved ×1.03 from a proven year.
+    years = ["2005", "2006"]
+    s = _store(("ppp_hfce", "AAA", "2005", 95.94, "s"), ("hfce_lcu", "AAA", "2005", 38.4 * 500, "s"),
+               ("hfce_intl", "AAA", "2005", 500.0, "s"), ("ppp_hfce", "AAA", "2006", 99.15, "s"),
+               ("hfce_lcu", "AAA", "2006", 99.15 * 500, "s"), ("hfce_intl", "AAA", "2006", 500.0, "s"))
+    u = build.UnitGraph(s, DIC, years, META)
+    _f, p = u._factors("AAA")
+    assert p["2006"][0] is True and p["2005"][0] is None and "原因不明" in p["2005"][1]
 
 
 def test_nbs_split_wage_releases():

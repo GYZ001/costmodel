@@ -43,20 +43,21 @@ export function ChinaUs({ ds }: Scope) {
             </table>
           </div>
           <details>
-            <summary>各口径的统计范围与定义（国家统计局原文）</summary>
+            <summary>各口径的统计范围与定义</summary>
             <dl className="small ink2" style={{ margin: "6px 0 0" }}>
-              {cnRow.wages.filter((w) => w.key.startsWith("cn_") && w.caveat).map((w) => (
+              {cnRow.wages.filter((w) => w.key.startsWith("cn_") && (w.quote || w.caveat)).map((w) => (
                 <div key={w.key} style={{ marginBottom: 8 }}>
                   <dt style={{ fontWeight: 600, color: "var(--ink)" }}>{w.label}（{w.source}）</dt>
-                  <dd style={{ margin: "2px 0 0" }}>{w.caveat}</dd>
+                  {w.quote && <dd style={{ margin: "2px 0 0" }}>国家统计局原文：“{w.quote}”</dd>}
+                  {w.caveat && <dd style={{ margin: "2px 0 0" }}>本项目说明：{w.caveat}</dd>}
                 </div>
               ))}
             </dl>
           </details>
           <p className="note">
-            实际工时：国家统计局月度劳动力调查“全国企业就业人员周平均工作时间”，本项目存档的 {cnYear} 年各月
+            实际工时：国家统计局月度发布的“全国企业就业人员周平均工作时间”，本项目存档的 {cnYear} 年各月
             （{cnHours.map(([p, v]) => `${Number(p.slice(5))}月 ${v}`).join("、")} 小时）的平均。
-            本项目存档的发布中没有单独的 1 月数值（1—2 月合并发布）。工时调查覆盖企业就业人员，与工资统计的覆盖面不完全一致，这是近似。
+            本项目存档的发布中没有单独的 1 月数值（1—2 月合并发布）。该工时是全国企业就业人员的平均，与各工资口径的覆盖面不完全一致，这是近似。
             黄金：{cnYear} 年世界银行月均金价的年平均 ÷ 31.1034768 克/盎司 × 该年人民币年均汇率 = {fmt(cnRow.gold_lcu_g, 1)} 元/克。
           </p>
         </div>
@@ -191,12 +192,13 @@ function NoChinaItems({ ds }: { ds: Scope["ds"] }) {
       <p style={{ margin: 0 }}>
         美国劳工统计局每月公布鸡蛋、牛奶、面包等商品的全国城市平均零售价（上表）。
         中国方面，本项目每次运行都会扫描国家统计局“最新发布”栏目，记录标题含“价格”的全部发布
-        {idx ? `（本次覆盖 ${idx.from} 至 ${idx.to}）` : ""}，结果如下——其中没有城市食品零售单品均价。
-        列表页本身不存档，标题目录由数据管道写入仓库的 data/derived/nbs_price_release_index.json：
+        {idx ? `（栏目列表日期 ${idx.from} 至 ${idx.to}）` : ""}，结果如下——其中没有城市食品零售单品均价。
+        列表页本身不存档，标题目录由数据管道写入仓库的 data/derived/nbs_price_release_index.json。
+        下表的日期是栏目列表（网址）上的日期，不一定是原始发布日期：国家统计局 2023 年网站改版时重新发布的旧页面（如 2021 年 12 月的居民消费价格），列表日期都是 2023-02-03。
       </p>
       {idx && (
         <table className="data" style={{ marginTop: 8 }}>
-          <thead><tr><th className="l">发布类型</th><th>条数</th><th>最早</th><th>最近</th></tr></thead>
+          <thead><tr><th className="l">发布类型</th><th>条数</th><th>最早（列表日期）</th><th>最近（列表日期）</th></tr></thead>
           <tbody>
             {idx.groups.map((g) => (
               <tr key={g.kind}><td className="l"><a href={g.example}>{g.kind}</a></td><td>{g.count}</td><td>{g.first}</td><td>{g.last}</td></tr>

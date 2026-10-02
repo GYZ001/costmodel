@@ -44,7 +44,7 @@ export function ChainSection({ ds, year, view, picks }: Scope) {
           <div className="arrow" aria-hidden>→</div>
           <div className="step">
             <div className="k">③ 劳动 → 商品（①×②）</div>
-            <div className="v">1 {unit} ≈ {sig(ex.row.cohd.total ? ex.lcu / ex.row.cohd.total : null)} 天健康饮食</div>
+            <div className="v">{unit === "月" ? "1 个月" : `1 ${unit}`} ≈ {sig(ex.row.cohd.total ? ex.lcu / ex.row.cohd.total : null)} 天健康饮食</div>
             <div className="f">
               = {hourly ? "时薪" : "月薪"} ÷ 饮食成本，黄金在这里被约掉
               {hourly && <>；换句话说，挣够一天的健康饮食要工作 {minutes(ex.w.minutes_per_cohd_day)}</>}
@@ -71,7 +71,7 @@ export function ChainSection({ ds, year, view, picks }: Scope) {
                 <th>当地金价（本币/克）</th>
                 <th>① 克金/{unit}</th>
                 <th>② 1 克金 = 几天健康饮食</th>
-                <th>③ 1 {unit} = 几天健康饮食</th>
+                <th>③ {unit === "月" ? "1 个月" : `1 ${unit}`} = 几天健康饮食</th>
                 {hourly && <th>挣一天健康饮食要工作</th>}
                 <th>购买力平价{hourly ? "时薪" : "月薪"}（国际元）</th>
               </tr>

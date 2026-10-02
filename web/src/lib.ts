@@ -48,21 +48,61 @@ export function wageCurrency(w: Wage, c: Country): string | null {
   return w.currency ?? c.currency;
 }
 
+function cut(s: string, max: number): string {
+  return max && s.length > max ? `${s.slice(0, max)}…` : s;
+}
+
 /** Tooltip / table lines describing where a wage figure comes from and what it measures. */
 export function wageNotes(w: Wage, view: View, c: Country, max = 0): string[] {
   const value = view === "hourly" ? `${money(w.hourly_lcu, wageCurrency(w, c))}/小时` : `${money(w.monthly_lcu, wageCurrency(w, c))}/月`;
-  const caveat = max && w.caveat.length > max ? `${w.caveat.slice(0, max)}…` : w.caveat;
   const sw = view === "hourly" ? w.role_switch : w.mrole_switch;
+  const switchNote = !sw ? [] : sw.kind === "source"
+    ? [`注意：${sw.year} 年的主要数字来自另一序列（${sw.label}，${sw.source}），与 ${sw.year} 年比较的变化含口径变化`]
+    : [`注意：ILOSTAT 对该序列的注释与 ${sw.year} 年不同`
+      + (sw.only_before.length ? `（${sw.year} 年有：${sw.only_before.join("；")}）` : "")
+      + (sw.only_now.length ? `（本年有：${sw.only_now.join("；")}）` : "")];
   return [
     `${wageLabel(w, view)}：${value}`,
     ...(view === "hourly" && w.hours_week ? [`工时：每周 ${w.hours_week.toFixed(1)} 小时（${w.method}）`] : []),
     w.source,
-    ...(sw ? [`注意：${sw.year} 年用的是另一序列（${sw.label}，${sw.source}），与上一年比较的变化含口径变化`] : []),
-    ...(caveat ? [`口径注释：${caveat}`] : []),
+    ...switchNote.map((t) => cut(t, max)),
+    ...(w.caveat ? [`口径注释：${cut(w.caveat, max)}`] : []),
+    ...(w.quote ? [`发布方原文：${cut(w.quote, max)}`] : []),
   ];
 }
 
+/** The exchange-rate line for a row: the official rate, and where the World Bank converted
+ *  that year's GDP at another factor (fiscal-year or other rates), that factor too. */
+export function fxNote(row: CountryYear, c: Country): string[] {
+  if (row.fx == null) return [];
+  const d = row.fx_vs_gdp_factor;
+  return [`汇率：WDI 官方年均汇率 ${fmt(row.fx, 4)} ${c.currency ?? "本币"}/美元`
+    + (row.fx_gdp_factor != null && d != null && Math.abs(d - 1) >= 0.005
+      ? `；世界银行换算该年 GDP 用的是 ${fmt(row.fx_gdp_factor, 4)}（官方汇率为其 ${fmt(d, 3)} 倍，可能是财年换算或多重汇率）`
+      : "")];
+}
+
+/** Other figures published for the same economy and year (another concept or survey), as they are. */
+export function otherWages(row: CountryYear, w: Wage, view: View, c: Country): string[] {
+  const others = row.wages.filter((o) => o !== w && (view === "hourly" ? o.hourly_gold_g : o.monthly_gold_g));
+  if (!others.length) return [];
+  return ["同年其他口径：" + others.map((o) => {
+    const v = view === "hourly" ? o.hourly_lcu : o.monthly_lcu;
+    const g = view === "hourly" ? o.hourly_gold_g : o.monthly_gold_g;
+    return `${wageLabel(o, view)}（${o.source}）${money(v, wageCurrency(o, c))}，${sig(g, 2)} 克`;
+  }).join("；")];
+}
+
 export type View = "hourly" | "monthly";
+
+/** Years in which the archived World Bank data have all six food-group costs for some economy. */
+export function foodGroupYears(ds: Dataset): string[] {
+  const ys = new Set<string>();
+  const keys = ["staples", "vegetables", "fruits", "animal", "legumes", "oils"] as const;
+  for (const c of Object.values(ds.countries))
+    for (const [y, row] of Object.entries(c.years)) if (keys.every((k) => row.cohd[k] != null)) ys.add(y);
+  return [...ys].sort();
+}
 
 export function primaryWage(row: CountryYear | undefined, view: View = "hourly"): Wage | undefined {
   return row?.wages.find((w) => (view === "hourly" ? w.role : w.mrole) === "primary");

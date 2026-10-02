@@ -8,6 +8,7 @@
 from __future__ import annotations
 
 import argparse
+from dataclasses import asdict
 import json
 import sys
 import traceback
@@ -104,7 +105,9 @@ def _build_and_write(store, f, meta, ilo_dic, today, save) -> int:
     dataset = {
         "generated_at": datetime.now(timezone.utc).replace(microsecond=0).isoformat(),
         "constants": {"grams_per_troy_ounce": GRAMS_PER_TROY_OUNCE, "weeks_per_month": build.WEEKS_PER_MONTH,
-                      "assumed_hours_cn": build.ASSUMED_HOURS_CN},
+                      "assumed_hours_cn": build.ASSUMED_HOURS_CN, "max_factor": build.MAX_FACTOR,
+                      "time_factor": build.TIME_FACTOR, "unit_gap": build.UNIT_GAP,
+                      "level_bound": units.level_bound, "level_basis": units.level_basis},
         "gold": gold,
         "countries": build.country_years(store, gold, meta, ilo_dic, years, units, nbs.wage_definitions()),
         "icp2021_pli_us": build.icp_levels(store, meta),
@@ -118,6 +121,7 @@ def _build_and_write(store, f, meta, ilo_dic, today, save) -> int:
         "bls_unavailable": bls.unavailable(s for k, s in sorted(f.used.items()) if k.startswith("bls/")),
         "cn_hours_monthly": [[p, o.value] for p, o in sorted(store.series("cn_weekly_hours_enterprise", "CHN").items())],
     }
+    dataset["oecd_vs_survey"] = build.oecd_vs_survey(dataset["countries"])
     dataset["exclusions"] = _dedupe(units.log)
     checks = validate.run_all(store, dataset, years, today.isoformat())
     for c in checks:
@@ -126,7 +130,8 @@ def _build_and_write(store, f, meta, ilo_dic, today, save) -> int:
     from .config import DATA_DIR
     (DATA_DIR / "checks.json").write_text(json.dumps(checks, ensure_ascii=False, indent=1) + "\n", encoding="utf-8")
     dataset["checks"] = checks
-    dataset["sources"] = describe(_merged_manifest(f))
+    # Only the snapshots this run read: the provenance of the numbers published.
+    dataset["sources"] = describe({k: asdict(sn) for k, sn in f.used.items()})
     dataset["stale"] = [k for k, s in f.used.items() if s.status == "stale"]
 
     if any(c["status"] == "fail" for c in checks):
@@ -142,20 +147,11 @@ def _build_and_write(store, f, meta, ilo_dic, today, save) -> int:
 def _dedupe(rows: list[dict]) -> list[dict]:
     seen, out = set(), []
     for r in rows:
-        k = (r["area"], r["year"], r["scope"])
+        k = (r["area"], r["year"], r["scope"], r["detail"])
         if k not in seen:
             seen.add(k)
             out.append(r)
-    return sorted(out, key=lambda r: (r["area"], r["year"], r["scope"]))
-
-
-def _merged_manifest(f: Fetcher) -> dict:
-    from dataclasses import asdict
-
-    merged = dict(f.manifest)
-    for k, s in f.used.items():
-        merged[k] = asdict(s)
-    return merged
+    return sorted(out, key=lambda r: (r["area"], r["year"], r["scope"], r["detail"]))
 
 
 if __name__ == "__main__":

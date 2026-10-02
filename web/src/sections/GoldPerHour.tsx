@@ -2,7 +2,7 @@ import { useMemo } from "react";
 import type { Scope } from "../App";
 import { Chart } from "../Chart";
 import { rankingHeight, rankingOption, type RankItem } from "../charts";
-import { countryName, money, primaryWage, rowFor, sig, typicalWage, useThemeVersion, wageLabel, wageNotes } from "../lib";
+import { countryName, fmt, fxNote, money, otherWages, primaryWage, rowFor, sig, typicalWage, useThemeVersion, wageLabel, wageNotes } from "../lib";
 
 export function useRows(scope: Scope) {
   const { ds, year, group } = scope;
@@ -36,9 +36,16 @@ export function GoldPerHour(scope: Scope) {
           highlight: scope.picks.includes(iso),
           tip: [
             ...wageNotes(w, scope.view, c, 160),
+            ...(t ? wageNotes(t, scope.view, c, 120).map((x, i) => (i === 0 ? `中位数（同一调查）：${x}` : x)).slice(0, 2) : []),
             `当地金价：${money(row.gold_lcu_g, c.currency)}/克（${year} 年均）`,
+            ...fxNote(row, c),
           ],
-          table: wageNotes(w, scope.view, c),
+          table: [
+            ...wageNotes(w, scope.view, c),
+            ...(t ? wageNotes(t, scope.view, c).map((x, i) => (i === 0 ? `中位数（同一调查）：${x}` : x)) : []),
+            ...fxNote(row, c),
+            ...otherWages(row, w, scope.view, c),
+          ],
         }];
       }),
     [rows, scope.picks, scope.view],
@@ -64,16 +71,21 @@ export function GoldPerHour(scope: Scope) {
         <div className="legend">
           <span><span className="sw" style={{ background: "var(--accent)" }} />重点对比的经济体（平均{scope.view === "hourly" ? "时薪" : "月薪"}）</span>
           <span><span className="sw" style={{ background: "var(--deemph)" }} />其他经济体</span>
-          <span><span className="sw" style={{ background: "var(--s2)", borderRadius: "50%" }} />中位{scope.view === "hourly" ? "时薪" : "月薪"}（有数据时）</span>
+          <span><span className="sw" style={{ background: "var(--s2)", borderRadius: "50%" }} />同一调查的中位{scope.view === "hourly" ? "时薪" : "月薪"}（有数据时）</span>
         </div>
         <Chart option={option} height={rankingHeight(items.length)} ariaLabel="各经济体每小时工资可换黄金克数排名" />
         <p className="note">
           工资的选用顺序：OECD 全职当量平均工资（时薪按 OECD 公布的全职雇员通常周工时折算）→ 国际劳工组织 ILOSTAT 覆盖全国全体雇员的平均工资
           （只有月薪的，用同一调查的每周实际工时折算）→ 国家统计机构自己的数据（中国国家统计局、美国劳工统计局，覆盖范围按其原文说明）→
           ILOSTAT 注明覆盖范围有限的记录（如只含城镇、只含私营部门、只含全职）。某经济体的主要口径与上一年不同时，悬停提示里会注明。
+          {scope.ds.oecd_vs_survey && <>不同口径之间差距可能很大：同一经济体同一年 ILOSTAT 调查的平均月薪是 OECD 全职当量平均工资的
+            {" "}{fmt(scope.ds.oecd_vs_survey.min, 2)}–{fmt(scope.ds.oecd_vs_survey.max, 2)} 倍（本项目数据中的 {scope.ds.oecd_vs_survey.n} 组对比），
+            所以用不同口径的经济体之间的排序要谨慎看待；数据表里列出了同年的其他口径。</>}
+          橙点是与条形同一调查的中位数，只在该调查同时发布了中位数时画出。
           {cnW && <>中国 {scope.year} 年用的是：{wageLabel(cnW, scope.view)}（{cnW.source}）。</>}
           每个经济体所用口径与发布方的注释见悬停提示和数据表。
-          金价：世界银行 Pink Sheet 月均价的年平均；汇率：世界银行 WDI 年均官方汇率，并逐年核对它就是世界银行自己换算该年美元数据所用的汇率。
+          金价：世界银行 Pink Sheet 月均价的年平均；汇率：世界银行 WDI 年均官方汇率。它与世界银行换算该年 GDP 所用的因子逐年核对，相差在 ×/÷1.4 以内，
+          只能证明两者是同一货币单位，不证明是同一个汇率：财年换算或多重汇率下两者可能相差一两成，相差 0.5% 以上时悬停提示里会列出。
         </p>
         <DataTable items={items} />
       </div>

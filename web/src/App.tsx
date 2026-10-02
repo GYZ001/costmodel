@@ -63,14 +63,19 @@ export default function App({ ds }: { ds: Dataset }) {
         .map(([, c]) => {
           const ys = wageYears(c, view);
           if (view === "hourly" && wageYears(c, "monthly").includes(year)) return `${countryName(c)}（该年无同口径时薪，可切换“按月薪”）`;
-          if (ys.length) return `${countryName(c)}（最近 ${ys[0]} 年）`;
+          const medianNow = c.years[year]?.wages.some((w) => w.concept === "median" && (view === "hourly" ? w.hourly_gold_g : w.monthly_gold_g));
+          if (ys.length) return `${countryName(c)}（${medianNow ? "该年只有中位数；" : ""}平均工资最近 ${ys[0]} 年）`;
           const ms = view === "hourly" ? wageYears(c, "monthly") : [];
-          return `${countryName(c)}${ms.length ? `（无同口径时薪；月薪最近 ${ms[0]} 年）` : "（无可核对工资数据）"}`;
+          if (ms.length) return `${countryName(c)}（无同口径时薪；月薪最近 ${ms[0]} 年）`;
+          // Economies whose verified figures are all medians have no primary (average) figure.
+          const med = Object.keys(c.years).filter((y) => c.years[y].wages.some((w) => w.concept === "median" && (w.hourly_gold_g || w.monthly_gold_g))).sort();
+          return `${countryName(c)}${med.length ? `（只有中位数，没有平均工资；中位数最近 ${med[med.length - 1]} 年）` : "（无可核对工资数据）"}`;
         }),
     [ds, group, picks, view, year],
   );
-  const passed = ds.checks.filter((c) => c.status === "pass").length;
-  const failed = ds.checks.filter((c) => c.status === "fail").length;
+  const checks = ds.checks.filter((c) => c.status !== "info"); // "info" rows are overviews, not checks
+  const passed = checks.filter((c) => c.status === "pass").length;
+  const failed = checks.filter((c) => c.status === "fail").length;
   const g = ds.gold.latest;
 
   return (
@@ -88,7 +93,7 @@ export default function App({ ds }: { ds: Dataset }) {
           </span>
           <span className="badge">
             <span className="dot" style={{ background: failed ? "var(--critical)" : "var(--good)" }} />
-            交叉校验 {passed}/{ds.checks.length} 通过
+            交叉校验 {passed}/{checks.length} 通过
           </span>
           <span className="badge">数据生成于 {new Date(ds.generated_at).toLocaleString("zh-CN", { hour12: false })}</span>
           {ds.stale.length > 0 && <span className="badge">⚠ {ds.stale.length} 个来源本次未更新，沿用上次快照</span>}
@@ -161,7 +166,7 @@ export default function App({ ds }: { ds: Dataset }) {
       </main>
       <footer className="wrap">
         数据与代码：<a href="https://github.com/GYZ001/costmodel">github.com/GYZ001/costmodel</a> ·
-        数据集由 GitHub Actions 从官方来源重新抓取并校验（手动触发，合并到默认分支后每天自动运行）；任何数字都可以在“方法与来源”中找到原始文件与校验和。
+        数据集由 GitHub Actions 从官方来源重新抓取并校验（管道代码更新时或手动触发；合并到默认分支后每天自动运行）；任何数字都可以在“方法与来源”中找到原始文件与校验和。
       </footer>
     </>
   );

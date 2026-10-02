@@ -23,7 +23,7 @@ SOURCES = [
         "title": "World Development Indicators：官方汇率、居民消费 PPP、人口；GDP 与居民消费的本币、美元、国际元值",
         "landing": "https://data.worldbank.org/",
         "license": "CC BY 4.0",
-        "use": "各国年均官方汇率（PA.NUS.FCRF）、居民消费购买力平价（PA.NUS.PRVT.PP）、人口；GDP（NY.GDP.MKTP.CN/.CD）与居民消费（NE.CON.PRVT.CN/.PP.CD）只用于逐年核对汇率和购买力平价的货币单位",
+        "use": "各国年均官方汇率（PA.NUS.FCRF）、居民消费购买力平价（PA.NUS.PRVT.PP）、人口；GDP（NY.GDP.MKTP.CN/.CD）与居民消费（NE.CON.PRVT.CN/.PP.CD）用于逐年核对汇率和购买力平价的货币单位，并与人口一起给出人均 GDP（工资量级核对）和名义人均收入（工资序列连续性核对）",
     },
     {
         "prefix": "worldbank/fpn_",

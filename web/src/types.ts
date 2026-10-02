@@ -10,14 +10,17 @@ export interface Wage {
   concept: "mean" | "median";
   source: string;
   method: string;
-  /** Notes that qualify the figure, verbatim from the publisher (ILOSTAT notes are in English). */
+  /** Notes that qualify the figure: ILOSTAT's own note labels (English, verbatim), and this
+   *  project's notes (e.g. a level shift against adjacent years, how hours were applied). */
   caveat: string;
+  /** The publisher's own definitions, quoted verbatim (NBS releases); empty otherwise. */
+  quote: string;
+  /** Publisher and survey, e.g. "ILOSTAT BA:463", "OECD", "NBS", "BLS". */
+  source_id: string;
   /** Coverage limited, as the publisher states (e.g. urban units, private sector, full-time workers only). */
   restricted: boolean;
   /** Currency the publisher states for the figure. */
   currency: string | null;
-  /** The publisher's series; a change between years is a change of concept or source. */
-  series_id: string;
   /** Set on a primary figure whose series differs from the economy's previous year's primary one. */
   role_switch: Switch | null;
   mrole_switch: Switch | null;
@@ -38,6 +41,10 @@ export interface Switch {
   year: string;
   label: string;
   source: string;
+  /** source: another publisher series; notes: the same series with different notes on what it measures */
+  kind: "source" | "notes";
+  only_before: string[];
+  only_now: string[];
 }
 
 export type CohdKey = "total" | "staples" | "vegetables" | "fruits" | "animal" | "legumes" | "oils";
@@ -46,6 +53,9 @@ export type CohdKey = "total" | "staples" | "vegetables" | "fruits" | "animal" |
 // as the World Bank's local-currency series (see dataset.exclusions for the reason).
 export interface CountryYear {
   fx: number | null;
+  /** The factor the World Bank applied to the year's GDP (GDP in LCU ÷ in US$), and fx ÷ that factor. */
+  fx_gdp_factor: number | null;
+  fx_vs_gdp_factor: number | null;
   ppp_hfce: number | null;
   pli_hfce: number | null;
   population: number | null;
@@ -92,7 +102,8 @@ export interface UsItem {
 export interface Check {
   id: string;
   title: string;
-  status: "pass" | "warn" | "fail";
+  /** info: an overview, not a pass/fail check */
+  status: "pass" | "warn" | "fail" | "info";
   detail: string;
 }
 
@@ -119,7 +130,13 @@ export interface SourceInfo {
 
 export interface Dataset {
   generated_at: string;
-  constants: { grams_per_troy_ounce: number; weeks_per_month: number; assumed_hours_cn: number };
+  constants: {
+    grams_per_troy_ounce: number; weeks_per_month: number; assumed_hours_cn: number;
+    /** bound for currency units; for one figure in two time units; for figures of different concepts */
+    max_factor: number; time_factor: number; unit_gap: number;
+    /** how far a same-concept series can move against nominal consumption per head in a year, and why */
+    level_bound: number; level_basis: string;
+  };
   gold: {
     monthly: [string, number][];
     annual: Record<string, { usd_oz: number; usd_g: number }>;
@@ -134,7 +151,14 @@ export interface Dataset {
   us_items: Record<string, UsItem>;
   cn_hours_monthly: [string, number][];
   /** [year, monthly wage in LCU, grams of gold, source line, series breaks before this point, why] */
-  wage_gold_history: Record<string, { label: string; points: [string, number, number, string, boolean, string][] }>;
+  wage_gold_history: Record<string, {
+    label: string; source_id: string; restricted: boolean;
+    /** ILOSTAT's coverage notes and remarks on the drawn records (English, verbatim) */
+    notes: string[];
+    points: [string, number, number, string, boolean, string][];
+  }>;
+  /** ILOSTAT survey mean monthly earnings ÷ OECD's FTE wage, same economy and year: range over all such pairs. */
+  oecd_vs_survey: { n: number; min: number; min_at: [string, string]; max: number; max_at: [string, string] } | null;
   latest: {
     period: string;
     gold_usd_oz: number;
@@ -163,7 +187,8 @@ export interface Dataset {
   }[];
   /** Months BLS lists without a value, with BLS's own footnote. */
   bls_unavailable: { period: string; note: string; series: string[] }[];
-  exclusions: { area: string; year: string; scope: string; detail: string }[];
+  /** kind: unit / missing / notes / check / area (see build.UnitGraph._exclude) */
+  exclusions: { area: string; year: string; scope: string; kind: string; detail: string }[];
   checks: Check[];
   sources: SourceInfo[];
   stale: string[];

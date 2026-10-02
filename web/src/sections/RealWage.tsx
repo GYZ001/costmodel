@@ -2,7 +2,7 @@ import { useMemo } from "react";
 import type { Scope } from "../App";
 import { Chart } from "../Chart";
 import { dumbbellOption, rankingHeight, rankingOption, stackedOption, type RankItem } from "../charts";
-import { countryName, fmt, minutes, primaryWage, sig, useThemeVersion, wageLabel, wageNotes } from "../lib";
+import { countryName, fmt, foodGroupYears, minutes, primaryWage, sig, useThemeVersion, wageLabel, wageNotes } from "../lib";
 import type { CohdKey } from "../types";
 import { useRows } from "./GoldPerHour";
 
@@ -66,8 +66,9 @@ export function RealWage(scope: Scope) {
     [rows, scope.picks],
   );
 
-  // The food-group split is published for the 2021 benchmark only, so this chart is a 2021 view.
-  const GROUP_YEAR = "2021";
+  // The food-group split exists only for some benchmark years (in the archive so far: 2021); the chart uses the latest.
+  const groupYears = useMemo(() => foodGroupYears(scope.ds), [scope.ds]);
+  const GROUP_YEAR = groupYears[groupYears.length - 1] ?? "";
   const diet = useMemo(() => {
     return Object.entries(scope.ds.countries)
       .filter(([iso, c]) => scope.group === "all" || c.g20 || scope.picks.includes(iso))
@@ -84,7 +85,7 @@ export function RealWage(scope: Scope) {
           tip: wageNotes(w, "hourly", c, 160),
         }];
       });
-  }, [scope.ds, scope.group, scope.picks]);
+  }, [scope.ds, scope.group, scope.picks, GROUP_YEAR]);
 
   const monthDays: RankItem[] = useMemo(
     () =>
@@ -159,7 +160,7 @@ export function RealWage(scope: Scope) {
           <div className="card">
             <h3>这些分钟花在哪类食物上（{GROUP_YEAR} 年基准）</h3>
             <p className="small ink2" style={{ margin: "0 0 8px" }}>
-              世界银行只在 2021 基准年发布六类食物的分项成本，所以这张图固定为 2021 年：分项成本与 2021 年时薪配对。
+              本项目存档的世界银行数据只有 {groupYears.join("、") || "—"} 年有六类食物的分项成本，所以这张图用 {GROUP_YEAR || "—"} 年：分项成本与该年时薪配对。
             </p>
             <div className="legend">
               {GROUPS.map((g, i) => (

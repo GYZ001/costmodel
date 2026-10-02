@@ -16,7 +16,7 @@ from .model import Store, annual_mean
 class Check:
     id: str
     title: str
-    status: str  # pass | warn | fail
+    status: str  # pass | warn | fail | info (an overview, not a check)
     detail: str
 
 
@@ -113,22 +113,22 @@ def nbs_consistency(store: Store) -> Check:
     return Check("nbs_internal", "国家统计局工资：前后年份与增速自洽", "fail" if bad else "pass", "；".join(msgs))
 
 
-def china_ilo_equals_nbs(store: Store) -> Check:
-    """ILOSTAT's China monthly earnings should be NBS urban private-unit wages / 12."""
-    from .build import pick_source
-
-    s = pick_source(store, "ilo_monthly_mean", "CHN")
+def china_ilo_equals_nbs(store: Store, dataset: dict) -> Check:
+    """The ILOSTAT China series drawn in the gold history (dataset.wage_gold_history.CHN,
+    labelled as the same series as NBS's) must be NBS urban private-unit wages ÷ 12."""
+    title = "中国：历年图中的 ILOSTAT 月薪 = 国家统计局私营单位年薪 ÷ 12"
+    src = (dataset.get("wage_gold_history", {}).get("CHN") or {}).get("source_id") or ""
     nbs = {**store.series("cn_wage_private__implied_prev", "CHN"), **store.series("cn_wage_private", "CHN")}
-    if not s or not nbs:
-        return Check("cn_ilo_nbs", "中国：ILOSTAT 月薪 = 国家统计局私营单位年薪 ÷ 12", "warn", "缺少可对比年份")
-    ilo = store.series(s, "CHN")
+    if not src.startswith("ILOSTAT ") or not nbs:
+        return Check("cn_ilo_nbs", title, "warn", "历年图没有用 ILOSTAT 的中国序列，或缺少国家统计局私营单位工资")
+    ilo = store.series(f"ilo_monthly_mean@{src.split(' ', 1)[1]}", "CHN")
     common = sorted(set(ilo) & set(nbs))
     if not common:
-        return Check("cn_ilo_nbs", "中国：ILOSTAT 月薪 = 国家统计局私营单位年薪 ÷ 12", "warn", "没有重叠年份")
+        return Check("cn_ilo_nbs", title, "warn", f"{src} 与国家统计局私营单位工资没有重叠年份，无法核对是同一序列")
     worst = max(common, key=lambda y: _rel(ilo[y].value * 12, nbs[y].value))
     d = _rel(ilo[worst].value * 12, nbs[worst].value)
-    return Check("cn_ilo_nbs", "中国：ILOSTAT 月薪 = 国家统计局私营单位年薪 ÷ 12", "pass" if d < 0.002 else "fail",
-                 f"重叠年份 {', '.join(common)}；最大偏差 {d:.3%}（{worst}：ILOSTAT×12 = {ilo[worst].value * 12:,.0f}，国家统计局 {nbs[worst].value:,.0f}）")
+    return Check("cn_ilo_nbs", title, "pass" if d < 0.002 else "fail",
+                 f"{src}；重叠年份 {', '.join(common)}；最大偏差 {d:.3%}（{worst}：ILOSTAT×12 = {ilo[worst].value * 12:,.0f}，国家统计局 {nbs[worst].value:,.0f}）")
 
 
 def us_ppp_is_one(store: Store, years: list[str]) -> Check:
@@ -154,21 +154,21 @@ def identities(dataset: dict) -> Check:
 
 
 def exclusions_summary(dataset: dict) -> Check:
-    ex = dataset.get("exclusions", [])
-    by_scope: dict[str, set] = {}
-    for e in ex:
-        by_scope.setdefault(e["scope"].split(":")[0], set()).add(e["area"])
-    names = {"fx": "官方汇率", "ppp": "购买力平价", "cohd": "健康饮食成本", "wage": "工资", "currency": "货币代码"}
+    """What was left out and why, by kind of reason (an overview, not a pass/fail check)."""
+    names = {"unit": "无法证明同一货币单位", "missing": "发布方未发布该年数值", "notes": "发布方的注释或观测状态表明不能使用",
+             "check": "数量级、时间单位或工时核对不通过", "area": "地区代码无法对应"}
+    by_kind: dict[str, set] = {}
+    for e in dataset.get("exclusions", []):
+        by_kind.setdefault(e.get("kind", "unit"), set()).add(e["area"])
     detail = "；".join(f"{names.get(k, k)}：{len(v)} 个经济体（{', '.join(sorted(v)[:12])}{'…' if len(v) > 12 else ''}）"
-                     for k, v in sorted(by_scope.items())) or "无"
-    return Check("record_gates", "货币单位逐年核对（恒等关系）", "pass",
-                 f"未能证明与世界银行本币序列同一货币单位的输入不参与计算，原因见剔除记录。{detail}")
+                     for k, v in sorted(by_kind.items(), key=lambda kv: list(names).index(kv[0]) if kv[0] in names else 99)) or "无"
+    return Check("record_gates", "不参与计算的输入（按原因）", "info", f"原因和数字逐条列在剔除记录中。{detail}")
 
 
 def run_all(store: Store, dataset: dict, years: list[str], today: str) -> list[dict]:
     checks = [
         gold_cross_source(store), gold_freshness(store, today), fx_cross_source(store),
-        bls_vs_fred(store), nbs_consistency(store), china_ilo_equals_nbs(store),
+        bls_vs_fred(store), nbs_consistency(store), china_ilo_equals_nbs(store, dataset),
         us_ppp_is_one(store, years), exclusions_summary(dataset), identities(dataset),
     ]
     return [asdict(c) for c in checks]

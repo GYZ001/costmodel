@@ -20,8 +20,10 @@ from .common import check_csv_header, to_float
 
 URL = ("https://sdmx.oecd.org/public/rest/data/OECD.ELS.SAE,DSD_EARNINGS@AV_AN_WAGE,1.0/all"
        "?startPeriod=2000&format=csvfilewithlabels")
-HOURS_URL = ("https://sdmx.oecd.org/public/rest/data/OECD.ELS.SAE,DSD_HW@DF_AVG_USL_WK_WKD,1.0/all"
-             "?startPeriod=2000&format=csvfilewithlabels")
+# Key order: REF_AREA.MEASURE.UNIT_MEASURE.SEX.AGE.LABOUR_FORCE_STATUS.WORK_PERIOD.HOURS_TYPE.
+#            WORKER_STATUS.WORK_TIME_ARNGMNT.AGGREGATION_OPERATION.HOUR_BANDS.JOB_COVERAGE
+HOURS_URL = ("https://sdmx.oecd.org/public/rest/data/OECD.ELS.SAE,DSD_HW@DF_AVG_USL_WK_WKD,1.0/"
+             ".HW.H_WK_PS._T._T.EMP.W.USUAL.ICSE93_1.FT.MEAN._Z.MAIN?startPeriod=2000&format=csvfilewithlabels")
 
 
 def collect(f: Fetcher) -> list[Obs]:
@@ -41,7 +43,8 @@ def collect(f: Fetcher) -> list[Obs]:
             "HOURS_TYPE": "USUAL", "JOB_COVERAGE": "MAIN", "AGGREGATION_OPERATION": "MEAN"}
     for r in csv.DictReader(io.StringIO(hs.read().decode("utf-8-sig"))):
         v = to_float(r["OBS_VALUE"])
-        if v is None or any(r.get(k) != val for k, val in want.items()):
+        # zero is not an observation of weekly hours; treat it as missing
+        if v is None or v <= 0 or any(r.get(k) != val for k, val in want.items()):
             continue
         out.append(Obs("oecd_usual_weekly_hours_ft", r["REF_AREA"], r["TIME_PERIOD"], v, hs.key))
     return out

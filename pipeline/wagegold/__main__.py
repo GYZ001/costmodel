@@ -84,6 +84,18 @@ def main(argv=None) -> int:
         print("\nRequired sources failed; website dataset not written.\n  " + "\n  ".join(problems), file=sys.stderr)
         return 1
 
+    try:
+        return _build_and_write(store, f, meta, ilo_dic, today, save)
+    except Exception as exc:  # noqa: BLE001 - a build error must still leave a report behind
+        traceback.print_exc()
+        save()
+        from .config import DATA_DIR
+        report = [{"id": "build", "title": "数据集构建", "status": "fail", "detail": f"{type(exc).__name__}: {exc}"}]
+        (DATA_DIR / "checks.json").write_text(json.dumps(report, ensure_ascii=False, indent=1) + "\n", encoding="utf-8")
+        return 3
+
+
+def _build_and_write(store, f, meta, ilo_dic, today, save) -> int:
     years = [str(y) for y in range(2000, today.year + 1)]
     gold = build.gold_tables(store)
     gates = build.Gates(store)

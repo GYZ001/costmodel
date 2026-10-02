@@ -54,8 +54,8 @@ def collect(f: Fetcher, start: int = 2000) -> tuple[list[Obs], dict[str, dict[st
         )
         for r in csv.DictReader(io.StringIO(snap.read().decode("utf-8-sig"))):
             v = to_float(r["obs_value"])
-            if v is None or r["sex"] != "SEX_T" or r.get("classif1", "ECO_SECTOR_TOTAL") != "ECO_SECTOR_TOTAL":
-                continue
+            if v is None or v <= 0 or r["sex"] != "SEX_T" or r.get("classif1", "ECO_SECTOR_TOTAL") != "ECO_SECTOR_TOTAL":
+                continue  # earnings and hours are positive by definition; 0 marks a missing value
             notes = "|".join(x for x in (r.get("note_indicator"), r.get("note_source"), r.get("note_classif")) if x)
             # One series per ILOSTAT source, so a country with several sources keeps them apart.
             out.append(Obs(f"{series}@{r['source']}", r["ref_area"], r["time"], v, snap.key, note=notes))

@@ -1,6 +1,6 @@
 {
  "bls/ap_from_2016": {
-  "attempted_at": "2026-10-02T02:19:32+00:00",
+  "attempted_at": "2026-10-02T02:43:33+00:00",
   "bytes": 221522,
   "content_type": "application/json",
   "error": null,
@@ -35,13 +35,13 @@
    ],
    "startyear": "2016"
   },
-  "retrieved_at": "2026-10-02T02:19:32+00:00",
-  "sha256": "676b2e6779d3cb57b46adebe8f0367b41c81ad460950470cd32ec0128aa44c14",
+  "retrieved_at": "2026-10-02T02:43:33+00:00",
+  "sha256": "5e9e7a8f35de83323f85fe4a920970b0e17d5189d0ea9ce16eed31270c42b002",
   "status": "fresh",
   "url": "https://api.bls.gov/publicAPI/v2/timeseries/data/"
  },
  "bls/ap_from_2026": {
-  "attempted_at": "2026-10-02T02:19:33+00:00",
+  "attempted_at": "2026-10-02T02:43:34+00:00",
   "bytes": 16135,
   "content_type": "application/json",
   "error": null,
@@ -76,13 +76,13 @@
    ],
    "startyear": "2026"
   },
-  "retrieved_at": "2026-10-02T02:19:33+00:00",
-  "sha256": "6e44c5842af96b73e939a5d28fde36856ba98e14324c73293f54e45ff1dfdd21",
+  "retrieved_at": "2026-10-02T02:43:34+00:00",
+  "sha256": "55c660efae082e05ac722ee95a4dd5787c2078524672589f1ce4045d7718feeb",
   "status": "fresh",
   "url": "https://api.bls.gov/publicAPI/v2/timeseries/data/"
  },
  "bls/ces_from_1964": {
-  "attempted_at": "2026-10-02T02:19:30+00:00",
+  "attempted_at": "2026-10-02T02:43:31+00:00",
   "bytes": 43522,
   "content_type": "application/json",
   "error": null,
@@ -103,13 +103,13 @@
    ],
    "startyear": "1964"
   },
-  "retrieved_at": "2026-10-02T02:19:30+00:00",
-  "sha256": "b80414c8a0aadbfd85f2abdc44afae6e890904a0e335f0a8992bb9242191e590",
+  "retrieved_at": "2026-10-02T02:43:31+00:00",
+  "sha256": "4fd986592c7d69858275ae023476ee712402d94568661c0c7a4cce91f7fd7629",
   "status": "fresh",
   "url": "https://api.bls.gov/publicAPI/v2/timeseries/data/"
  },
  "bls/ces_from_1974": {
-  "attempted_at": "2026-10-02T02:19:30+00:00",
+  "attempted_at": "2026-10-02T02:43:32+00:00",
   "bytes": 43522,
   "content_type": "application/json",
   "error": null,
@@ -130,13 +130,13 @@
    ],
    "startyear": "1974"
   },
-  "retrieved_at": "2026-10-02T02:19:30+00:00",
-  "sha256": "0cd38053a4d43bffd8b811af7bd14492821b55eae93bafc0c18396bcfdd852c9",
+  "retrieved_at": "2026-10-02T02:43:32+00:00",
+  "sha256": "968211fc8eb1fb1e4ff60205aa7830e75c5ae5249b8fa1886f101e47d3455d44",
   "status": "fresh",
   "url": "https://api.bls.gov/publicAPI/v2/timeseries/data/"
  },
  "bls/ces_from_1984": {
-  "attempted_at": "2026-10-02T02:19:31+00:00",
+  "attempted_at": "2026-10-02T02:43:32+00:00",
   "bytes": 43618,
   "content_type": "application/json",
   "error": null,
@@ -157,13 +157,13 @@
    ],
    "startyear": "1984"
   },
-  "retrieved_at": "2026-10-02T02:19:31+00:00",
-  "sha256": "31a3b12a194393e4f1c82667cb9b28bd4601b093f8c5cccf1945a441b6f988ae",
+  "retrieved_at": "2026-10-02T02:43:32+00:00",
+  "sha256": "3c2223e5e2fa20f56f24bbb11935f856d56260fc4a5ce76c73914729083b1ccf",
   "status": "fresh",
   "url": "https://api.bls.gov/publicAPI/v2/timeseries/data/"
  },
  "bls/ces_from_1994": {
-  "attempted_at": "2026-10-02T02:19:31+00:00",
+  "attempted_at": "2026-10-02T02:43:32+00:00",
   "bytes": 43762,
   "content_type": "application/json",
   "error": null,
@@ -184,13 +184,13 @@
    ],
    "startyear": "1994"
   },
-  "retrieved_at": "2026-10-02T02:19:31+00:00",
-  "sha256": "8ba18f4634e549957975a4149daea22142c0a1fbbfdde4ca1881e0385b6da262",
+  "retrieved_at": "2026-10-02T02:43:32+00:00",
+  "sha256": "91feae87d700671c87e46acc0ea2abc8b582f2760e660654a531ae8613857d35",
   "status": "fresh",
   "url": "https://api.bls.gov/publicAPI/v2/timeseries/data/"
  },
  "bls/ces_from_2004": {
-  "attempted_at": "2026-10-02T02:19:31+00:00",
+  "attempted_at": "2026-10-02T02:43:33+00:00",
   "bytes": 74166,
   "content_type": "application/json",
   "error": null,
@@ -211,13 +211,13 @@
    ],
    "startyear": "2004"
   },
-  "retrieved_at": "2026-10-02T02:19:31+00:00",
-  "sha256": "74bf6ac004f212c997fe08a7fb59c1764e2bc682d81ff894734ef7f66cd3641f",
+  "retrieved_at": "2026-10-02T02:43:33+00:00",
+  "sha256": "4c3e7ccef5cba1aab65efe487225dc088ef0218a4cd42afce0b4b70f71b98e99",
   "status": "fresh",
   "url": "https://api.bls.gov/publicAPI/v2/timeseries/data/"
  },
  "bls/ces_from_2014": {
-  "attempted_at": "2026-10-02T02:19:32+00:00",
+  "attempted_at": "2026-10-02T02:43:33+00:00",
   "bytes": 82639,
   "content_type": "application/json",
   "error": null,
@@ -238,13 +238,13 @@
    ],
    "startyear": "2014"
   },
-  "retrieved_at": "2026-10-02T02:19:32+00:00",
-  "sha256": "a0e7c1ad0eab7296b2241b6da99f703438b62bb1ff655954732775e3e1d806c4",
+  "retrieved_at": "2026-10-02T02:43:33+00:00",
+  "sha256": "91c99696c596c24b5b7eca3ee02894e5d9b663c5aebaf17e0e0636f1264bbcc1",
   "status": "fresh",
   "url": "https://api.bls.gov/publicAPI/v2/timeseries/data/"
  },
  "bls/ces_from_2024": {
-  "attempted_at": "2026-10-02T02:19:32+00:00",
+  "attempted_at": "2026-10-02T02:43:33+00:00",
   "bytes": 22894,
   "content_type": "application/json",
   "error": null,
@@ -265,13 +265,13 @@
    ],
    "startyear": "2024"
   },
-  "retrieved_at": "2026-10-02T02:19:32+00:00",
-  "sha256": "ff6090c79729bd7f7ab74588d103cfdbf58342febe65873f739d0bb8bd202d90",
+  "retrieved_at": "2026-10-02T02:43:33+00:00",
+  "sha256": "fb9b3de8e13fd8285bfbbbd29a824594f69842f4b164fa592fe4ecec9f712481",
   "status": "fresh",
   "url": "https://api.bls.gov/publicAPI/v2/timeseries/data/"
  },
  "ecb/exr_monthly": {
-  "attempted_at": "2026-10-02T02:19:21+00:00",
+  "attempted_at": "2026-10-02T02:43:24+00:00",
   "bytes": 2725355,
   "content_type": "text/csv",
   "error": null,
@@ -279,13 +279,13 @@
   "method": "GET",
   "path": "data/raw/ecb/exr_monthly.csv",
   "request_body": null,
-  "retrieved_at": "2026-10-02T02:19:21+00:00",
+  "retrieved_at": "2026-10-02T02:43:24+00:00",
   "sha256": "141db98b655060dab5239c8c0579bf5e94f4d9d965c63f64271a354731ddcc76",
   "status": "fresh",
   "url": "https://data-api.ecb.europa.eu/service/data/EXR/M..EUR.SP00.A?format=csvdata&startPeriod=1999-01"
  },
  "fred/AHETPI": {
-  "attempted_at": "2026-10-02T02:19:24+00:00",
+  "attempted_at": "2026-10-02T02:43:26+00:00",
   "bytes": 12496,
   "content_type": "application/csv",
   "error": null,
@@ -293,13 +293,13 @@
   "method": "GET",
   "path": "data/raw/fred/AHETPI.csv",
   "request_body": null,
-  "retrieved_at": "2026-10-02T02:19:24+00:00",
+  "retrieved_at": "2026-10-02T02:43:26+00:00",
   "sha256": "bf666fc39bfc5b0cbc8fbe0d5abc06e84233f0300edbf88299ba696801e1ca7a",
   "status": "fresh",
   "url": "https://fred.stlouisfed.org/graph/fredgraph.csv?id=AHETPI"
  },
  "fred/CES0500000003": {
-  "attempted_at": "2026-10-02T02:19:24+00:00",
+  "attempted_at": "2026-10-02T02:43:27+00:00",
   "bytes": 4213,
   "content_type": "application/csv",
   "error": null,
@@ -307,13 +307,13 @@
   "method": "GET",
   "path": "data/raw/fred/CES0500000003.csv",
   "request_body": null,
-  "retrieved_at": "2026-10-02T02:19:24+00:00",
+  "retrieved_at": "2026-10-02T02:43:27+00:00",
   "sha256": "c602b6f2be66970cf4d06fa376fd761ae6211e93c06bfe4ea337625a080d21e8",
   "status": "fresh",
   "url": "https://fred.stlouisfed.org/graph/fredgraph.csv?id=CES0500000003"
  },
  "fred/EXBZUS": {
-  "attempted_at": "2026-10-02T02:19:26+00:00",
+  "attempted_at": "2026-10-02T02:43:28+00:00",
   "bytes": 6882,
   "content_type": "application/csv",
   "error": null,
@@ -321,13 +321,13 @@
   "method": "GET",
   "path": "data/raw/fred/EXBZUS.csv",
   "request_body": null,
-  "retrieved_at": "2026-10-02T02:19:26+00:00",
+  "retrieved_at": "2026-10-02T02:43:28+00:00",
   "sha256": "6fddee3dd1b34879f1d98fb09d5598cd081b5f1c8a6103ef714f8c3fb5b17015",
   "status": "fresh",
   "url": "https://fred.stlouisfed.org/graph/fredgraph.csv?id=EXBZUS"
  },
  "fred/EXCAUS": {
-  "attempted_at": "2026-10-02T02:19:27+00:00",
+  "attempted_at": "2026-10-02T02:43:29+00:00",
   "bytes": 12066,
   "content_type": "application/csv",
   "error": null,
@@ -335,13 +335,13 @@
   "method": "GET",
   "path": "data/raw/fred/EXCAUS.csv",
   "request_body": null,
-  "retrieved_at": "2026-10-02T02:19:27+00:00",
+  "retrieved_at": "2026-10-02T02:43:29+00:00",
   "sha256": "36f974b1786e66afa494c72e55b2d8732320a6a2327e461304602d3857476647",
   "status": "fresh",
   "url": "https://fred.stlouisfed.org/graph/fredgraph.csv?id=EXCAUS"
  },
  "fred/EXCHUS": {
-  "attempted_at": "2026-10-02T02:19:24+00:00",
+  "attempted_at": "2026-10-02T02:43:27+00:00",
   "bytes": 9906,
   "content_type": "application/csv",
   "error": null,
@@ -349,13 +349,13 @@
   "method": "GET",
   "path": "data/raw/fred/EXCHUS.csv",
   "request_body": null,
-  "retrieved_at": "2026-10-02T02:19:24+00:00",
+  "retrieved_at": "2026-10-02T02:43:27+00:00",
   "sha256": "f1a7e13b5c01c51b22fb5d4e3beefc756d1d4d83b14a69417af9130ae46e0510",
   "status": "fresh",
   "url": "https://fred.stlouisfed.org/graph/fredgraph.csv?id=EXCHUS"
  },
  "fred/EXINUS": {
-  "attempted_at": "2026-10-02T02:19:25+00:00",
+  "attempted_at": "2026-10-02T02:43:27+00:00",
   "bytes": 12154,
   "content_type": "application/csv",
   "error": null,
@@ -363,13 +363,13 @@
   "method": "GET",
   "path": "data/raw/fred/EXINUS.csv",
   "request_body": null,
-  "retrieved_at": "2026-10-02T02:19:25+00:00",
+  "retrieved_at": "2026-10-02T02:43:27+00:00",
   "sha256": "721e9f523a4dd83ab5572f172a5750c087bc7c6f3ba357c85511e54eca90e690",
   "status": "fresh",
   "url": "https://fred.stlouisfed.org/graph/fredgraph.csv?id=EXINUS"
  },
  "fred/EXJPUS": {
-  "attempted_at": "2026-10-02T02:19:25+00:00",
+  "attempted_at": "2026-10-02T02:43:27+00:00",
   "bytes": 13331,
   "content_type": "application/csv",
   "error": null,
@@ -377,13 +377,13 @@
   "method": "GET",
   "path": "data/raw/fred/EXJPUS.csv",
   "request_body": null,
-  "retrieved_at": "2026-10-02T02:19:25+00:00",
+  "retrieved_at": "2026-10-02T02:43:27+00:00",
   "sha256": "8fa8c7f09a2ed88e5a258798b9835839692eca5e22529acea56b28d40ed98bf2",
   "status": "fresh",
   "url": "https://fred.stlouisfed.org/graph/fredgraph.csv?id=EXJPUS"
  },
  "fred/EXKOUS": {
-  "attempted_at": "2026-10-02T02:19:25+00:00",
+  "attempted_at": "2026-10-02T02:43:27+00:00",
   "bytes": 11263,
   "content_type": "application/csv",
   "error": null,
@@ -391,13 +391,13 @@
   "method": "GET",
   "path": "data/raw/fred/EXKOUS.csv",
   "request_body": null,
-  "retrieved_at": "2026-10-02T02:19:25+00:00",
+  "retrieved_at": "2026-10-02T02:43:27+00:00",
   "sha256": "b786f9d5da70d4ab9004fca8a550af187f04420faa1ef194eb8a4cb7179c66b4",
   "status": "fresh",
   "url": "https://fred.stlouisfed.org/graph/fredgraph.csv?id=EXKOUS"
  },
  "fred/EXMXUS": {
-  "attempted_at": "2026-10-02T02:19:26+00:00",
+  "attempted_at": "2026-10-02T02:43:28+00:00",
   "bytes": 7427,
   "content_type": "application/csv",
   "error": null,
@@ -405,13 +405,13 @@
   "method": "GET",
   "path": "data/raw/fred/EXMXUS.csv",
   "request_body": null,
-  "retrieved_at": "2026-10-02T02:19:26+00:00",
+  "retrieved_at": "2026-10-02T02:43:28+00:00",
   "sha256": "5d36eed0f9b86a4dfc148cf35756f5a2b573d413445cc033972fbb31fb70e739",
   "status": "fresh",
   "url": "https://fred.stlouisfed.org/graph/fredgraph.csv?id=EXMXUS"
  },
  "fred/EXSFUS": {
-  "attempted_at": "2026-10-02T02:19:26+00:00",
+  "attempted_at": "2026-10-02T02:43:28+00:00",
   "bytes": 12235,
   "content_type": "application/csv",
   "error": null,
@@ -419,13 +419,13 @@
   "method": "GET",
   "path": "data/raw/fred/EXSFUS.csv",
   "request_body": null,
-  "retrieved_at": "2026-10-02T02:19:26+00:00",
+  "retrieved_at": "2026-10-02T02:43:28+00:00",
   "sha256": "93476d3e6db0672a08c85fbd94bcb8c76af0ed93587e60c9b361c0ef30654bf4",
   "status": "fresh",
   "url": "https://fred.stlouisfed.org/graph/fredgraph.csv?id=EXSFUS"
  },
  "fred/EXSZUS": {
-  "attempted_at": "2026-10-02T02:19:27+00:00",
+  "attempted_at": "2026-10-02T02:43:29+00:00",
   "bytes": 12066,
   "content_type": "application/csv",
   "error": null,
@@ -433,13 +433,13 @@
   "method": "GET",
   "path": "data/raw/fred/EXSZUS.csv",
   "request_body": null,
-  "retrieved_at": "2026-10-02T02:19:27+00:00",
+  "retrieved_at": "2026-10-02T02:43:29+00:00",
   "sha256": "519c7ebdfef9eff3d8812f806dcb23b9d04b423e3373f700e4374f4e67e06a65",
   "status": "fresh",
   "url": "https://fred.stlouisfed.org/graph/fredgraph.csv?id=EXSZUS"
  },
  "fred/EXUSAL": {
-  "attempted_at": "2026-10-02T02:19:28+00:00",
+  "attempted_at": "2026-10-02T02:43:30+00:00",
   "bytes": 12066,
   "content_type": "application/csv",
   "error": null,
@@ -447,13 +447,13 @@
   "method": "GET",
   "path": "data/raw/fred/EXUSAL.csv",
   "request_body": null,
-  "retrieved_at": "2026-10-02T02:19:28+00:00",
+  "retrieved_at": "2026-10-02T02:43:30+00:00",
   "sha256": "82e25a8698f9aaae05531a51897714a2a66d1bb520e7e3780ab5f8644e9bafe2",
   "status": "fresh",
   "url": "https://fred.stlouisfed.org/graph/fredgraph.csv?id=EXUSAL"
  },
  "fred/EXUSEU": {
-  "attempted_at": "2026-10-02T02:19:28+00:00",
+  "attempted_at": "2026-10-02T02:43:29+00:00",
   "bytes": 6018,
   "content_type": "application/csv",
   "error": null,
@@ -461,13 +461,13 @@
   "method": "GET",
   "path": "data/raw/fred/EXUSEU.csv",
   "request_body": null,
-  "retrieved_at": "2026-10-02T02:19:28+00:00",
+  "retrieved_at": "2026-10-02T02:43:29+00:00",
   "sha256": "564a5b9162af037c4c064f0493fd0ee65d5d11eb84f6191cb384b4183cd5a7af",
   "status": "fresh",
   "url": "https://fred.stlouisfed.org/graph/fredgraph.csv?id=EXUSEU"
  },
  "fred/EXUSUK": {
-  "attempted_at": "2026-10-02T02:19:28+00:00",
+  "attempted_at": "2026-10-02T02:43:29+00:00",
   "bytes": 12066,
   "content_type": "application/csv",
   "error": null,
@@ -475,13 +475,13 @@
   "method": "GET",
   "path": "data/raw/fred/EXUSUK.csv",
   "request_body": null,
-  "retrieved_at": "2026-10-02T02:19:28+00:00",
+  "retrieved_at": "2026-10-02T02:43:29+00:00",
   "sha256": "ae4d8ba6035c18bf816ef9dcb0cea7921dc89ee13fabcf55bbc0071ce064ccf8",
   "status": "fresh",
   "url": "https://fred.stlouisfed.org/graph/fredgraph.csv?id=EXUSUK"
  },
  "ilostat/EAR_EHRA_SEX_CUR_NB_A": {
-  "attempted_at": "2026-10-02T02:21:53+00:00",
+  "attempted_at": "2026-10-02T02:54:21+00:00",
   "bytes": 340311,
   "content_type": "application/octet-stream",
   "error": null,
@@ -489,13 +489,13 @@
   "method": "GET",
   "path": "data/raw/ilostat/EAR_EHRA_SEX_CUR_NB_A.csv",
   "request_body": null,
-  "retrieved_at": "2026-10-02T02:21:53+00:00",
+  "retrieved_at": "2026-10-02T02:54:21+00:00",
   "sha256": "629355ab190897b3fb0b4549a35fc941efa4634ff2029a7e39c2d0b51adfbf0d",
   "status": "fresh",
   "url": "https://rplumber.ilo.org/data/indicator/?id=EAR_EHRA_SEX_CUR_NB_A&sex=SEX_T&timefrom=2000&format=.csv"
  },
  "ilostat/EAR_EHRA_SEX_NB_A": {
-  "attempted_at": "2026-10-02T02:21:48+00:00",
+  "attempted_at": "2026-10-02T02:54:18+00:00",
   "bytes": 70594,
   "content_type": "application/octet-stream",
   "error": null,
@@ -503,13 +503,13 @@
   "method": "GET",
   "path": "data/raw/ilostat/EAR_EHRA_SEX_NB_A.csv",
   "request_body": null,
-  "retrieved_at": "2026-10-02T02:21:48+00:00",
+  "retrieved_at": "2026-10-02T02:54:18+00:00",
   "sha256": "95afe583c86783eb2294413664df771dd67f9b4d7ee5f23d1533483a1ae8328e",
   "status": "fresh",
   "url": "https://rplumber.ilo.org/data/indicator/?id=EAR_EHRA_SEX_NB_A&sex=SEX_T&timefrom=2000&format=.csv"
  },
  "ilostat/EAR_EHRM_SEX_CUR_NB_A": {
-  "attempted_at": "2026-10-02T02:21:54+00:00",
+  "attempted_at": "2026-10-02T02:54:22+00:00",
   "bytes": 250403,
   "content_type": "application/octet-stream",
   "error": null,
@@ -517,13 +517,13 @@
   "method": "GET",
   "path": "data/raw/ilostat/EAR_EHRM_SEX_CUR_NB_A.csv",
   "request_body": null,
-  "retrieved_at": "2026-10-02T02:21:54+00:00",
+  "retrieved_at": "2026-10-02T02:54:22+00:00",
   "sha256": "ae7b1098dcb27854bba9d35ac22af8c303752fadb068ae8d35b88b3d6612de63",
   "status": "fresh",
   "url": "https://rplumber.ilo.org/data/indicator/?id=EAR_EHRM_SEX_CUR_NB_A&sex=SEX_T&timefrom=2000&format=.csv"
  },
  "ilostat/EAR_EHRM_SEX_NB_A": {
-  "attempted_at": "2026-10-02T02:21:49+00:00",
+  "attempted_at": "2026-10-02T02:54:19+00:00",
   "bytes": 70094,
   "content_type": "application/octet-stream",
   "error": null,
@@ -531,13 +531,13 @@
   "method": "GET",
   "path": "data/raw/ilostat/EAR_EHRM_SEX_NB_A.csv",
   "request_body": null,
-  "retrieved_at": "2026-10-02T02:21:49+00:00",
+  "retrieved_at": "2026-10-02T02:54:19+00:00",
   "sha256": "f08608b27b2d4ca84687e91f02d8d0c248e3dad0a074531e1d3e55adaa969c48",
   "status": "fresh",
   "url": "https://rplumber.ilo.org/data/indicator/?id=EAR_EHRM_SEX_NB_A&sex=SEX_T&timefrom=2000&format=.csv"
  },
  "ilostat/EAR_EMTA_SEX_CUR_NB_A": {
-  "attempted_at": "2026-10-02T02:21:56+00:00",
+  "attempted_at": "2026-10-02T02:54:23+00:00",
   "bytes": 749009,
   "content_type": "application/octet-stream",
   "error": null,
@@ -545,13 +545,13 @@
   "method": "GET",
   "path": "data/raw/ilostat/EAR_EMTA_SEX_CUR_NB_A.csv",
   "request_body": null,
-  "retrieved_at": "2026-10-02T02:21:56+00:00",
+  "retrieved_at": "2026-10-02T02:54:23+00:00",
   "sha256": "8100089cf53f3e22d903dd279eb39840f349f1cb061786e88e63ea1ed1353d19",
   "status": "fresh",
   "url": "https://rplumber.ilo.org/data/indicator/?id=EAR_EMTA_SEX_CUR_NB_A&sex=SEX_T&timefrom=2000&format=.csv"
  },
  "ilostat/EAR_EMTA_SEX_ECO_NB_A": {
-  "attempted_at": "2026-10-02T02:21:50+00:00",
+  "attempted_at": "2026-10-02T02:54:19+00:00",
   "bytes": 243022,
   "content_type": "application/octet-stream",
   "error": null,
@@ -559,13 +559,13 @@
   "method": "GET",
   "path": "data/raw/ilostat/EAR_EMTA_SEX_ECO_NB_A.csv",
   "request_body": null,
-  "retrieved_at": "2026-10-02T02:21:50+00:00",
+  "retrieved_at": "2026-10-02T02:54:19+00:00",
   "sha256": "c452e87a87e536a21e6edff323db6ef5719b8f4416acd7be2e7dac4beca7d15b",
   "status": "fresh",
   "url": "https://rplumber.ilo.org/data/indicator/?id=EAR_EMTA_SEX_ECO_NB_A&sex=SEX_T&classif1=ECO_SECTOR_TOTAL&timefrom=2000&format=.csv"
  },
  "ilostat/EAR_EMTM_SEX_CUR_NB_A": {
-  "attempted_at": "2026-10-02T02:21:57+00:00",
+  "attempted_at": "2026-10-02T02:54:24+00:00",
   "bytes": 482742,
   "content_type": "application/octet-stream",
   "error": null,
@@ -573,13 +573,13 @@
   "method": "GET",
   "path": "data/raw/ilostat/EAR_EMTM_SEX_CUR_NB_A.csv",
   "request_body": null,
-  "retrieved_at": "2026-10-02T02:21:57+00:00",
+  "retrieved_at": "2026-10-02T02:54:24+00:00",
   "sha256": "fa60a85c40236a45ba6a8e952e0ddfd08566ddd60ef6b89ef301f928dc758256",
   "status": "fresh",
   "url": "https://rplumber.ilo.org/data/indicator/?id=EAR_EMTM_SEX_CUR_NB_A&sex=SEX_T&timefrom=2000&format=.csv"
  },
  "ilostat/EAR_EMTM_SEX_NB_A": {
-  "attempted_at": "2026-10-02T02:21:51+00:00",
+  "attempted_at": "2026-10-02T02:54:20+00:00",
   "bytes": 131906,
   "content_type": "application/octet-stream",
   "error": null,
@@ -587,13 +587,13 @@
   "method": "GET",
   "path": "data/raw/ilostat/EAR_EMTM_SEX_NB_A.csv",
   "request_body": null,
-  "retrieved_at": "2026-10-02T02:21:51+00:00",
+  "retrieved_at": "2026-10-02T02:54:20+00:00",
   "sha256": "6f99a1128fc0462f8ae38509fff20c7317710afb25407d5fad31309d693f04eb",
   "status": "fresh",
   "url": "https://rplumber.ilo.org/data/indicator/?id=EAR_EMTM_SEX_NB_A&sex=SEX_T&timefrom=2000&format=.csv"
  },
  "ilostat/HOW_XEES_SEX_NB_A": {
-  "attempted_at": "2026-10-02T02:21:52+00:00",
+  "attempted_at": "2026-10-02T02:54:21+00:00",
   "bytes": 128812,
   "content_type": "application/octet-stream",
   "error": null,
@@ -601,13 +601,13 @@
   "method": "GET",
   "path": "data/raw/ilostat/HOW_XEES_SEX_NB_A.csv",
   "request_body": null,
-  "retrieved_at": "2026-10-02T02:21:52+00:00",
+  "retrieved_at": "2026-10-02T02:54:21+00:00",
   "sha256": "932bee114b45084f865a27254f751eab4b83df274ee0f4f8f8848924566ff487",
   "status": "fresh",
   "url": "https://rplumber.ilo.org/data/indicator/?id=HOW_XEES_SEX_NB_A&sex=SEX_T&timefrom=2000&format=.csv"
  },
  "ilostat/dic_note_indicator": {
-  "attempted_at": "2026-10-02T02:22:00+00:00",
+  "attempted_at": "2026-10-02T02:54:26+00:00",
   "bytes": 35748,
   "content_type": "application/octet-stream",
   "error": null,
@@ -615,13 +615,13 @@
   "method": "GET",
   "path": "data/raw/ilostat/dic_note_indicator.csv",
   "request_body": null,
-  "retrieved_at": "2026-10-02T02:22:00+00:00",
+  "retrieved_at": "2026-10-02T02:54:26+00:00",
   "sha256": "a5a03f637172636744eed76940144189ae7313eee666cedd6dabb934c8a5af0d",
   "status": "fresh",
   "url": "https://rplumber.ilo.org/metadata/dic/?var=note_indicator&lang=en&format=.csv"
  },
  "ilostat/dic_note_source": {
-  "attempted_at": "2026-10-02T02:21:59+00:00",
+  "attempted_at": "2026-10-02T02:54:25+00:00",
   "bytes": 14606,
   "content_type": "application/octet-stream",
   "error": null,
@@ -629,13 +629,13 @@
   "method": "GET",
   "path": "data/raw/ilostat/dic_note_source.csv",
   "request_body": null,
-  "retrieved_at": "2026-10-02T02:21:59+00:00",
+  "retrieved_at": "2026-10-02T02:54:25+00:00",
   "sha256": "35d6f835d68b89a3fae98f462b4d2ea4f8ce8aca24bf0b49eec3f4cabb43b9fd",
   "status": "fresh",
   "url": "https://rplumber.ilo.org/metadata/dic/?var=note_source&lang=en&format=.csv"
  },
  "ilostat/dic_source": {
-  "attempted_at": "2026-10-02T02:21:58+00:00",
+  "attempted_at": "2026-10-02T02:54:24+00:00",
   "bytes": 214163,
   "content_type": "application/octet-stream",
   "error": null,
@@ -643,13 +643,13 @@
   "method": "GET",
   "path": "data/raw/ilostat/dic_source.csv",
   "request_body": null,
-  "retrieved_at": "2026-10-02T02:21:58+00:00",
+  "retrieved_at": "2026-10-02T02:54:24+00:00",
   "sha256": "f0fe6308df810781ff4e71d27f90247f4cc879850d74b6343cb456a017dbf101",
   "status": "fresh",
   "url": "https://rplumber.ilo.org/metadata/dic/?var=source&lang=en&format=.csv"
  },
  "imf/pcps_pgold_monthly": {
-  "attempted_at": "2026-10-02T02:19:19+00:00",
+  "attempted_at": "2026-10-02T02:43:23+00:00",
   "bytes": 61811,
   "content_type": "application/xml",
   "error": null,
@@ -657,10 +657,24 @@
   "method": "GET",
   "path": "data/raw/imf/pcps_pgold_monthly.xml",
   "request_body": null,
-  "retrieved_at": "2026-10-02T02:19:19+00:00",
-  "sha256": "14879b04a9f6df780eab9a87571c72397c35e9e9f57ea5555689655857b90000",
+  "retrieved_at": "2026-10-02T02:43:23+00:00",
+  "sha256": "ea9a6b5e17699fc7e4008c7c8984e94a2f179e398a66b7d443c0c99a78b7178f",
   "status": "fresh",
   "url": "https://api.imf.org/external/sdmx/2.1/data/IMF.RES,PCPS,9.0.0/G001.PGOLD.USD.M?startPeriod=1990-01"
+ },
+ "nbs/release/202302/t20230203_1901328": {
+  "attempted_at": "2026-10-02T02:54:11+00:00",
+  "bytes": 318030,
+  "content_type": "text/html",
+  "error": null,
+  "key": "nbs/release/202302/t20230203_1901328",
+  "method": "GET",
+  "path": "data/raw/nbs/release/202302/t20230203_1901328.html",
+  "request_body": null,
+  "retrieved_at": "2026-10-02T02:54:11+00:00",
+  "sha256": "15935b37f25fc2a8282b40f5c6104c1f2fcc5f9e312a3a8131cd8b3d642724b6",
+  "status": "fresh",
+  "url": "https://www.stats.gov.cn/sj/zxfb/202302/t20230203_1901328.html"
  },
  "nbs/release/202302/t20230203_1901336": {
   "attempted_at": "2026-10-02T02:03:32+00:00",
@@ -676,6 +690,34 @@
   "status": "fresh",
   "url": "https://www.stats.gov.cn/sj/zxfb/202302/t20230203_1901336.html"
  },
+ "nbs/release/202302/t20230203_1901367": {
+  "attempted_at": "2026-10-02T02:54:05+00:00",
+  "bytes": 263679,
+  "content_type": "text/html",
+  "error": null,
+  "key": "nbs/release/202302/t20230203_1901367",
+  "method": "GET",
+  "path": "data/raw/nbs/release/202302/t20230203_1901367.html",
+  "request_body": null,
+  "retrieved_at": "2026-10-02T02:54:05+00:00",
+  "sha256": "c22b4af63bf21e3b607f8ac4e49b9634964027f2e96633c98d200b111b8d21d8",
+  "status": "fresh",
+  "url": "https://www.stats.gov.cn/sj/zxfb/202302/t20230203_1901367.html"
+ },
+ "nbs/release/202302/t20230203_1901398": {
+  "attempted_at": "2026-10-02T02:53:59+00:00",
+  "bytes": 314423,
+  "content_type": "text/html",
+  "error": null,
+  "key": "nbs/release/202302/t20230203_1901398",
+  "method": "GET",
+  "path": "data/raw/nbs/release/202302/t20230203_1901398.html",
+  "request_body": null,
+  "retrieved_at": "2026-10-02T02:53:59+00:00",
+  "sha256": "df0d951e2ff874c37e1ba03a721186ac06cca64b9e3b5d87c24de4539ec8ebff",
+  "status": "fresh",
+  "url": "https://www.stats.gov.cn/sj/zxfb/202302/t20230203_1901398.html"
+ },
  "nbs/release/202302/t20230203_1901402": {
   "attempted_at": "2026-10-02T02:03:24+00:00",
   "bytes": 831559,
@@ -689,6 +731,20 @@
   "sha256": "b966e69e4d7d9241fe0bf9e071fa0fc3f58a5b4312857bd8c7ce6d426a241a68",
   "status": "fresh",
   "url": "https://www.stats.gov.cn/sj/zxfb/202302/t20230203_1901402.html"
+ },
+ "nbs/release/202302/t20230203_1901421": {
+  "attempted_at": "2026-10-02T02:53:50+00:00",
+  "bytes": 315729,
+  "content_type": "text/html",
+  "error": null,
+  "key": "nbs/release/202302/t20230203_1901421",
+  "method": "GET",
+  "path": "data/raw/nbs/release/202302/t20230203_1901421.html",
+  "request_body": null,
+  "retrieved_at": "2026-10-02T02:53:50+00:00",
+  "sha256": "43e950d630810554678fa7bd6ba93c1c6509bd88bcecf68e73d686e5662083cf",
+  "status": "fresh",
+  "url": "https://www.stats.gov.cn/sj/zxfb/202302/t20230203_1901421.html"
  },
  "nbs/release/202302/t20230203_1901427": {
   "attempted_at": "2026-10-02T02:03:13+00:00",
@@ -718,6 +774,48 @@
   "status": "fresh",
   "url": "https://www.stats.gov.cn/sj/zxfb/202302/t20230203_1901452.html"
  },
+ "nbs/release/202302/t20230203_1901456": {
+  "attempted_at": "2026-10-02T02:53:44+00:00",
+  "bytes": 316559,
+  "content_type": "text/html",
+  "error": null,
+  "key": "nbs/release/202302/t20230203_1901456",
+  "method": "GET",
+  "path": "data/raw/nbs/release/202302/t20230203_1901456.html",
+  "request_body": null,
+  "retrieved_at": "2026-10-02T02:53:44+00:00",
+  "sha256": "fdfde738830be5b0a8a915cd30014383c62ac488031bc8752f59939a7abbb213",
+  "status": "fresh",
+  "url": "https://www.stats.gov.cn/sj/zxfb/202302/t20230203_1901456.html"
+ },
+ "nbs/release/202302/t20230203_1901460": {
+  "attempted_at": "2026-10-02T02:53:34+00:00",
+  "bytes": 806510,
+  "content_type": "text/html",
+  "error": null,
+  "key": "nbs/release/202302/t20230203_1901460",
+  "method": "GET",
+  "path": "data/raw/nbs/release/202302/t20230203_1901460.html",
+  "request_body": null,
+  "retrieved_at": "2026-10-02T02:53:34+00:00",
+  "sha256": "7255030afe2521a31ff04ee0b2e1d8845880359c3d70a1c7869bc1abfdbabd78",
+  "status": "fresh",
+  "url": "https://www.stats.gov.cn/sj/zxfb/202302/t20230203_1901460.html"
+ },
+ "nbs/release/202302/t20230203_1901482": {
+  "attempted_at": "2026-10-02T02:53:28+00:00",
+  "bytes": 316841,
+  "content_type": "text/html",
+  "error": null,
+  "key": "nbs/release/202302/t20230203_1901482",
+  "method": "GET",
+  "path": "data/raw/nbs/release/202302/t20230203_1901482.html",
+  "request_body": null,
+  "retrieved_at": "2026-10-02T02:53:28+00:00",
+  "sha256": "48f599d283e3be12636d5f9ab4a29bd6507836e0ff155c305efeb6e2c7a50639",
+  "status": "fresh",
+  "url": "https://www.stats.gov.cn/sj/zxfb/202302/t20230203_1901482.html"
+ },
  "nbs/release/202302/t20230203_1901486": {
   "attempted_at": "2026-10-02T02:02:57+00:00",
   "bytes": 862845,
@@ -731,6 +829,62 @@
   "sha256": "b24182e712e4f8ce071758b26b7514c094c047f0a8d9b66f461ac9125810300c",
   "status": "fresh",
   "url": "https://www.stats.gov.cn/sj/zxfb/202302/t20230203_1901486.html"
+ },
+ "nbs/release/202302/t20230203_1901504": {
+  "attempted_at": "2026-10-02T02:53:21+00:00",
+  "bytes": 314621,
+  "content_type": "text/html",
+  "error": null,
+  "key": "nbs/release/202302/t20230203_1901504",
+  "method": "GET",
+  "path": "data/raw/nbs/release/202302/t20230203_1901504.html",
+  "request_body": null,
+  "retrieved_at": "2026-10-02T02:53:21+00:00",
+  "sha256": "7127f51d879357cefaaf20a2e3acf2b920a5e9e258065ab2b24c3d2d97f1374f",
+  "status": "fresh",
+  "url": "https://www.stats.gov.cn/sj/zxfb/202302/t20230203_1901504.html"
+ },
+ "nbs/release/202302/t20230203_1901513": {
+  "attempted_at": "2026-10-02T02:53:08+00:00",
+  "bytes": 1813384,
+  "content_type": "text/html",
+  "error": null,
+  "key": "nbs/release/202302/t20230203_1901513",
+  "method": "GET",
+  "path": "data/raw/nbs/release/202302/t20230203_1901513.html",
+  "request_body": null,
+  "retrieved_at": "2026-10-02T02:53:08+00:00",
+  "sha256": "8bfc4ab46e954db01b6249d7a3759485f6bfe5b35efddb26dfec62d4871bc6ae",
+  "status": "fresh",
+  "url": "https://www.stats.gov.cn/sj/zxfb/202302/t20230203_1901513.html"
+ },
+ "nbs/release/202302/t20230203_1901536": {
+  "attempted_at": "2026-10-02T02:53:05+00:00",
+  "bytes": 111451,
+  "content_type": "text/html",
+  "error": null,
+  "key": "nbs/release/202302/t20230203_1901536",
+  "method": "GET",
+  "path": "data/raw/nbs/release/202302/t20230203_1901536.html",
+  "request_body": null,
+  "retrieved_at": "2026-10-02T02:53:05+00:00",
+  "sha256": "7d942e69d3363409adb2a5ae07e1fbc4004d9364772952f20c6cae48ff317284",
+  "status": "fresh",
+  "url": "https://www.stats.gov.cn/sj/zxfb/202302/t20230203_1901536.html"
+ },
+ "nbs/release/202302/t20230203_1901542": {
+  "attempted_at": "2026-10-02T02:52:58+00:00",
+  "bytes": 315599,
+  "content_type": "text/html",
+  "error": null,
+  "key": "nbs/release/202302/t20230203_1901542",
+  "method": "GET",
+  "path": "data/raw/nbs/release/202302/t20230203_1901542.html",
+  "request_body": null,
+  "retrieved_at": "2026-10-02T02:52:58+00:00",
+  "sha256": "e073fe50f9f9b12ec680c8a9e3feaa44855cf52a5aa471e33c9b83c5a64a0569",
+  "status": "fresh",
+  "url": "https://www.stats.gov.cn/sj/zxfb/202302/t20230203_1901542.html"
  },
  "nbs/release/202302/t20230203_1901548": {
   "attempted_at": "2026-10-02T02:02:48+00:00",
@@ -746,6 +900,34 @@
   "status": "fresh",
   "url": "https://www.stats.gov.cn/sj/zxfb/202302/t20230203_1901548.html"
  },
+ "nbs/release/202302/t20230203_1901563": {
+  "attempted_at": "2026-10-02T02:52:52+00:00",
+  "bytes": 271428,
+  "content_type": "text/html",
+  "error": null,
+  "key": "nbs/release/202302/t20230203_1901563",
+  "method": "GET",
+  "path": "data/raw/nbs/release/202302/t20230203_1901563.html",
+  "request_body": null,
+  "retrieved_at": "2026-10-02T02:52:52+00:00",
+  "sha256": "65b4361c893eaa77dbc9a2cc418d80e6893fc9a50794f6c66cf05421c2e570c2",
+  "status": "fresh",
+  "url": "https://www.stats.gov.cn/sj/zxfb/202302/t20230203_1901563.html"
+ },
+ "nbs/release/202302/t20230203_1901570": {
+  "attempted_at": "2026-10-02T02:52:45+00:00",
+  "bytes": 315463,
+  "content_type": "text/html",
+  "error": null,
+  "key": "nbs/release/202302/t20230203_1901570",
+  "method": "GET",
+  "path": "data/raw/nbs/release/202302/t20230203_1901570.html",
+  "request_body": null,
+  "retrieved_at": "2026-10-02T02:52:45+00:00",
+  "sha256": "230624f7883153715f55d787377c2ff4d035a20c35fe0337c85605a5975259ed",
+  "status": "fresh",
+  "url": "https://www.stats.gov.cn/sj/zxfb/202302/t20230203_1901570.html"
+ },
  "nbs/release/202302/t20230203_1901579": {
   "attempted_at": "2026-10-02T02:02:39+00:00",
   "bytes": 804358,
@@ -759,6 +941,20 @@
   "sha256": "d50eda94f8dfe4adf55e9e81e71a1aa50119f20d05243f496833a140bffc1e25",
   "status": "fresh",
   "url": "https://www.stats.gov.cn/sj/zxfb/202302/t20230203_1901579.html"
+ },
+ "nbs/release/202302/t20230203_1901613": {
+  "attempted_at": "2026-10-02T02:52:39+00:00",
+  "bytes": 317077,
+  "content_type": "text/html",
+  "error": null,
+  "key": "nbs/release/202302/t20230203_1901613",
+  "method": "GET",
+  "path": "data/raw/nbs/release/202302/t20230203_1901613.html",
+  "request_body": null,
+  "retrieved_at": "2026-10-02T02:52:39+00:00",
+  "sha256": "ab4ce587d1a17ea81de4f0fb6114600bb891b07180e8a8e2e8a51719fa0451cf",
+  "status": "fresh",
+  "url": "https://www.stats.gov.cn/sj/zxfb/202302/t20230203_1901613.html"
  },
  "nbs/release/202302/t20230203_1901627": {
   "attempted_at": "2026-10-02T02:02:29+00:00",
@@ -774,6 +970,20 @@
   "status": "fresh",
   "url": "https://www.stats.gov.cn/sj/zxfb/202302/t20230203_1901627.html"
  },
+ "nbs/release/202302/t20230203_1901647": {
+  "attempted_at": "2026-10-02T02:52:32+00:00",
+  "bytes": 318552,
+  "content_type": "text/html",
+  "error": null,
+  "key": "nbs/release/202302/t20230203_1901647",
+  "method": "GET",
+  "path": "data/raw/nbs/release/202302/t20230203_1901647.html",
+  "request_body": null,
+  "retrieved_at": "2026-10-02T02:52:32+00:00",
+  "sha256": "e6b220b9e1bb0001393bf541095008619d42fbbf65a8a5f27a27a4e2571cd57b",
+  "status": "fresh",
+  "url": "https://www.stats.gov.cn/sj/zxfb/202302/t20230203_1901647.html"
+ },
  "nbs/release/202302/t20230203_1901651": {
   "attempted_at": "2026-10-02T02:02:20+00:00",
   "bytes": 850244,
@@ -787,6 +997,20 @@
   "sha256": "bc05c6c8c84d9adb7e78da2c82052e9af393086b146a942237a085a483dc0a79",
   "status": "fresh",
   "url": "https://www.stats.gov.cn/sj/zxfb/202302/t20230203_1901651.html"
+ },
+ "nbs/release/202302/t20230203_1901670": {
+  "attempted_at": "2026-10-02T02:52:26+00:00",
+  "bytes": 315376,
+  "content_type": "text/html",
+  "error": null,
+  "key": "nbs/release/202302/t20230203_1901670",
+  "method": "GET",
+  "path": "data/raw/nbs/release/202302/t20230203_1901670.html",
+  "request_body": null,
+  "retrieved_at": "2026-10-02T02:52:26+00:00",
+  "sha256": "d606417b9601d24111b7c381200912427964d2ce3730a281c90f64c0884c8c16",
+  "status": "fresh",
+  "url": "https://www.stats.gov.cn/sj/zxfb/202302/t20230203_1901670.html"
  },
  "nbs/release/202302/t20230203_1901678": {
   "attempted_at": "2026-10-02T02:02:11+00:00",
@@ -802,6 +1026,20 @@
   "status": "fresh",
   "url": "https://www.stats.gov.cn/sj/zxfb/202302/t20230203_1901678.html"
  },
+ "nbs/release/202302/t20230203_1901703": {
+  "attempted_at": "2026-10-02T02:52:19+00:00",
+  "bytes": 317494,
+  "content_type": "text/html",
+  "error": null,
+  "key": "nbs/release/202302/t20230203_1901703",
+  "method": "GET",
+  "path": "data/raw/nbs/release/202302/t20230203_1901703.html",
+  "request_body": null,
+  "retrieved_at": "2026-10-02T02:52:19+00:00",
+  "sha256": "e4b671b6e2f62efb21c732c42c57aa209369571fe1405c0d5855cf6fae5b2f28",
+  "status": "fresh",
+  "url": "https://www.stats.gov.cn/sj/zxfb/202302/t20230203_1901703.html"
+ },
  "nbs/release/202302/t20230203_1901709": {
   "attempted_at": "2026-10-02T02:02:01+00:00",
   "bytes": 1313902,
@@ -815,6 +1053,34 @@
   "sha256": "c01bd8f294bb45ad043ae7f39909ff99c384dcdf3c627c780f947596f6126a93",
   "status": "fresh",
   "url": "https://www.stats.gov.cn/sj/zxfb/202302/t20230203_1901709.html"
+ },
+ "nbs/release/202302/t20230220_1913661": {
+  "attempted_at": "2026-10-02T02:52:13+00:00",
+  "bytes": 264447,
+  "content_type": "text/html",
+  "error": null,
+  "key": "nbs/release/202302/t20230220_1913661",
+  "method": "GET",
+  "path": "data/raw/nbs/release/202302/t20230220_1913661.html",
+  "request_body": null,
+  "retrieved_at": "2026-10-02T02:52:13+00:00",
+  "sha256": "d832d70da25119f02e15ab0e4c3abec46cb73ab6cdaa7607b61d3285befe76d5",
+  "status": "fresh",
+  "url": "https://www.stats.gov.cn/sj/zxfb/202302/t20230220_1913661.html"
+ },
+ "nbs/release/202303/t20230309_1936952": {
+  "attempted_at": "2026-10-02T02:52:06+00:00",
+  "bytes": 316625,
+  "content_type": "text/html",
+  "error": null,
+  "key": "nbs/release/202303/t20230309_1936952",
+  "method": "GET",
+  "path": "data/raw/nbs/release/202303/t20230309_1936952.html",
+  "request_body": null,
+  "retrieved_at": "2026-10-02T02:52:06+00:00",
+  "sha256": "350d5dfa85055262f5d1e27b0a24f3ba596fa601025756c3f9c62f5036942fea",
+  "status": "fresh",
+  "url": "https://www.stats.gov.cn/sj/zxfb/202303/t20230309_1936952.html"
  },
  "nbs/release/202303/t20230315_1937190": {
   "attempted_at": "2026-10-02T02:01:52+00:00",
@@ -830,6 +1096,34 @@
   "status": "fresh",
   "url": "https://www.stats.gov.cn/sj/zxfb/202303/t20230315_1937190.html"
  },
+ "nbs/release/202304/t20230411_1938507": {
+  "attempted_at": "2026-10-02T02:52:00+00:00",
+  "bytes": 339707,
+  "content_type": "text/html",
+  "error": null,
+  "key": "nbs/release/202304/t20230411_1938507",
+  "method": "GET",
+  "path": "data/raw/nbs/release/202304/t20230411_1938507.html",
+  "request_body": null,
+  "retrieved_at": "2026-10-02T02:52:00+00:00",
+  "sha256": "d225669224f3225bcc3c5cfc594515637fa6750e64d877dfbcf0b094e8ee3e0f",
+  "status": "fresh",
+  "url": "https://www.stats.gov.cn/sj/zxfb/202304/t20230411_1938507.html"
+ },
+ "nbs/release/202304/t20230418_1938706": {
+  "attempted_at": "2026-10-02T02:51:44+00:00",
+  "bytes": 1360929,
+  "content_type": "text/html",
+  "error": null,
+  "key": "nbs/release/202304/t20230418_1938706",
+  "method": "GET",
+  "path": "data/raw/nbs/release/202304/t20230418_1938706.html",
+  "request_body": null,
+  "retrieved_at": "2026-10-02T02:51:44+00:00",
+  "sha256": "2a67217ee789799f4bb634b8207cfd66976ddbea1aa599b596aa5b6c6b350f17",
+  "status": "fresh",
+  "url": "https://www.stats.gov.cn/sj/zxfb/202304/t20230418_1938706.html"
+ },
  "nbs/release/202304/t20230427_1939124": {
   "attempted_at": "2026-10-02T02:01:46+00:00",
   "bytes": 387661,
@@ -843,6 +1137,20 @@
   "sha256": "49208095ad06dd0437ba91545997b40a3160bb8a6e35f83a621b58a0872b1637",
   "status": "fresh",
   "url": "https://www.stats.gov.cn/sj/zxfb/202304/t20230427_1939124.html"
+ },
+ "nbs/release/202305/t20230511_1939347": {
+  "attempted_at": "2026-10-02T02:51:37+00:00",
+  "bytes": 334311,
+  "content_type": "text/html",
+  "error": null,
+  "key": "nbs/release/202305/t20230511_1939347",
+  "method": "GET",
+  "path": "data/raw/nbs/release/202305/t20230511_1939347.html",
+  "request_body": null,
+  "retrieved_at": "2026-10-02T02:51:37+00:00",
+  "sha256": "456ecd4a5e60a67767b4d70ece8b7361ae208286a86d77ee65fa906c7f28ef2b",
+  "status": "fresh",
+  "url": "https://www.stats.gov.cn/sj/zxfb/202305/t20230511_1939347.html"
  },
  "nbs/release/202305/t20230516_1939486": {
   "attempted_at": "2026-10-02T02:01:37+00:00",
@@ -858,6 +1166,20 @@
   "status": "fresh",
   "url": "https://www.stats.gov.cn/sj/zxfb/202305/t20230516_1939486.html"
  },
+ "nbs/release/202306/t20230609_1940479": {
+  "attempted_at": "2026-10-02T02:51:31+00:00",
+  "bytes": 323489,
+  "content_type": "text/html",
+  "error": null,
+  "key": "nbs/release/202306/t20230609_1940479",
+  "method": "GET",
+  "path": "data/raw/nbs/release/202306/t20230609_1940479.html",
+  "request_body": null,
+  "retrieved_at": "2026-10-02T02:51:31+00:00",
+  "sha256": "ab9359fd345c2416c5cf0360486376e87372aa640009cef63406f2d63a7da411",
+  "status": "fresh",
+  "url": "https://www.stats.gov.cn/sj/zxfb/202306/t20230609_1940479.html"
+ },
  "nbs/release/202306/t20230615_1940628": {
   "attempted_at": "2026-10-02T02:01:29+00:00",
   "bytes": 818455,
@@ -871,6 +1193,20 @@
   "sha256": "4a7fd8d85e287977d95892afd39108bde04cb60a199ca2bffb7704af8f426c54",
   "status": "fresh",
   "url": "https://www.stats.gov.cn/sj/zxfb/202306/t20230615_1940628.html"
+ },
+ "nbs/release/202307/t20230710_1941147": {
+  "attempted_at": "2026-10-02T02:51:24+00:00",
+  "bytes": 333245,
+  "content_type": "text/html",
+  "error": null,
+  "key": "nbs/release/202307/t20230710_1941147",
+  "method": "GET",
+  "path": "data/raw/nbs/release/202307/t20230710_1941147.html",
+  "request_body": null,
+  "retrieved_at": "2026-10-02T02:51:24+00:00",
+  "sha256": "a4368693909db0bb86f6c414f6d7b2671eb576a6c6ea29f0bf08b9f500f81d8c",
+  "status": "fresh",
+  "url": "https://www.stats.gov.cn/sj/zxfb/202307/t20230710_1941147.html"
  },
  "nbs/release/202307/t20230715_1941271": {
   "attempted_at": "2026-10-02T02:01:18+00:00",
@@ -886,6 +1222,34 @@
   "status": "fresh",
   "url": "https://www.stats.gov.cn/sj/zxfb/202307/t20230715_1941271.html"
  },
+ "nbs/release/202307/t20230727_1941591": {
+  "attempted_at": "2026-10-02T02:51:20+00:00",
+  "bytes": 107749,
+  "content_type": "text/html",
+  "error": null,
+  "key": "nbs/release/202307/t20230727_1941591",
+  "method": "GET",
+  "path": "data/raw/nbs/release/202307/t20230727_1941591.html",
+  "request_body": null,
+  "retrieved_at": "2026-10-02T02:51:20+00:00",
+  "sha256": "7eaf5673717765a4114b4e0894ba5a739b3061748fd37e1d26587b1d6050256d",
+  "status": "fresh",
+  "url": "https://www.stats.gov.cn/sj/zxfb/202307/t20230727_1941591.html"
+ },
+ "nbs/release/202308/t20230809_1941863": {
+  "attempted_at": "2026-10-02T02:51:14+00:00",
+  "bytes": 323653,
+  "content_type": "text/html",
+  "error": null,
+  "key": "nbs/release/202308/t20230809_1941863",
+  "method": "GET",
+  "path": "data/raw/nbs/release/202308/t20230809_1941863.html",
+  "request_body": null,
+  "retrieved_at": "2026-10-02T02:51:14+00:00",
+  "sha256": "402364c852fbc3efa7023b7f2f34f2acb49a39c67ce23816d7ad79aaea256475",
+  "status": "fresh",
+  "url": "https://www.stats.gov.cn/sj/zxfb/202308/t20230809_1941863.html"
+ },
  "nbs/release/202308/t20230815_1941957": {
   "attempted_at": "2026-10-02T02:01:09+00:00",
   "bytes": 807589,
@@ -899,6 +1263,34 @@
   "sha256": "4e055d0426d9d772fb3d313cf0a2b39a141ea3c6f2956bc9cfa8a0a147b41ffa",
   "status": "fresh",
   "url": "https://www.stats.gov.cn/sj/zxfb/202308/t20230815_1941957.html"
+ },
+ "nbs/release/202308/t20230822_1942172": {
+  "attempted_at": "2026-10-02T02:51:08+00:00",
+  "bytes": 289620,
+  "content_type": "text/html",
+  "error": null,
+  "key": "nbs/release/202308/t20230822_1942172",
+  "method": "GET",
+  "path": "data/raw/nbs/release/202308/t20230822_1942172.html",
+  "request_body": null,
+  "retrieved_at": "2026-10-02T02:51:08+00:00",
+  "sha256": "7da7f40f7a233ae9bb95f6a66dee9cd40506ec2aba9da2073b0fa593f6223049",
+  "status": "fresh",
+  "url": "https://www.stats.gov.cn/sj/zxfb/202308/t20230822_1942172.html"
+ },
+ "nbs/release/202309/t20230909_1942695": {
+  "attempted_at": "2026-10-02T02:51:01+00:00",
+  "bytes": 321593,
+  "content_type": "text/html",
+  "error": null,
+  "key": "nbs/release/202309/t20230909_1942695",
+  "method": "GET",
+  "path": "data/raw/nbs/release/202309/t20230909_1942695.html",
+  "request_body": null,
+  "retrieved_at": "2026-10-02T02:51:01+00:00",
+  "sha256": "79903cdb6b0f79a6633822a22c22d04d8f53f123a2ebf77ef30b0a43ad5f0b9b",
+  "status": "fresh",
+  "url": "https://www.stats.gov.cn/sj/zxfb/202309/t20230909_1942695.html"
  },
  "nbs/release/202309/t20230915_1942848": {
   "attempted_at": "2026-10-02T02:01:01+00:00",
@@ -914,6 +1306,20 @@
   "status": "fresh",
   "url": "https://www.stats.gov.cn/sj/zxfb/202309/t20230915_1942848.html"
  },
+ "nbs/release/202310/t20231013_1943548": {
+  "attempted_at": "2026-10-02T02:50:55+00:00",
+  "bytes": 325485,
+  "content_type": "text/html",
+  "error": null,
+  "key": "nbs/release/202310/t20231013_1943548",
+  "method": "GET",
+  "path": "data/raw/nbs/release/202310/t20231013_1943548.html",
+  "request_body": null,
+  "retrieved_at": "2026-10-02T02:50:55+00:00",
+  "sha256": "4e552baca76bfb856a8e282e21f8e1f17d2f2baeb9b891e24ffb06d32808afcc",
+  "status": "fresh",
+  "url": "https://www.stats.gov.cn/sj/zxfb/202310/t20231013_1943548.html"
+ },
  "nbs/release/202310/t20231018_1943654": {
   "attempted_at": "2026-10-02T02:00:50+00:00",
   "bytes": 1245048,
@@ -927,6 +1333,20 @@
   "sha256": "414cd23c475f282dd24d55f3e337e9c24c0aee0e978fe42de768855032fb4a77",
   "status": "fresh",
   "url": "https://www.stats.gov.cn/sj/zxfb/202310/t20231018_1943654.html"
+ },
+ "nbs/release/202311/t20231109_1944382": {
+  "attempted_at": "2026-10-02T02:50:49+00:00",
+  "bytes": 325236,
+  "content_type": "text/html",
+  "error": null,
+  "key": "nbs/release/202311/t20231109_1944382",
+  "method": "GET",
+  "path": "data/raw/nbs/release/202311/t20231109_1944382.html",
+  "request_body": null,
+  "retrieved_at": "2026-10-02T02:50:49+00:00",
+  "sha256": "739f1dc6062e027416ab9a8082e661bf84deb5578b85e79762318b826504c0c7",
+  "status": "fresh",
+  "url": "https://www.stats.gov.cn/sj/zxfb/202311/t20231109_1944382.html"
  },
  "nbs/release/202311/t20231115_1944527": {
   "attempted_at": "2026-10-02T02:00:41+00:00",
@@ -942,6 +1362,20 @@
   "status": "fresh",
   "url": "https://www.stats.gov.cn/sj/zxfb/202311/t20231115_1944527.html"
  },
+ "nbs/release/202312/t20231209_1945394": {
+  "attempted_at": "2026-10-02T02:50:42+00:00",
+  "bytes": 325908,
+  "content_type": "text/html",
+  "error": null,
+  "key": "nbs/release/202312/t20231209_1945394",
+  "method": "GET",
+  "path": "data/raw/nbs/release/202312/t20231209_1945394.html",
+  "request_body": null,
+  "retrieved_at": "2026-10-02T02:50:42+00:00",
+  "sha256": "8cf8757a481f00550f1cfb51e8dfca3af6272f226a4c8a31dacb88d075b14649",
+  "status": "fresh",
+  "url": "https://www.stats.gov.cn/sj/zxfb/202312/t20231209_1945394.html"
+ },
  "nbs/release/202312/t20231215_1945570": {
   "attempted_at": "2026-10-02T02:00:30+00:00",
   "bytes": 838282,
@@ -955,6 +1389,20 @@
   "sha256": "9407434e3f23e43c80a3bbd6a60118dde64145bafef410c5e20f5fdb22dda7cf",
   "status": "fresh",
   "url": "https://www.stats.gov.cn/sj/zxfb/202312/t20231215_1945570.html"
+ },
+ "nbs/release/202401/t20240112_1946465": {
+  "attempted_at": "2026-10-02T02:50:36+00:00",
+  "bytes": 323644,
+  "content_type": "text/html",
+  "error": null,
+  "key": "nbs/release/202401/t20240112_1946465",
+  "method": "GET",
+  "path": "data/raw/nbs/release/202401/t20240112_1946465.html",
+  "request_body": null,
+  "retrieved_at": "2026-10-02T02:50:36+00:00",
+  "sha256": "4d46be21f4bbaa038b0d2f619b10a1c27200eb9485e50afd1ea1cdee23fff580",
+  "status": "fresh",
+  "url": "https://www.stats.gov.cn/sj/zxfb/202401/t20240112_1946465.html"
  },
  "nbs/release/202401/t20240117_1946624": {
   "attempted_at": "2026-10-02T02:00:19+00:00",
@@ -970,6 +1418,34 @@
   "status": "fresh",
   "url": "https://www.stats.gov.cn/sj/zxfb/202401/t20240117_1946624.html"
  },
+ "nbs/release/202402/t20240208_1947623": {
+  "attempted_at": "2026-10-02T02:50:30+00:00",
+  "bytes": 257088,
+  "content_type": "text/html",
+  "error": null,
+  "key": "nbs/release/202402/t20240208_1947623",
+  "method": "GET",
+  "path": "data/raw/nbs/release/202402/t20240208_1947623.html",
+  "request_body": null,
+  "retrieved_at": "2026-10-02T02:50:30+00:00",
+  "sha256": "e42c30e7c6ee1b407940f8f9bc40b7bef111f8a91b796c5bac428320feaad44a",
+  "status": "fresh",
+  "url": "https://www.stats.gov.cn/sj/zxfb/202402/t20240208_1947623.html"
+ },
+ "nbs/release/202403/t20240321_1948077": {
+  "attempted_at": "2026-10-02T02:50:24+00:00",
+  "bytes": 220405,
+  "content_type": "text/html",
+  "error": null,
+  "key": "nbs/release/202403/t20240321_1948077",
+  "method": "GET",
+  "path": "data/raw/nbs/release/202403/t20240321_1948077.html",
+  "request_body": null,
+  "retrieved_at": "2026-10-02T02:50:24+00:00",
+  "sha256": "878c33461e6063cbc1558eb2625276868c81182e5304ce9337d80537c5d3d927",
+  "status": "fresh",
+  "url": "https://www.stats.gov.cn/sj/zxfb/202403/t20240321_1948077.html"
+ },
  "nbs/release/202403/t20240321_1948109": {
   "attempted_at": "2026-10-02T02:00:13+00:00",
   "bytes": 337145,
@@ -983,6 +1459,20 @@
   "sha256": "f51d56314c4fbf09911a9f1a5562949ab67aa48c53be9aa3b950eca074abfb79",
   "status": "fresh",
   "url": "https://www.stats.gov.cn/sj/zxfb/202403/t20240321_1948109.html"
+ },
+ "nbs/release/202404/t20240411_1948448": {
+  "attempted_at": "2026-10-02T02:50:19+00:00",
+  "bytes": 212626,
+  "content_type": "text/html",
+  "error": null,
+  "key": "nbs/release/202404/t20240411_1948448",
+  "method": "GET",
+  "path": "data/raw/nbs/release/202404/t20240411_1948448.html",
+  "request_body": null,
+  "retrieved_at": "2026-10-02T02:50:19+00:00",
+  "sha256": "44bd3993dd6d643a1a092646e3c187f09001531d13b9d27de534b2c629856a38",
+  "status": "fresh",
+  "url": "https://www.stats.gov.cn/sj/zxfb/202404/t20240411_1948448.html"
  },
  "nbs/release/202404/t20240416_1948561": {
   "attempted_at": "2026-10-02T02:00:05+00:00",
@@ -1012,6 +1502,20 @@
   "status": "fresh",
   "url": "https://www.stats.gov.cn/sj/zxfb/202404/t20240430_1948783.html"
  },
+ "nbs/release/202405/t20240511_1950302": {
+  "attempted_at": "2026-10-02T02:50:13+00:00",
+  "bytes": 211482,
+  "content_type": "text/html",
+  "error": null,
+  "key": "nbs/release/202405/t20240511_1950302",
+  "method": "GET",
+  "path": "data/raw/nbs/release/202405/t20240511_1950302.html",
+  "request_body": null,
+  "retrieved_at": "2026-10-02T02:50:13+00:00",
+  "sha256": "78fdcb03a6562f25a9c9860b974bdb9bf25498b994b170e3022f3d4c4b61c453",
+  "status": "fresh",
+  "url": "https://www.stats.gov.cn/sj/zxfb/202405/t20240511_1950302.html"
+ },
  "nbs/release/202405/t20240517_1950397": {
   "attempted_at": "2026-10-02T01:59:53+00:00",
   "bytes": 348816,
@@ -1040,6 +1544,20 @@
   "status": "fresh",
   "url": "https://www.stats.gov.cn/sj/zxfb/202405/t20240520_1950434.html"
  },
+ "nbs/release/202406/t20240612_1954519": {
+  "attempted_at": "2026-10-02T02:50:07+00:00",
+  "bytes": 208743,
+  "content_type": "text/html",
+  "error": null,
+  "key": "nbs/release/202406/t20240612_1954519",
+  "method": "GET",
+  "path": "data/raw/nbs/release/202406/t20240612_1954519.html",
+  "request_body": null,
+  "retrieved_at": "2026-10-02T02:50:07+00:00",
+  "sha256": "f7ab50f46007a33838519211eba2b18676e18bed068058e9bf26c0bcfc1a634e",
+  "status": "fresh",
+  "url": "https://www.stats.gov.cn/sj/zxfb/202406/t20240612_1954519.html"
+ },
  "nbs/release/202406/t20240617_1954710": {
   "attempted_at": "2026-10-02T01:59:39+00:00",
   "bytes": 346955,
@@ -1053,6 +1571,20 @@
   "sha256": "8f82b682f134596070418d134d6780888b548ef6ad71dfc22807f05e58dea0ab",
   "status": "fresh",
   "url": "https://www.stats.gov.cn/sj/zxfb/202406/t20240617_1954710.html"
+ },
+ "nbs/release/202407/t20240710_1955508": {
+  "attempted_at": "2026-10-02T02:50:03+00:00",
+  "bytes": 211511,
+  "content_type": "text/html",
+  "error": null,
+  "key": "nbs/release/202407/t20240710_1955508",
+  "method": "GET",
+  "path": "data/raw/nbs/release/202407/t20240710_1955508.html",
+  "request_body": null,
+  "retrieved_at": "2026-10-02T02:50:03+00:00",
+  "sha256": "6ba8b78f268cf87604586c8c670ce5ae283fe2ce29f09c3843c26c2295542b96",
+  "status": "fresh",
+  "url": "https://www.stats.gov.cn/sj/zxfb/202407/t20240710_1955508.html"
  },
  "nbs/release/202407/t20240715_1955618": {
   "attempted_at": "2026-10-02T01:59:30+00:00",
@@ -1068,6 +1600,34 @@
   "status": "fresh",
   "url": "https://www.stats.gov.cn/sj/zxfb/202407/t20240715_1955618.html"
  },
+ "nbs/release/202407/t20240730_1955890": {
+  "attempted_at": "2026-10-02T02:50:00+00:00",
+  "bytes": 99621,
+  "content_type": "text/html",
+  "error": null,
+  "key": "nbs/release/202407/t20240730_1955890",
+  "method": "GET",
+  "path": "data/raw/nbs/release/202407/t20240730_1955890.html",
+  "request_body": null,
+  "retrieved_at": "2026-10-02T02:50:00+00:00",
+  "sha256": "45c7f41a99aecb18dfd54283829ec9e2d9a66350e5f13773fedd6eab10373680",
+  "status": "fresh",
+  "url": "https://www.stats.gov.cn/sj/zxfb/202407/t20240730_1955890.html"
+ },
+ "nbs/release/202408/t20240809_1955948": {
+  "attempted_at": "2026-10-02T02:49:55+00:00",
+  "bytes": 211269,
+  "content_type": "text/html",
+  "error": null,
+  "key": "nbs/release/202408/t20240809_1955948",
+  "method": "GET",
+  "path": "data/raw/nbs/release/202408/t20240809_1955948.html",
+  "request_body": null,
+  "retrieved_at": "2026-10-02T02:49:55+00:00",
+  "sha256": "10e3d67bfff2f275c8295458d207e25f3c1f6b75455cdbe2ce78d4f667cdbada",
+  "status": "fresh",
+  "url": "https://www.stats.gov.cn/sj/zxfb/202408/t20240809_1955948.html"
+ },
  "nbs/release/202408/t20240815_1955986": {
   "attempted_at": "2026-10-02T01:59:24+00:00",
   "bytes": 340435,
@@ -1081,6 +1641,34 @@
   "sha256": "8742115f46760401e699c4b43f7e01fa6a9af1dde5887753a98866db005cddec",
   "status": "fresh",
   "url": "https://www.stats.gov.cn/sj/zxfb/202408/t20240815_1955986.html"
+ },
+ "nbs/release/202408/t20240831_1956158": {
+  "attempted_at": "2026-10-02T02:49:50+00:00",
+  "bytes": 183266,
+  "content_type": "text/html",
+  "error": null,
+  "key": "nbs/release/202408/t20240831_1956158",
+  "method": "GET",
+  "path": "data/raw/nbs/release/202408/t20240831_1956158.html",
+  "request_body": null,
+  "retrieved_at": "2026-10-02T02:49:50+00:00",
+  "sha256": "f0feb8136e1c0cdc3215a1fda74c02cc70635eb921c07148adc1afcf5ab7199a",
+  "status": "fresh",
+  "url": "https://www.stats.gov.cn/sj/zxfb/202408/t20240831_1956158.html"
+ },
+ "nbs/release/202409/t20240909_1956311": {
+  "attempted_at": "2026-10-02T02:49:42+00:00",
+  "bytes": 246161,
+  "content_type": "text/html",
+  "error": null,
+  "key": "nbs/release/202409/t20240909_1956311",
+  "method": "GET",
+  "path": "data/raw/nbs/release/202409/t20240909_1956311.html",
+  "request_body": null,
+  "retrieved_at": "2026-10-02T02:49:42+00:00",
+  "sha256": "cde942ed2e781513943b7599ceb1bb4b5096fa6c6fe8b2fd879be93ec9524723",
+  "status": "fresh",
+  "url": "https://www.stats.gov.cn/sj/zxfb/202409/t20240909_1956311.html"
  },
  "nbs/release/202409/t20240914_1956487": {
   "attempted_at": "2026-10-02T01:59:18+00:00",
@@ -1096,6 +1684,20 @@
   "status": "fresh",
   "url": "https://www.stats.gov.cn/sj/zxfb/202409/t20240914_1956487.html"
  },
+ "nbs/release/202410/t20241013_1956899": {
+  "attempted_at": "2026-10-02T02:49:36+00:00",
+  "bytes": 246997,
+  "content_type": "text/html",
+  "error": null,
+  "key": "nbs/release/202410/t20241013_1956899",
+  "method": "GET",
+  "path": "data/raw/nbs/release/202410/t20241013_1956899.html",
+  "request_body": null,
+  "retrieved_at": "2026-10-02T02:49:36+00:00",
+  "sha256": "daa70d5e2a44af60736b510a084b58c62903b95f9dbe4450f4d725924162a01b",
+  "status": "fresh",
+  "url": "https://www.stats.gov.cn/sj/zxfb/202410/t20241013_1956899.html"
+ },
  "nbs/release/202410/t20241018_1957044": {
   "attempted_at": "2026-10-02T01:59:10+00:00",
   "bytes": 663297,
@@ -1109,6 +1711,20 @@
   "sha256": "be6d5615fc002f0ebdde24b4d91e3d97d0594367f11247c546979b9d18b61097",
   "status": "fresh",
   "url": "https://www.stats.gov.cn/sj/zxfb/202410/t20241018_1957044.html"
+ },
+ "nbs/release/202411/t20241109_1957353": {
+  "attempted_at": "2026-10-02T02:49:31+00:00",
+  "bytes": 247784,
+  "content_type": "text/html",
+  "error": null,
+  "key": "nbs/release/202411/t20241109_1957353",
+  "method": "GET",
+  "path": "data/raw/nbs/release/202411/t20241109_1957353.html",
+  "request_body": null,
+  "retrieved_at": "2026-10-02T02:49:31+00:00",
+  "sha256": "384012d93bc45eaeb07837c2dd2793281a766aa879b1a2cacf331cdcc9ac28a1",
+  "status": "fresh",
+  "url": "https://www.stats.gov.cn/sj/zxfb/202411/t20241109_1957353.html"
  },
  "nbs/release/202411/t20241115_1957431": {
   "attempted_at": "2026-10-02T01:59:03+00:00",
@@ -1124,6 +1740,20 @@
   "status": "fresh",
   "url": "https://www.stats.gov.cn/sj/zxfb/202411/t20241115_1957431.html"
  },
+ "nbs/release/202412/t20241209_1957689": {
+  "attempted_at": "2026-10-02T02:49:25+00:00",
+  "bytes": 246572,
+  "content_type": "text/html",
+  "error": null,
+  "key": "nbs/release/202412/t20241209_1957689",
+  "method": "GET",
+  "path": "data/raw/nbs/release/202412/t20241209_1957689.html",
+  "request_body": null,
+  "retrieved_at": "2026-10-02T02:49:25+00:00",
+  "sha256": "f2641365a27b4d37c97b4ea1a897aac87173f67cfa63e0c67d92fe69e192b2b6",
+  "status": "fresh",
+  "url": "https://www.stats.gov.cn/sj/zxfb/202412/t20241209_1957689.html"
+ },
  "nbs/release/202412/t20241216_1957767": {
   "attempted_at": "2026-10-02T01:58:56+00:00",
   "bytes": 430818,
@@ -1138,6 +1768,76 @@
   "status": "fresh",
   "url": "https://www.stats.gov.cn/sj/zxfb/202412/t20241216_1957767.html"
  },
+ "nbs/release/202412/t20241231_1958126": {
+  "attempted_at": "2026-10-02T02:49:22+00:00",
+  "bytes": 98480,
+  "content_type": "text/html",
+  "error": null,
+  "key": "nbs/release/202412/t20241231_1958126",
+  "method": "GET",
+  "path": "data/raw/nbs/release/202412/t20241231_1958126.html",
+  "request_body": null,
+  "retrieved_at": "2026-10-02T02:49:22+00:00",
+  "sha256": "53ab3595dbcee5ea5ebc0bcf8e84d13166ffc92ef49b97d975fb3b31be19ef8e",
+  "status": "fresh",
+  "url": "https://www.stats.gov.cn/sj/zxfb/202412/t20241231_1958126.html"
+ },
+ "nbs/release/202501/t20250109_1958170": {
+  "attempted_at": "2026-10-02T02:49:17+00:00",
+  "bytes": 243724,
+  "content_type": "text/html",
+  "error": null,
+  "key": "nbs/release/202501/t20250109_1958170",
+  "method": "GET",
+  "path": "data/raw/nbs/release/202501/t20250109_1958170.html",
+  "request_body": null,
+  "retrieved_at": "2026-10-02T02:49:17+00:00",
+  "sha256": "6a6d665091f0b657286e3fc5973dfb95758edf3a42fdf2e905b1325dec511b20",
+  "status": "fresh",
+  "url": "https://www.stats.gov.cn/sj/zxfb/202501/t20250109_1958170.html"
+ },
+ "nbs/release/202501/t20250117_1958332": {
+  "attempted_at": "2026-10-02T02:49:08+00:00",
+  "bytes": 742514,
+  "content_type": "text/html",
+  "error": null,
+  "key": "nbs/release/202501/t20250117_1958332",
+  "method": "GET",
+  "path": "data/raw/nbs/release/202501/t20250117_1958332.html",
+  "request_body": null,
+  "retrieved_at": "2026-10-02T02:49:08+00:00",
+  "sha256": "1ea97704f279604434d7fb191e290e2f47eaeb1a2342a901af752467ee1ab59f",
+  "status": "fresh",
+  "url": "https://www.stats.gov.cn/sj/zxfb/202501/t20250117_1958332.html"
+ },
+ "nbs/release/202502/t20250209_1958646": {
+  "attempted_at": "2026-10-02T02:49:04+00:00",
+  "bytes": 178574,
+  "content_type": "text/html",
+  "error": null,
+  "key": "nbs/release/202502/t20250209_1958646",
+  "method": "GET",
+  "path": "data/raw/nbs/release/202502/t20250209_1958646.html",
+  "request_body": null,
+  "retrieved_at": "2026-10-02T02:49:04+00:00",
+  "sha256": "561156821fba8b7abb85fcd91460e0f5afd542b21850851859a30085f2c95e97",
+  "status": "fresh",
+  "url": "https://www.stats.gov.cn/sj/zxfb/202502/t20250209_1958646.html"
+ },
+ "nbs/release/202503/t20250309_1958915": {
+  "attempted_at": "2026-10-02T02:48:59+00:00",
+  "bytes": 209446,
+  "content_type": "text/html",
+  "error": null,
+  "key": "nbs/release/202503/t20250309_1958915",
+  "method": "GET",
+  "path": "data/raw/nbs/release/202503/t20250309_1958915.html",
+  "request_body": null,
+  "retrieved_at": "2026-10-02T02:48:59+00:00",
+  "sha256": "d175eb1313a56f2d6e69b7ac3fd64cfdc017b5d91a33ca2848450a1bcb8bf64e",
+  "status": "fresh",
+  "url": "https://www.stats.gov.cn/sj/zxfb/202503/t20250309_1958915.html"
+ },
  "nbs/release/202503/t20250317_1959010": {
   "attempted_at": "2026-10-02T01:58:50+00:00",
   "bytes": 337106,
@@ -1151,6 +1851,20 @@
   "sha256": "fb067bdaae833f2215a6374a4e9bd4cd9e7bf94a5b4bd2b0f637f28ee54f1744",
   "status": "fresh",
   "url": "https://www.stats.gov.cn/sj/zxfb/202503/t20250317_1959010.html"
+ },
+ "nbs/release/202504/t20250410_1959261": {
+  "attempted_at": "2026-10-02T02:48:53+00:00",
+  "bytes": 211966,
+  "content_type": "text/html",
+  "error": null,
+  "key": "nbs/release/202504/t20250410_1959261",
+  "method": "GET",
+  "path": "data/raw/nbs/release/202504/t20250410_1959261.html",
+  "request_body": null,
+  "retrieved_at": "2026-10-02T02:48:53+00:00",
+  "sha256": "68ffe70e1276e0a105e75347c658908b566fa9eb713af43cbd7f92ed6960456d",
+  "status": "fresh",
+  "url": "https://www.stats.gov.cn/sj/zxfb/202504/t20250410_1959261.html"
  },
  "nbs/release/202504/t20250416_1959321": {
   "attempted_at": "2026-10-02T01:58:42+00:00",
@@ -1180,6 +1894,20 @@
   "status": "fresh",
   "url": "https://www.stats.gov.cn/sj/zxfb/202504/t20250430_1959523.html"
  },
+ "nbs/release/202505/t20250510_1959771": {
+  "attempted_at": "2026-10-02T02:48:48+00:00",
+  "bytes": 208518,
+  "content_type": "text/html",
+  "error": null,
+  "key": "nbs/release/202505/t20250510_1959771",
+  "method": "GET",
+  "path": "data/raw/nbs/release/202505/t20250510_1959771.html",
+  "request_body": null,
+  "retrieved_at": "2026-10-02T02:48:48+00:00",
+  "sha256": "95b121662eed71e62f131999a2a065d6f6b767cd391826eb0acf2314e0e7b8e3",
+  "status": "fresh",
+  "url": "https://www.stats.gov.cn/sj/zxfb/202505/t20250510_1959771.html"
+ },
  "nbs/release/202505/t20250516_1959826": {
   "attempted_at": "2026-10-02T01:58:28+00:00",
   "bytes": 596690,
@@ -1208,6 +1936,20 @@
   "status": "fresh",
   "url": "https://www.stats.gov.cn/sj/zxfb/202505/t20250519_1959864.html"
  },
+ "nbs/release/202506/t20250609_1960094": {
+  "attempted_at": "2026-10-02T02:48:43+00:00",
+  "bytes": 251322,
+  "content_type": "text/html",
+  "error": null,
+  "key": "nbs/release/202506/t20250609_1960094",
+  "method": "GET",
+  "path": "data/raw/nbs/release/202506/t20250609_1960094.html",
+  "request_body": null,
+  "retrieved_at": "2026-10-02T02:48:43+00:00",
+  "sha256": "fb6799cae7d6b64a20fb14025a0380ca9aa854fb235a371f0cb24a08f8ff628f",
+  "status": "fresh",
+  "url": "https://www.stats.gov.cn/sj/zxfb/202506/t20250609_1960094.html"
+ },
  "nbs/release/202506/t20250616_1960173": {
   "attempted_at": "2026-10-02T01:58:13+00:00",
   "bytes": 404604,
@@ -1221,6 +1963,20 @@
   "sha256": "18152afc33e7a2510b1b0ccae46a8fb9402a085158920e126cc8705d05892db9",
   "status": "fresh",
   "url": "https://www.stats.gov.cn/sj/zxfb/202506/t20250616_1960173.html"
+ },
+ "nbs/release/202507/t20250709_1960370": {
+  "attempted_at": "2026-10-02T02:48:38+00:00",
+  "bytes": 213892,
+  "content_type": "text/html",
+  "error": null,
+  "key": "nbs/release/202507/t20250709_1960370",
+  "method": "GET",
+  "path": "data/raw/nbs/release/202507/t20250709_1960370.html",
+  "request_body": null,
+  "retrieved_at": "2026-10-02T02:48:38+00:00",
+  "sha256": "e27c8565f86a81d02a4672e90bf53c4713f9b6104c041e9fa53d4a6d29a03c9c",
+  "status": "fresh",
+  "url": "https://www.stats.gov.cn/sj/zxfb/202507/t20250709_1960370.html"
  },
  "nbs/release/202507/t20250715_1960414": {
   "attempted_at": "2026-10-02T01:58:06+00:00",
@@ -1236,6 +1992,34 @@
   "status": "fresh",
   "url": "https://www.stats.gov.cn/sj/zxfb/202507/t20250715_1960414.html"
  },
+ "nbs/release/202507/t20250731_1960553": {
+  "attempted_at": "2026-10-02T02:48:34+00:00",
+  "bytes": 102324,
+  "content_type": "text/html",
+  "error": null,
+  "key": "nbs/release/202507/t20250731_1960553",
+  "method": "GET",
+  "path": "data/raw/nbs/release/202507/t20250731_1960553.html",
+  "request_body": null,
+  "retrieved_at": "2026-10-02T02:48:34+00:00",
+  "sha256": "3474762e69b2849deb12c7abda4cbd1333d769b5ece9f4bd65ed92dee69138fd",
+  "status": "fresh",
+  "url": "https://www.stats.gov.cn/sj/zxfb/202507/t20250731_1960553.html"
+ },
+ "nbs/release/202508/t20250809_1960635": {
+  "attempted_at": "2026-10-02T02:48:29+00:00",
+  "bytes": 222066,
+  "content_type": "text/html",
+  "error": null,
+  "key": "nbs/release/202508/t20250809_1960635",
+  "method": "GET",
+  "path": "data/raw/nbs/release/202508/t20250809_1960635.html",
+  "request_body": null,
+  "retrieved_at": "2026-10-02T02:48:29+00:00",
+  "sha256": "873a2ee7abe730e781bc58e4b99d8f5de124e192dcda0d0fda792e058437ee42",
+  "status": "fresh",
+  "url": "https://www.stats.gov.cn/sj/zxfb/202508/t20250809_1960635.html"
+ },
  "nbs/release/202508/t20250815_1960789": {
   "attempted_at": "2026-10-02T01:58:00+00:00",
   "bytes": 344534,
@@ -1249,6 +2033,34 @@
   "sha256": "9b1b772e57df19b954f5e3a706c93964e49e72bd6217500aeed49ff74c276320",
   "status": "fresh",
   "url": "https://www.stats.gov.cn/sj/zxfb/202508/t20250815_1960789.html"
+ },
+ "nbs/release/202508/t20250827_1960915": {
+  "attempted_at": "2026-10-02T02:48:24+00:00",
+  "bytes": 168978,
+  "content_type": "text/html",
+  "error": null,
+  "key": "nbs/release/202508/t20250827_1960915",
+  "method": "GET",
+  "path": "data/raw/nbs/release/202508/t20250827_1960915.html",
+  "request_body": null,
+  "retrieved_at": "2026-10-02T02:48:24+00:00",
+  "sha256": "82c85dd6c1084e2dbefd2c915976bcb130ebf931a6476d220689ed6c59da6d3e",
+  "status": "fresh",
+  "url": "https://www.stats.gov.cn/sj/zxfb/202508/t20250827_1960915.html"
+ },
+ "nbs/release/202509/t20250910_1961112": {
+  "attempted_at": "2026-10-02T02:48:19+00:00",
+  "bytes": 213164,
+  "content_type": "text/html",
+  "error": null,
+  "key": "nbs/release/202509/t20250910_1961112",
+  "method": "GET",
+  "path": "data/raw/nbs/release/202509/t20250910_1961112.html",
+  "request_body": null,
+  "retrieved_at": "2026-10-02T02:48:19+00:00",
+  "sha256": "085630553f414eee3dc1e1d95fb5a303286f4abc04bb37accb9eb3955acbe9a0",
+  "status": "fresh",
+  "url": "https://www.stats.gov.cn/sj/zxfb/202509/t20250910_1961112.html"
  },
  "nbs/release/202509/t20250915_1961181": {
   "attempted_at": "2026-10-02T01:57:53+00:00",
@@ -1264,6 +2076,48 @@
   "status": "fresh",
   "url": "https://www.stats.gov.cn/sj/zxfb/202509/t20250915_1961181.html"
  },
+ "nbs/release/202510/t20251015_1961521": {
+  "attempted_at": "2026-10-02T02:48:13+00:00",
+  "bytes": 214394,
+  "content_type": "text/html",
+  "error": null,
+  "key": "nbs/release/202510/t20251015_1961521",
+  "method": "GET",
+  "path": "data/raw/nbs/release/202510/t20251015_1961521.html",
+  "request_body": null,
+  "retrieved_at": "2026-10-02T02:48:13+00:00",
+  "sha256": "6468a275460e4da2be0c7e972b49943e56e0b5efecc809e58080e9f078e777d5",
+  "status": "fresh",
+  "url": "https://www.stats.gov.cn/sj/zxfb/202510/t20251015_1961521.html"
+ },
+ "nbs/release/202510/t20251020_1961612": {
+  "attempted_at": "2026-10-02T02:48:05+00:00",
+  "bytes": 596316,
+  "content_type": "text/html",
+  "error": null,
+  "key": "nbs/release/202510/t20251020_1961612",
+  "method": "GET",
+  "path": "data/raw/nbs/release/202510/t20251020_1961612.html",
+  "request_body": null,
+  "retrieved_at": "2026-10-02T02:48:05+00:00",
+  "sha256": "4a113cb30357089548e455320a68900b48b196c6f4bce32b9e0dc9205567d32c",
+  "status": "fresh",
+  "url": "https://www.stats.gov.cn/sj/zxfb/202510/t20251020_1961612.html"
+ },
+ "nbs/release/202511/t20251109_1961826": {
+  "attempted_at": "2026-10-02T02:48:00+00:00",
+  "bytes": 212310,
+  "content_type": "text/html",
+  "error": null,
+  "key": "nbs/release/202511/t20251109_1961826",
+  "method": "GET",
+  "path": "data/raw/nbs/release/202511/t20251109_1961826.html",
+  "request_body": null,
+  "retrieved_at": "2026-10-02T02:48:00+00:00",
+  "sha256": "fed797abc1322f87fa2dbc585a8129e1b09961990e8c9d7579627c3b3363cce7",
+  "status": "fresh",
+  "url": "https://www.stats.gov.cn/sj/zxfb/202511/t20251109_1961826.html"
+ },
  "nbs/release/202511/t20251114_1961858": {
   "attempted_at": "2026-10-02T01:57:47+00:00",
   "bytes": 350602,
@@ -1277,6 +2131,20 @@
   "sha256": "548d3ec85f843faee24b1a71cf5e04000a4636a7d9ac30b34c60d2132cc19c2a",
   "status": "fresh",
   "url": "https://www.stats.gov.cn/sj/zxfb/202511/t20251114_1961858.html"
+ },
+ "nbs/release/202512/t20251210_1962015": {
+  "attempted_at": "2026-10-02T02:47:55+00:00",
+  "bytes": 215016,
+  "content_type": "text/html",
+  "error": null,
+  "key": "nbs/release/202512/t20251210_1962015",
+  "method": "GET",
+  "path": "data/raw/nbs/release/202512/t20251210_1962015.html",
+  "request_body": null,
+  "retrieved_at": "2026-10-02T02:47:55+00:00",
+  "sha256": "34467011f7532958dc6921d32ed2caf1aa9c3e5869b39d3a67f246a9593c47dd",
+  "status": "fresh",
+  "url": "https://www.stats.gov.cn/sj/zxfb/202512/t20251210_1962015.html"
  },
  "nbs/release/202512/t20251215_1962075": {
   "attempted_at": "2026-10-02T01:57:41+00:00",
@@ -1292,6 +2160,76 @@
   "status": "fresh",
   "url": "https://www.stats.gov.cn/sj/zxfb/202512/t20251215_1962075.html"
  },
+ "nbs/release/202512/t20251230_1962177": {
+  "attempted_at": "2026-10-02T02:47:49+00:00",
+  "bytes": 94426,
+  "content_type": "text/html",
+  "error": null,
+  "key": "nbs/release/202512/t20251230_1962177",
+  "method": "GET",
+  "path": "data/raw/nbs/release/202512/t20251230_1962177.html",
+  "request_body": null,
+  "retrieved_at": "2026-10-02T02:47:49+00:00",
+  "sha256": "5ba6e9250bef9205482d2a4b71aee929d522db7db51977768f029a996c161a9b",
+  "status": "fresh",
+  "url": "https://www.stats.gov.cn/sj/zxfb/202512/t20251230_1962177.html"
+ },
+ "nbs/release/202601/t20260109_1962273": {
+  "attempted_at": "2026-10-02T02:47:42+00:00",
+  "bytes": 220743,
+  "content_type": "text/html",
+  "error": null,
+  "key": "nbs/release/202601/t20260109_1962273",
+  "method": "GET",
+  "path": "data/raw/nbs/release/202601/t20260109_1962273.html",
+  "request_body": null,
+  "retrieved_at": "2026-10-02T02:47:42+00:00",
+  "sha256": "029d16d76ba6c207b46be0cf4a13ca2c88ae431540aec335778644e97830da7f",
+  "status": "fresh",
+  "url": "https://www.stats.gov.cn/sj/zxfb/202601/t20260109_1962273.html"
+ },
+ "nbs/release/202601/t20260119_1962330": {
+  "attempted_at": "2026-10-02T02:47:33+00:00",
+  "bytes": 629358,
+  "content_type": "text/html",
+  "error": null,
+  "key": "nbs/release/202601/t20260119_1962330",
+  "method": "GET",
+  "path": "data/raw/nbs/release/202601/t20260119_1962330.html",
+  "request_body": null,
+  "retrieved_at": "2026-10-02T02:47:33+00:00",
+  "sha256": "13edb6f7dbc08cfddc86119715c7a867e36229e51ead5028f6d8e94b9d1cdc77",
+  "status": "fresh",
+  "url": "https://www.stats.gov.cn/sj/zxfb/202601/t20260119_1962330.html"
+ },
+ "nbs/release/202602/t20260211_1962588": {
+  "attempted_at": "2026-10-02T02:47:28+00:00",
+  "bytes": 198964,
+  "content_type": "text/html",
+  "error": null,
+  "key": "nbs/release/202602/t20260211_1962588",
+  "method": "GET",
+  "path": "data/raw/nbs/release/202602/t20260211_1962588.html",
+  "request_body": null,
+  "retrieved_at": "2026-10-02T02:47:28+00:00",
+  "sha256": "f65b52d3c2418f40a43e0991d041e0295e56941ca7d9bc9bad76e0d5d0cab964",
+  "status": "fresh",
+  "url": "https://www.stats.gov.cn/sj/zxfb/202602/t20260211_1962588.html"
+ },
+ "nbs/release/202603/t20260309_1962732": {
+  "attempted_at": "2026-10-02T02:47:22+00:00",
+  "bytes": 246192,
+  "content_type": "text/html",
+  "error": null,
+  "key": "nbs/release/202603/t20260309_1962732",
+  "method": "GET",
+  "path": "data/raw/nbs/release/202603/t20260309_1962732.html",
+  "request_body": null,
+  "retrieved_at": "2026-10-02T02:47:22+00:00",
+  "sha256": "321b7693d1e112a92c83fc16293cc115429b0dee88e4201f115668850cf97043",
+  "status": "fresh",
+  "url": "https://www.stats.gov.cn/sj/zxfb/202603/t20260309_1962732.html"
+ },
  "nbs/release/202603/t20260316_1962780": {
   "attempted_at": "2026-10-02T01:57:35+00:00",
   "bytes": 342822,
@@ -1305,6 +2243,20 @@
   "sha256": "8fb1c9659f549ec33fb13e298234f2af668974a67dd15340056ba472ae757aaa",
   "status": "fresh",
   "url": "https://www.stats.gov.cn/sj/zxfb/202603/t20260316_1962780.html"
+ },
+ "nbs/release/202604/t20260410_1963264": {
+  "attempted_at": "2026-10-02T02:47:17+00:00",
+  "bytes": 246454,
+  "content_type": "text/html",
+  "error": null,
+  "key": "nbs/release/202604/t20260410_1963264",
+  "method": "GET",
+  "path": "data/raw/nbs/release/202604/t20260410_1963264.html",
+  "request_body": null,
+  "retrieved_at": "2026-10-02T02:47:17+00:00",
+  "sha256": "acaf1bd86124b1aca4c7ed1cee26560d0fe24c665d614ca4ca2b10c2601a811a",
+  "status": "fresh",
+  "url": "https://www.stats.gov.cn/sj/zxfb/202604/t20260410_1963264.html"
  },
  "nbs/release/202604/t20260416_1963330": {
   "attempted_at": "2026-10-02T01:57:27+00:00",
@@ -1334,6 +2286,20 @@
   "status": "fresh",
   "url": "https://www.stats.gov.cn/sj/zxfb/202604/t20260430_1963472.html"
  },
+ "nbs/release/202605/t20260511_1963659": {
+  "attempted_at": "2026-10-02T02:47:12+00:00",
+  "bytes": 236292,
+  "content_type": "text/html",
+  "error": null,
+  "key": "nbs/release/202605/t20260511_1963659",
+  "method": "GET",
+  "path": "data/raw/nbs/release/202605/t20260511_1963659.html",
+  "request_body": null,
+  "retrieved_at": "2026-10-02T02:47:12+00:00",
+  "sha256": "5b35264f5e63c0776701fb2586ffd8511f28fdc4360547a791de51e2cc7750c4",
+  "status": "fresh",
+  "url": "https://www.stats.gov.cn/sj/zxfb/202605/t20260511_1963659.html"
+ },
  "nbs/release/202605/t20260515_1963707": {
   "attempted_at": "2026-10-02T01:57:14+00:00",
   "bytes": 490106,
@@ -1362,6 +2328,20 @@
   "status": "fresh",
   "url": "https://www.stats.gov.cn/sj/zxfb/202605/t20260518_1963732.html"
  },
+ "nbs/release/202606/t20260610_1963923": {
+  "attempted_at": "2026-10-02T02:47:06+00:00",
+  "bytes": 234920,
+  "content_type": "text/html",
+  "error": null,
+  "key": "nbs/release/202606/t20260610_1963923",
+  "method": "GET",
+  "path": "data/raw/nbs/release/202606/t20260610_1963923.html",
+  "request_body": null,
+  "retrieved_at": "2026-10-02T02:47:06+00:00",
+  "sha256": "f021e838ebf280e92cde9f4d965cf6b40d4efba391ff4225970731662493559f",
+  "status": "fresh",
+  "url": "https://www.stats.gov.cn/sj/zxfb/202606/t20260610_1963923.html"
+ },
  "nbs/release/202606/t20260616_1963954": {
   "attempted_at": "2026-10-02T01:57:02+00:00",
   "bytes": 366058,
@@ -1376,6 +2356,62 @@
   "status": "fresh",
   "url": "https://www.stats.gov.cn/sj/zxfb/202606/t20260616_1963954.html"
  },
+ "nbs/release/202607/t20260709_1964084": {
+  "attempted_at": "2026-10-02T02:47:01+00:00",
+  "bytes": 233834,
+  "content_type": "text/html",
+  "error": null,
+  "key": "nbs/release/202607/t20260709_1964084",
+  "method": "GET",
+  "path": "data/raw/nbs/release/202607/t20260709_1964084.html",
+  "request_body": null,
+  "retrieved_at": "2026-10-02T02:47:01+00:00",
+  "sha256": "57665164e369235239d22d66d37d19f86172b2ac20a5e755c72199ad7a953d84",
+  "status": "fresh",
+  "url": "https://www.stats.gov.cn/sj/zxfb/202607/t20260709_1964084.html"
+ },
+ "nbs/release/202607/t20260715_1964121": {
+  "attempted_at": "2026-10-02T02:46:53+00:00",
+  "bytes": 521720,
+  "content_type": "text/html",
+  "error": null,
+  "key": "nbs/release/202607/t20260715_1964121",
+  "method": "GET",
+  "path": "data/raw/nbs/release/202607/t20260715_1964121.html",
+  "request_body": null,
+  "retrieved_at": "2026-10-02T02:46:53+00:00",
+  "sha256": "f65b3599374fd6cec3f2e1793074dd8bb4c8b338c97c89700315b2190c33edb8",
+  "status": "fresh",
+  "url": "https://www.stats.gov.cn/sj/zxfb/202607/t20260715_1964121.html"
+ },
+ "nbs/release/202607/t20260730_1964247": {
+  "attempted_at": "2026-10-02T02:46:51+00:00",
+  "bytes": 99618,
+  "content_type": "text/html",
+  "error": null,
+  "key": "nbs/release/202607/t20260730_1964247",
+  "method": "GET",
+  "path": "data/raw/nbs/release/202607/t20260730_1964247.html",
+  "request_body": null,
+  "retrieved_at": "2026-10-02T02:46:51+00:00",
+  "sha256": "4e472ac7185c6c74b67b44980ec722f0c1a829fa57f09acf9f95c8e7e82685fa",
+  "status": "fresh",
+  "url": "https://www.stats.gov.cn/sj/zxfb/202607/t20260730_1964247.html"
+ },
+ "nbs/release/202608/t20260809_1965008": {
+  "attempted_at": "2026-10-02T02:46:45+00:00",
+  "bytes": 233412,
+  "content_type": "text/html",
+  "error": null,
+  "key": "nbs/release/202608/t20260809_1965008",
+  "method": "GET",
+  "path": "data/raw/nbs/release/202608/t20260809_1965008.html",
+  "request_body": null,
+  "retrieved_at": "2026-10-02T02:46:45+00:00",
+  "sha256": "a4b8c84fa4b005807a9c30b4a41c06726f571bd203e753db81532be4dee54a49",
+  "status": "fresh",
+  "url": "https://www.stats.gov.cn/sj/zxfb/202608/t20260809_1965008.html"
+ },
  "nbs/release/202608/t20260817_1965056": {
   "attempted_at": "2026-10-02T01:56:55+00:00",
   "bytes": 388238,
@@ -1389,6 +2425,34 @@
   "sha256": "dea13b8a4ff116ca91403b189cdd60705545b28200f9023c3d56e6db03f3939d",
   "status": "fresh",
   "url": "https://www.stats.gov.cn/sj/zxfb/202608/t20260817_1965056.html"
+ },
+ "nbs/release/202608/t20260827_1965129": {
+  "attempted_at": "2026-10-02T02:46:40+00:00",
+  "bytes": 180165,
+  "content_type": "text/html",
+  "error": null,
+  "key": "nbs/release/202608/t20260827_1965129",
+  "method": "GET",
+  "path": "data/raw/nbs/release/202608/t20260827_1965129.html",
+  "request_body": null,
+  "retrieved_at": "2026-10-02T02:46:40+00:00",
+  "sha256": "a7e4029df707918a552ad2580e8088a945bfe43ec3a2447742553258d0f1f8eb",
+  "status": "fresh",
+  "url": "https://www.stats.gov.cn/sj/zxfb/202608/t20260827_1965129.html"
+ },
+ "nbs/release/202609/t20260909_1965263": {
+  "attempted_at": "2026-10-02T02:46:34+00:00",
+  "bytes": 245888,
+  "content_type": "text/html",
+  "error": null,
+  "key": "nbs/release/202609/t20260909_1965263",
+  "method": "GET",
+  "path": "data/raw/nbs/release/202609/t20260909_1965263.html",
+  "request_body": null,
+  "retrieved_at": "2026-10-02T02:46:34+00:00",
+  "sha256": "a04f01c303c85edff794081d3651efe89bb679b1e5bad08aaa07a115dde74fbe",
+  "status": "fresh",
+  "url": "https://www.stats.gov.cn/sj/zxfb/202609/t20260909_1965263.html"
  },
  "nbs/release/202609/t20260915_1965307": {
   "attempted_at": "2026-10-02T01:56:49+00:00",
@@ -1405,7 +2469,7 @@
   "url": "https://www.stats.gov.cn/sj/zxfb/202609/t20260915_1965307.html"
  },
  "oecd/av_an_wage": {
-  "attempted_at": "2026-10-02T02:19:29+00:00",
+  "attempted_at": "2026-10-02T02:43:30+00:00",
   "bytes": 694706,
   "content_type": "application/vnd.sdmx.data+csv; labels=name; charset=utf-8; version=2",
   "error": null,
@@ -1413,13 +2477,13 @@
   "method": "GET",
   "path": "data/raw/oecd/av_an_wage.csv",
   "request_body": null,
-  "retrieved_at": "2026-10-02T02:19:29+00:00",
+  "retrieved_at": "2026-10-02T02:43:30+00:00",
   "sha256": "4281aa6a560245398ec784035b6280be540624f03d954e7fd7cc76e5a36bb274",
   "status": "fresh",
   "url": "https://sdmx.oecd.org/public/rest/data/OECD.ELS.SAE,DSD_EARNINGS@AV_AN_WAGE,1.0/all?startPeriod=2000&format=csvfilewithlabels"
  },
  "oecd/avg_usual_weekly_hours": {
-  "attempted_at": "2026-10-02T02:19:29+00:00",
+  "attempted_at": "2026-10-02T02:43:30+00:00",
   "bytes": 430204,
   "content_type": "application/vnd.sdmx.data+csv; labels=name; version=2; charset=utf-8",
   "error": null,
@@ -1427,13 +2491,13 @@
   "method": "GET",
   "path": "data/raw/oecd/avg_usual_weekly_hours.csv",
   "request_body": null,
-  "retrieved_at": "2026-10-02T02:19:29+00:00",
+  "retrieved_at": "2026-10-02T02:43:30+00:00",
   "sha256": "3754bfa5c6e294bc1adc0d2b466ca79a2f0e525860fbea37036fbcf4da93dafc",
   "status": "fresh",
   "url": "https://sdmx.oecd.org/public/rest/data/OECD.ELS.SAE,DSD_HW@DF_AVG_USL_WK_WKD,1.0/.HW.H_WK_PS._T._T.EMP.W.USUAL.ICSE93_1.FT.MEAN._Z.MAIN?startPeriod=2000&format=csvfilewithlabels"
  },
  "worldbank/CMO-Historical-Data-Monthly": {
-  "attempted_at": "2026-10-02T02:19:18+00:00",
+  "attempted_at": "2026-10-02T02:43:22+00:00",
   "bytes": 586735,
   "content_type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
   "error": null,
@@ -1441,13 +2505,13 @@
   "method": "GET",
   "path": "data/raw/worldbank/CMO-Historical-Data-Monthly.xlsx",
   "request_body": null,
-  "retrieved_at": "2026-10-02T02:19:18+00:00",
+  "retrieved_at": "2026-10-02T02:43:22+00:00",
   "sha256": "9fdcfa8a2aed9a1bb545a10c1a5ce036c6a0acd4766f450424ca800b4b5a0225",
   "status": "fresh",
   "url": "https://thedocs.worldbank.org/en/doc/74e8be41ceb20fa0da750cda2f6b9e4e-0050012026/related/CMO-Historical-Data-Monthly.xlsx"
  },
  "worldbank/commodity_markets_landing": {
-  "attempted_at": "2026-10-02T02:19:18+00:00",
+  "attempted_at": "2026-10-02T02:43:22+00:00",
   "bytes": 55841,
   "content_type": "text/html;charset=utf-8",
   "error": null,
@@ -1455,13 +2519,13 @@
   "method": "GET",
   "path": "data/raw/worldbank/commodity_markets_landing.html",
   "request_body": null,
-  "retrieved_at": "2026-10-02T02:19:18+00:00",
+  "retrieved_at": "2026-10-02T02:43:22+00:00",
   "sha256": "842c46c33e120d9baa06c0ea97a71f7efe77ec0c9a76eef0010ab345588fee2e",
   "status": "fresh",
   "url": "https://www.worldbank.org/en/research/commodity-markets"
  },
  "worldbank/countries": {
-  "attempted_at": "2026-10-02T02:19:18+00:00",
+  "attempted_at": "2026-10-02T02:43:22+00:00",
   "bytes": 113590,
   "content_type": "application/json;charset=utf-8",
   "error": null,
@@ -1469,13 +2533,13 @@
   "method": "GET",
   "path": "data/raw/worldbank/countries.json",
   "request_body": null,
-  "retrieved_at": "2026-10-02T02:19:18+00:00",
+  "retrieved_at": "2026-10-02T02:43:22+00:00",
   "sha256": "d29d57f8adf954c5e2a1520a02fb2c7b45575d8db3bd327a9dff47d66914231c",
   "status": "fresh",
   "url": "https://api.worldbank.org/v2/country?format=json&per_page=400"
  },
  "worldbank/countries_zh": {
-  "attempted_at": "2026-10-02T02:19:18+00:00",
+  "attempted_at": "2026-10-02T02:43:22+00:00",
   "bytes": 112475,
   "content_type": "application/json;charset=utf-8",
   "error": null,
@@ -1483,13 +2547,13 @@
   "method": "GET",
   "path": "data/raw/worldbank/countries_zh.json",
   "request_body": null,
-  "retrieved_at": "2026-10-02T02:19:18+00:00",
+  "retrieved_at": "2026-10-02T02:43:22+00:00",
   "sha256": "a27d8b5480bf7c0bbfbfdf15a0d63e118ba322f6f6b5a6765fa67226c9ea7edf",
   "status": "fresh",
   "url": "https://api.worldbank.org/v2/zh/country?format=json&per_page=400"
  },
  "worldbank/fpn_CoHD_LCU": {
-  "attempted_at": "2026-10-02T02:19:20+00:00",
+  "attempted_at": "2026-10-02T02:43:24+00:00",
   "bytes": 531914,
   "content_type": "application/json;charset=utf-8",
   "error": null,
@@ -1497,13 +2561,13 @@
   "method": "GET",
   "path": "data/raw/worldbank/fpn_CoHD_LCU.json",
   "request_body": null,
-  "retrieved_at": "2026-10-02T02:19:20+00:00",
+  "retrieved_at": "2026-10-02T02:43:24+00:00",
   "sha256": "c44fe6f2bd721ce8a3831fb029c26954bbc46af1f2271555068216b20e910337",
   "status": "fresh",
   "url": "https://api.worldbank.org/v2/sources/88/country/all/series/CoHD_LCU/time/all?format=json&per_page=20000"
  },
  "worldbank/fpn_CoHD_PPP": {
-  "attempted_at": "2026-10-02T02:19:21+00:00",
+  "attempted_at": "2026-10-02T02:43:24+00:00",
   "bytes": 516187,
   "content_type": "application/json;charset=utf-8",
   "error": null,
@@ -1511,13 +2575,13 @@
   "method": "GET",
   "path": "data/raw/worldbank/fpn_CoHD_PPP.json",
   "request_body": null,
-  "retrieved_at": "2026-10-02T02:19:21+00:00",
+  "retrieved_at": "2026-10-02T02:43:24+00:00",
   "sha256": "12d22fe31195f419452b31b5b390ef38cd9170802be251beeddbde433b70c37c",
   "status": "fresh",
   "url": "https://api.worldbank.org/v2/sources/88/country/all/series/CoHD_PPP/time/all?format=json&per_page=20000"
  },
  "worldbank/fpn_CoHD_asf_LCU": {
-  "attempted_at": "2026-10-02T02:19:21+00:00",
+  "attempted_at": "2026-10-02T02:43:24+00:00",
   "bytes": 545891,
   "content_type": "application/json;charset=utf-8",
   "error": null,
@@ -1525,13 +2589,13 @@
   "method": "GET",
   "path": "data/raw/worldbank/fpn_CoHD_asf_LCU.json",
   "request_body": null,
-  "retrieved_at": "2026-10-02T02:19:21+00:00",
+  "retrieved_at": "2026-10-02T02:43:24+00:00",
   "sha256": "a36a224d3ded17878d811c607157d115ddafdceebb1daa6df20a69beab73a5a1",
   "status": "fresh",
   "url": "https://api.worldbank.org/v2/sources/88/country/all/series/CoHD_asf_LCU/time/all?format=json&per_page=20000"
  },
  "worldbank/fpn_CoHD_f_LCU": {
-  "attempted_at": "2026-10-02T02:19:21+00:00",
+  "attempted_at": "2026-10-02T02:43:24+00:00",
   "bytes": 519936,
   "content_type": "application/json;charset=utf-8",
   "error": null,
@@ -1539,13 +2603,13 @@
   "method": "GET",
   "path": "data/raw/worldbank/fpn_CoHD_f_LCU.json",
   "request_body": null,
-  "retrieved_at": "2026-10-02T02:19:21+00:00",
+  "retrieved_at": "2026-10-02T02:43:24+00:00",
   "sha256": "3112b285be73e244fd926107d1ad2bba81ab02088ecf7fe40f93ba4b6a1fc1d4",
   "status": "fresh",
   "url": "https://api.worldbank.org/v2/sources/88/country/all/series/CoHD_f_LCU/time/all?format=json&per_page=20000"
  },
  "worldbank/fpn_CoHD_lns_LCU": {
-  "attempted_at": "2026-10-02T02:19:21+00:00",
+  "attempted_at": "2026-10-02T02:43:24+00:00",
   "bytes": 552751,
   "content_type": "application/json;charset=utf-8",
   "error": null,
@@ -1553,13 +2617,13 @@
   "method": "GET",
   "path": "data/raw/worldbank/fpn_CoHD_lns_LCU.json",
   "request_body": null,
-  "retrieved_at": "2026-10-02T02:19:21+00:00",
+  "retrieved_at": "2026-10-02T02:43:24+00:00",
   "sha256": "bb74ba28ffedc08018d594e18ba18c80b99610f09f1c2843e910d48f9e107944",
   "status": "fresh",
   "url": "https://api.worldbank.org/v2/sources/88/country/all/series/CoHD_lns_LCU/time/all?format=json&per_page=20000"
  },
  "worldbank/fpn_CoHD_of_LCU": {
-  "attempted_at": "2026-10-02T02:19:21+00:00",
+  "attempted_at": "2026-10-02T02:43:24+00:00",
   "bytes": 533731,
   "content_type": "application/json;charset=utf-8",
   "error": null,
@@ -1567,13 +2631,13 @@
   "method": "GET",
   "path": "data/raw/worldbank/fpn_CoHD_of_LCU.json",
   "request_body": null,
-  "retrieved_at": "2026-10-02T02:19:21+00:00",
+  "retrieved_at": "2026-10-02T02:43:24+00:00",
   "sha256": "856bff9ee4bcf8e7fce28561a35691b4e24457f6a5707ceaef7522289999fb9e",
   "status": "fresh",
   "url": "https://api.worldbank.org/v2/sources/88/country/all/series/CoHD_of_LCU/time/all?format=json&per_page=20000"
  },
  "worldbank/fpn_CoHD_ss_LCU": {
-  "attempted_at": "2026-10-02T02:19:21+00:00",
+  "attempted_at": "2026-10-02T02:43:24+00:00",
   "bytes": 537238,
   "content_type": "application/json;charset=utf-8",
   "error": null,
@@ -1581,13 +2645,13 @@
   "method": "GET",
   "path": "data/raw/worldbank/fpn_CoHD_ss_LCU.json",
   "request_body": null,
-  "retrieved_at": "2026-10-02T02:19:21+00:00",
+  "retrieved_at": "2026-10-02T02:43:24+00:00",
   "sha256": "855889f6aea646045fc51499693da780b6c9ca8de0f9ce48a4d2518a8476217b",
   "status": "fresh",
   "url": "https://api.worldbank.org/v2/sources/88/country/all/series/CoHD_ss_LCU/time/all?format=json&per_page=20000"
  },
  "worldbank/fpn_CoHD_v_LCU": {
-  "attempted_at": "2026-10-02T02:19:21+00:00",
+  "attempted_at": "2026-10-02T02:43:24+00:00",
   "bytes": 526862,
   "content_type": "application/json;charset=utf-8",
   "error": null,
@@ -1595,13 +2659,13 @@
   "method": "GET",
   "path": "data/raw/worldbank/fpn_CoHD_v_LCU.json",
   "request_body": null,
-  "retrieved_at": "2026-10-02T02:19:21+00:00",
+  "retrieved_at": "2026-10-02T02:43:24+00:00",
   "sha256": "e43dcec933486346fea6c8b220ab338e7e89291acb9c4ec27a294cfd6243255c",
   "status": "fresh",
   "url": "https://api.worldbank.org/v2/sources/88/country/all/series/CoHD_v_LCU/time/all?format=json&per_page=20000"
  },
  "worldbank/icp2021_PPPGlob": {
-  "attempted_at": "2026-10-02T02:19:20+00:00",
+  "attempted_at": "2026-10-02T02:43:24+00:00",
   "bytes": 1164291,
   "content_type": "application/json;charset=utf-8",
   "error": null,
@@ -1609,13 +2673,13 @@
   "method": "GET",
   "path": "data/raw/worldbank/icp2021_PPPGlob.json",
   "request_body": null,
-  "retrieved_at": "2026-10-02T02:19:20+00:00",
+  "retrieved_at": "2026-10-02T02:43:24+00:00",
   "sha256": "453c9748889de8879eace51714b5aa3eb128a0de0f9e8adf0ad6cb9a19ae8756",
   "status": "fresh",
   "url": "https://api.worldbank.org/v2/sources/90/country/all/series/9100000;1101000;1101110;1101120;1101130;1101140;1101150;1101160;1101170;1103000;1105000;9060000;9080000;1107000;1108000;9110000;9120000;1111000/classification/PPPGlob/time/YR2021?format=json&per_page=20000"
  },
  "worldbank/icp2021_PX.WL": {
-  "attempted_at": "2026-10-02T02:19:20+00:00",
+  "attempted_at": "2026-10-02T02:43:23+00:00",
   "bytes": 1128824,
   "content_type": "application/json;charset=utf-8",
   "error": null,
@@ -1623,13 +2687,13 @@
   "method": "GET",
   "path": "data/raw/worldbank/icp2021_PX.WL.json",
   "request_body": null,
-  "retrieved_at": "2026-10-02T02:19:20+00:00",
+  "retrieved_at": "2026-10-02T02:43:23+00:00",
   "sha256": "26e7fdc3299c582f9b26d62a87c53d233a13d59af8e2891e3302ea5882e3b801",
   "status": "fresh",
   "url": "https://api.worldbank.org/v2/sources/90/country/all/series/9100000;1101000;1101110;1101120;1101130;1101140;1101150;1101160;1101170;1103000;1105000;9060000;9080000;1107000;1108000;9110000;9120000;1111000/classification/PX.WL/time/YR2021?format=json&per_page=20000"
  },
  "worldbank/wdi_PA.NUS.FCRF": {
-  "attempted_at": "2026-10-02T02:19:19+00:00",
+  "attempted_at": "2026-10-02T02:43:23+00:00",
   "bytes": 2280487,
   "content_type": "application/json;charset=utf-8",
   "error": null,
@@ -1637,13 +2701,13 @@
   "method": "GET",
   "path": "data/raw/worldbank/wdi_PA.NUS.FCRF.json",
   "request_body": null,
-  "retrieved_at": "2026-10-02T02:19:19+00:00",
+  "retrieved_at": "2026-10-02T02:43:23+00:00",
   "sha256": "4d02ffb8db00f033421f99a46680f0c102fc4d41fa98034bc322ae93093423f7",
   "status": "fresh",
   "url": "https://api.worldbank.org/v2/country/all/indicator/PA.NUS.FCRF?format=json&per_page=20000&date=1990:2030"
  },
  "worldbank/wdi_PA.NUS.PPP": {
-  "attempted_at": "2026-10-02T02:19:20+00:00",
+  "attempted_at": "2026-10-02T02:43:23+00:00",
   "bytes": 2284222,
   "content_type": "application/json;charset=utf-8",
   "error": null,
@@ -1651,13 +2715,13 @@
   "method": "GET",
   "path": "data/raw/worldbank/wdi_PA.NUS.PPP.json",
   "request_body": null,
-  "retrieved_at": "2026-10-02T02:19:20+00:00",
+  "retrieved_at": "2026-10-02T02:43:23+00:00",
   "sha256": "bcf161d3e007ff12ff6202c7aadf005a4476581d580bd55e3b44a8128176ccaa",
   "status": "fresh",
   "url": "https://api.worldbank.org/v2/country/all/indicator/PA.NUS.PPP?format=json&per_page=20000&date=1990:2030"
  },
  "worldbank/wdi_PA.NUS.PRVT.PP": {
-  "attempted_at": "2026-10-02T02:19:19+00:00",
+  "attempted_at": "2026-10-02T02:43:23+00:00",
   "bytes": 2771097,
   "content_type": "application/json;charset=utf-8",
   "error": null,
@@ -1665,13 +2729,13 @@
   "method": "GET",
   "path": "data/raw/worldbank/wdi_PA.NUS.PRVT.PP.json",
   "request_body": null,
-  "retrieved_at": "2026-10-02T02:19:19+00:00",
+  "retrieved_at": "2026-10-02T02:43:23+00:00",
   "sha256": "9371b1adba0d04f0308ba0920401d06ed82c974b93248a6963ff86cf3b2323d7",
   "status": "fresh",
   "url": "https://api.worldbank.org/v2/country/all/indicator/PA.NUS.PRVT.PP?format=json&per_page=20000&date=1990:2030"
  },
  "worldbank/wdi_SP.POP.TOTL": {
-  "attempted_at": "2026-10-02T02:19:20+00:00",
+  "attempted_at": "2026-10-02T02:43:23+00:00",
   "bytes": 1917051,
   "content_type": "application/json;charset=utf-8",
   "error": null,
@@ -1679,7 +2743,7 @@
   "method": "GET",
   "path": "data/raw/worldbank/wdi_SP.POP.TOTL.json",
   "request_body": null,
-  "retrieved_at": "2026-10-02T02:19:20+00:00",
+  "retrieved_at": "2026-10-02T02:43:23+00:00",
   "sha256": "1dacdc84ba13e2c8dc9aa4bef80413fb8ffa4043446addf4a80a8afcfd648f6f",
   "status": "fresh",
   "url": "https://api.worldbank.org/v2/country/all/indicator/SP.POP.TOTL?format=json&per_page=20000&date=1990:2030"

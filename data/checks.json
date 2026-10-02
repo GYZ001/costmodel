@@ -3,7 +3,7 @@
   "id": "gold_wb_vs_imf",
   "title": "金价：世界银行 Pink Sheet vs IMF PCPS 月均价",
   "status": "pass",
-  "detail": "320 个重叠月份，最大偏差 0.74%（2011-12：世行 1,640.0，IMF 1,652.3）"
+  "detail": "416 个重叠月份，最大偏差 0.74%（2011-12：世行 1,640.0，IMF 1,652.3）"
  },
  {
   "id": "gold_fresh",
@@ -14,14 +14,14 @@
  {
   "id": "fx_ecb_vs_h10",
   "title": "汇率：ECB 参考汇率（交叉）vs 美联储 H.10 月均",
-  "status": "pass",
-  "detail": "1692 个国家-月份对比，最大偏差 0.57%（ZAF 2017-12：ECB 交叉汇率 13.1670，美联储 H.10 13.0918）"
+  "status": "fail",
+  "detail": "3960 个国家-月份对比，最大偏差 1.73%（BRA 2000-01：ECB 交叉汇率 1.7744，美联储 H.10 1.8057）"
  },
  {
   "id": "bls_vs_fred",
   "title": "美国时薪：BLS API vs FRED 转载",
   "status": "pass",
-  "detail": "246 个月份对比，最大偏差 0.00%（BLS 修订后 FRED 可能晚一天同步）"
+  "detail": "998 个月份对比，最大偏差 0.00%（BLS 修订后 FRED 可能晚一天同步）"
  },
  {
   "id": "nbs_internal",
@@ -45,12 +45,12 @@
   "id": "record_gates",
   "title": "记录级一致性：跨数据集货币单位与汇率核对",
   "status": "pass",
-  "detail": "不一致的记录已剔除并在下表列出原因。健康饮食成本：1 个经济体（SLE）；汇率：2 个经济体（ISL, THA）；购买力平价：6 个经济体（BGR, HRV, LBN, LBR, SYR, ZWE）；工资：26 个经济体（AZE, BGR, CHL, COL, CYP, CZE, DNK, EST, GIB, GUM, HRV, HUN…）"
+  "detail": "不一致的记录已剔除并在下表列出原因。健康饮食成本：4 个经济体（BGR, LBR, PSE, SLE）；currency：4 个经济体（BHS, BMU, PAN, SLV）；汇率：44 个经济体（ABW, AGO, ARE, ARG, AUS, BDI, BGD, BGR, BHS, BMU, COD, CUW…）；购买力平价：58 个经济体（AFG, AGO, ARE, ATG, BGD, BHR, BLZ, BOL, BRB, BTN, CHN, CIV…）；工资：50 个经济体（AND, ARE, ARG, BGR, BHR, CUB, CUW, CYP, CZE, DNK, EST, GHA…）"
  },
  {
   "id": "identity_chain",
   "title": "恒等式：克金/小时 × 每克金购买力 = PPP 实际时薪",
   "status": "pass",
-  "detail": "3026 条记录，最大相对误差 4.3e-16"
+  "detail": "2752 条记录，最大相对误差 4.2e-16"
  }
 ]

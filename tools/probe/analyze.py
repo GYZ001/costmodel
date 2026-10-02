@@ -296,17 +296,89 @@ def ecb_all():
     print(len(rows), sorted((r["CURRENCY"], r["TIME_PERIOD"], r["OBS_VALUE"]) for r in rows))
 
 
+
+def cohd():
+    section("WB Food Prices for Nutrition coverage")
+    for ind in ["CoHD_LCU", "CoHD_PPP"]:
+        d = json.loads(get(f"https://api.worldbank.org/v2/sources/88/country/all/series/{ind}/time/all?format=json&per_page=20000"))
+        print(ind, "pages", d.get("pages"), "total", d.get("total"), "lastupdated", d.get("lastupdated"))
+        rows = d["source"]["data"]
+        yrs = defaultdict(int)
+        latest = {}
+        for r in rows:
+            var = {v["concept"]: v["id"] for v in r["variable"]}
+            if r["value"] is None:
+                continue
+            yrs[var["Time"]] += 1
+            c = var["Country"]
+            if c not in latest or var["Time"] > latest[c][0]:
+                latest[c] = (var["Time"], r["value"])
+        print(" years:", sorted(yrs.items()))
+        for c in "USA CHN JPN DEU GBR FRA IND BRA MEX RUS TUR IDN ZAF CAN KOR AUS SAU ARG VNM NGA EGY".split():
+            print("  ", c, latest.get(c))
+        print(" sample row:", json.dumps(rows[0])[:600])
+
+
+def imf_cpi_food():
+    section("IMF CPI food index CHN/USA")
+    for key in ["CHN+USA.CPI.CP01.IX.A", "CHN+USA.CPI.CP01.IX.M", "CHN+USA..CP01..A"]:
+        try:
+            raw = get(f"https://api.imf.org/external/sdmx/2.1/data/IMF.STA,CPI/{key}?startPeriod=2019").decode()
+            series = re.findall(r"<Series [^>]+>", raw)
+            print(key, "series:", len(series))
+            for sr in series[:6]:
+                print("  ", sr[:400])
+            obs = re.findall(r'<Obs [^>]*TIME_PERIOD="([^"]+)"[^>]*OBS_VALUE="([^"]+)"', raw)
+            print("   obs sample:", obs[:8], "... last", obs[-4:])
+        except Exception as e:  # noqa: BLE001
+            print(key, "FAILED", e)
+
+
+def nbs_wages_text():
+    section("NBS 2025 wage release: headline sentences")
+    html = get("https://www.stats.gov.cn/sj/zxfb/202605/t20260515_1963707.html", timeout=60).decode("utf-8", "replace")
+    text = re.sub(r"<[^>]+>", " ", html)
+    text = re.sub(r"&nbsp;|\s+", " ", text)
+    for m in re.finditer(r"(城镇非私营单位|城镇私营单位)[^。]{0,200}。", text):
+        print(m.group(0)[:300])
+
+
+def nbs_food_price_titles():
+    section("NBS list pages: any item-price releases")
+    pat = re.compile(r'href="\./(\d{6}/t\d+_\d+\.html)"[^>]*title=\'([^\']+)\'')
+    seen = set()
+    for p in range(0, 40):
+        url = "https://www.stats.gov.cn/sj/zxfb/" + ("" if p == 0 else f"index_{p}.html")
+        try:
+            html = get(url, timeout=60).decode("utf-8", "replace")
+        except Exception as e:  # noqa: BLE001
+            print(url, "FAILED", e)
+            break
+        for href, title in pat.findall(html):
+            if href in seen:
+                continue
+            seen.add(href)
+            if re.search(r"食品|价格变动|平均价格|集贸|农产品", title) and "居民消费价格" not in title:
+                print(p, "https://www.stats.gov.cn/sj/zxfb/" + href, title)
+    print("scanned releases:", len(seen))
+
+
+def hosts():
+    section("China price host reachability")
+    for url in ["http://www.mofcom.gov.cn/", "https://www.mofcom.gov.cn/", "https://cif.mofcom.gov.cn/cif/html/index.html",
+                "https://www.ndrc.gov.cn/fgsj/", "https://www.moa.gov.cn/", "http://pfsc.agri.cn/", "https://pfsc.agri.cn/"]:
+        try:
+            b = get(url, timeout=30)
+            t = b.decode("utf-8", "replace")
+            title = re.search(r"<title>([^<]*)", t)
+            print(url, "OK", len(b), title.group(1).strip() if title else "")
+        except Exception as e:  # noqa: BLE001
+            print(url, "FAILED", type(e).__name__, e)
+
+
 if __name__ == "__main__":
-    for ind in ["EAR_EHRA_SEX_NB_A", "EAR_EHRM_SEX_NB_A", "EAR_EMTA_SEX_ECO_NB_A", "EAR_EMTM_SEX_NB_A"]:
-        ilo_earn_cov(ind)
-    safe(ilo_meta)
-    safe(wb_sources_food)
-    safe(wb_cohd)
-    safe(faostat)
-    safe(imf_cpi)
-    safe(bls_ap)
-    safe(ecb_all)
-    nbs_page("https://www.stats.gov.cn/sj/zxfb/202605/t20260515_1963707.html", ["平均工资", "岗位"])
-    nbs_page("https://www.stats.gov.cn/sj/zxfb/202604/t20260430_1963472.html", ["月均收入", "工作时间", "小时"])
-    nbs_page("https://www.stats.gov.cn/sj/zxfb/202609/t20260915_1965307.html", ["周平均工作时间"])
-    nbs_page("https://www.stats.gov.cn/sj/zxfb/202609/t20260909_1965263.html", ["粮食", "鲜果"])
+    safe(cohd)
+    safe(imf_cpi_food)
+    safe(nbs_wages_text)
+    safe(nbs_food_price_titles)
+    safe(hosts)

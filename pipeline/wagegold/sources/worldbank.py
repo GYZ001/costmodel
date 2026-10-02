@@ -1,0 +1,118 @@
+"""World Bank open data: WDI indicators and ICP 2021 category results.
+
+WDI (source 2):
+  PA.NUS.FCRF   Official exchange rate (LCU per US$, period average)
+  PA.NUS.PRVT.PP PPP conversion factor, household final consumption (LCU per international $)
+  PA.NUS.PPP    PPP conversion factor, GDP (LCU per international $)
+  SP.POP.TOTL   Population, total
+
+ICP 2021 (source 90): price level indices (World = 100) and PPPs (US$ = 1) for
+expenditure categories, from the 2021 benchmark comparison.  Products priced in
+the ICP follow common specifications across countries, so category price levels
+are quality-matched, unlike comparing same-named supermarket items.
+"""
+from __future__ import annotations
+
+import json
+
+from ..fetch import Fetcher
+from ..model import Obs
+from .common import check_json
+
+API = "https://api.worldbank.org/v2"
+
+WDI_INDICATORS = {
+    "PA.NUS.FCRF": "fx_lcu_usd",
+    "PA.NUS.PRVT.PP": "ppp_hfce",
+    "PA.NUS.PPP": "ppp_gdp",
+    "SP.POP.TOTL": "population",
+}
+
+# ICP 2021 series id -> short category key used throughout the project
+ICP_CATEGORIES = {
+    "9100000": "hfce",  # households and NPISHs final consumption expenditure
+    "1101000": "food_nonalc",
+    "1101110": "bread_cereals",
+    "1101120": "meat",
+    "1101130": "fish",
+    "1101140": "milk_cheese_eggs",
+    "1101150": "oils_fats",
+    "1101160": "fruit",
+    "1101170": "vegetables",
+    "1103000": "clothing",
+    "1105000": "furnishings",
+    "9060000": "housing",  # actual housing, water, electricity, gas and other fuels
+    "9080000": "health",  # actual health
+    "1107000": "transport",
+    "1108000": "communication",
+    "9110000": "recreation",  # actual recreation and culture
+    "9120000": "education",  # actual education
+    "1111000": "restaurants_hotels",
+}
+ICP_MEASURES = {"PX.WL": "icp21_pli_wl", "PPPGlob": "icp21_ppp"}
+
+
+def _wdi_ok(data) -> bool:
+    return isinstance(data, list) and len(data) == 2 and isinstance(data[1], list) and len(data[1]) > 0
+
+
+def collect_countries(f: Fetcher) -> dict[str, dict]:
+    """Economy metadata; aggregates (regions, income groups) have region id 'NA'."""
+    snap = f.get(
+        "worldbank/countries",
+        f"{API}/country?format=json&per_page=400",
+        ext="json",
+        check=check_json(_wdi_ok, "WDI country list empty"),
+    )
+    rows = json.loads(snap.read())[1]
+    return {
+        r["id"]: {
+            "iso2": r["iso2Code"],
+            "name_en": r["name"],
+            "region": r["region"]["value"],
+            "income": r["incomeLevel"]["value"],
+            "is_economy": r["region"]["id"] != "NA",
+        }
+        for r in rows
+    }
+
+
+def collect_wdi(f: Fetcher, first_year: int = 1990, last_year: int = 2030) -> list[Obs]:
+    out: list[Obs] = []
+    for code, series in WDI_INDICATORS.items():
+        snap = f.get(
+            f"worldbank/wdi_{code}",
+            f"{API}/country/all/indicator/{code}?format=json&per_page=20000&date={first_year}:{last_year}",
+            ext="json",
+            check=check_json(_wdi_ok, f"WDI {code} empty"),
+        )
+        meta, rows = json.loads(snap.read())
+        if meta.get("pages", 1) != 1:
+            raise ValueError(f"WDI {code}: paging not handled ({meta})")
+        for r in rows:
+            if r["value"] is None:
+                continue
+            out.append(Obs(series, r["countryiso3code"] or r["country"]["id"], r["date"], float(r["value"]), snap.key))
+    return out
+
+
+def collect_icp2021(f: Fetcher) -> list[Obs]:
+    out: list[Obs] = []
+    series = ";".join(ICP_CATEGORIES)
+    for cls, prefix in ICP_MEASURES.items():
+        snap = f.get(
+            f"worldbank/icp2021_{cls}",
+            f"{API}/sources/90/country/all/series/{series}/classification/{cls}/time/YR2021?format=json&per_page=20000",
+            ext="json",
+            check=check_json(lambda d: d.get("source", {}).get("data"), "ICP 2021 payload empty"),
+        )
+        payload = json.loads(snap.read())
+        if payload.get("pages", 1) != 1:
+            raise ValueError(f"ICP {cls}: paging not handled")
+        for row in payload["source"]["data"]:
+            if row["value"] is None:
+                continue
+            var = {v["concept"]: v["id"] for v in row["variable"]}
+            cat = ICP_CATEGORIES[var["Series"]]
+            out.append(Obs(f"{prefix}_{cat}", var["Country"], "2021", float(row["value"]), snap.key))
+    return out

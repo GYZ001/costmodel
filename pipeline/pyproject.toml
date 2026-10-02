@@ -1,0 +1,12 @@
+[project]
+name = "wagegold"
+version = "0.1.0"
+description = "Labor → gold → goods: official-data pipeline for cross-country hourly-wage purchasing power"
+requires-python = ">=3.11"
+dependencies = ["openpyxl>=3.1"]
+
+[project.optional-dependencies]
+test = ["pytest>=8"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

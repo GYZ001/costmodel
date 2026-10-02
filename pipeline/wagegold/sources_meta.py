@@ -20,10 +20,10 @@ SOURCES = [
     {
         "prefix": "worldbank/wdi_",
         "publisher": "世界银行（World Bank）",
-        "title": "World Development Indicators：官方汇率、居民消费 PPP、人口",
+        "title": "World Development Indicators：官方汇率、居民消费 PPP、人口；GDP 与居民消费的本币、美元、国际元值",
         "landing": "https://data.worldbank.org/",
         "license": "CC BY 4.0",
-        "use": "各国年均汇率（PA.NUS.FCRF）、居民最终消费购买力平价（PA.NUS.PRVT.PP）、人口",
+        "use": "各国年均官方汇率（PA.NUS.FCRF）、居民消费购买力平价（PA.NUS.PRVT.PP）、人口；GDP（NY.GDP.MKTP.CN/.CD）与居民消费（NE.CON.PRVT.CN/.PP.CD）只用于逐年核对汇率和购买力平价的货币单位",
     },
     {
         "prefix": "worldbank/fpn_",
@@ -60,18 +60,18 @@ SOURCES = [
     {
         "prefix": "ilostat/",
         "publisher": "国际劳工组织（ILO）",
-        "title": "ILOSTAT：雇员平均/中位时薪与月薪、每周实际工时",
+        "title": "ILOSTAT：雇员平均/中位时薪与月薪（本币、美元、PPP 三种值）、每周实际工时",
         "landing": "https://ilostat.ilo.org/data/",
         "license": "CC BY 4.0",
-        "use": "跨国工资与工时（本币、男女合计）",
+        "use": "跨国工资与工时（男女合计）；ILOSTAT 自己的美元与 PPP 换算值用于核对本币值的货币单位，每条记录的注释决定其口径",
     },
     {
         "prefix": "oecd/",
         "publisher": "经济合作与发展组织（OECD）",
-        "title": "OECD Data Explorer：平均年薪（全职当量）、全职雇员通常周工时",
+        "title": "OECD Data Explorer：平均年薪（全职当量；现价与不变价，本币与 PPP 美元）、全职雇员通常周工时",
         "landing": "https://data-explorer.oecd.org/",
         "license": "CC BY 4.0",
-        "use": "OECD 成员的工资水平与时薪折算；同时作为 ILOSTAT 工资数量级的独立参照",
+        "use": "OECD 数据库中经济体的工资水平与时薪折算；不变价本币与 PPP 美元两行用于核对本币值的货币单位",
     },
     {
         "prefix": "bls/",
@@ -100,10 +100,10 @@ SOURCES = [
     {
         "prefix": "nbs/",
         "publisher": "国家统计局",
-        "title": "数据发布：城镇单位平均工资、农民工监测调查报告、月度国民经济运行（企业周平均工作时间）",
+        "title": "数据发布：城镇单位平均工资、农民工监测调查报告、月度国民经济运行（企业周平均工作时间）、居民消费价格",
         "landing": "https://www.stats.gov.cn/sj/zxfb/",
         "license": "国家统计局网站（注明来源）",
-        "use": "中国工资、农民工收入与实际工时",
+        "use": "中国工资、农民工收入与调查工时；CPI 同比原句（用于核对相关说法）",
     },
 ]
 

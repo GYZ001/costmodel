@@ -62,9 +62,12 @@ def fx_cross_source(store: Store) -> Check:
                     worst = (d, f"{area} {p}：ECB 交叉汇率 {ecb[p].value:.4f}，美联储 H.10 {h10[p].value:.4f}")
     if n == 0:
         return Check("fx_ecb_vs_h10", "汇率：ECB vs 美联储 H.10 月均", "warn", "无重叠数据（FRED 未取到）")
-    status = "pass" if worst[0] < 0.015 else "fail"
+    # Two fixings of the same market rate (ECB 14:15 CET, Fed noon New York): their monthly
+    # averages differ only by intraday moves.  A wrong currency mapping or an inverted
+    # quote shows up as a gap of tens of percent; 3 % separates the two.
+    status = "pass" if worst[0] < 0.03 else "fail"
     return Check("fx_ecb_vs_h10", "汇率：ECB 参考汇率（交叉）vs 美联储 H.10 月均", status,
-                 f"{n} 个国家-月份对比，最大偏差 {worst[0]:.2%}（{worst[1]}）")
+                 f"{n} 个国家-月份对比，最大偏差 {worst[0]:.2%}（{worst[1]}）；阈值 3%（两者是同一市场汇率在不同时点的定价）")
 
 
 def bls_vs_fred(store: Store) -> Check:
@@ -155,11 +158,11 @@ def exclusions_summary(dataset: dict) -> Check:
     by_scope: dict[str, set] = {}
     for e in ex:
         by_scope.setdefault(e["scope"].split(":")[0], set()).add(e["area"])
-    names = {"fx": "汇率", "ppp": "购买力平价", "cohd": "健康饮食成本", "wage": "工资"}
+    names = {"fx": "官方汇率", "ppp": "购买力平价", "cohd": "健康饮食成本", "wage": "工资", "currency": "货币代码"}
     detail = "；".join(f"{names.get(k, k)}：{len(v)} 个经济体（{', '.join(sorted(v)[:12])}{'…' if len(v) > 12 else ''}）"
                      for k, v in sorted(by_scope.items())) or "无"
-    return Check("record_gates", "记录级一致性：跨数据集货币单位与汇率核对", "pass",
-                 f"不一致的记录已剔除并在下表列出原因。{detail}")
+    return Check("record_gates", "货币单位逐年核对（恒等关系）", "pass",
+                 f"未能证明与世界银行本币序列同一货币单位的输入不参与计算，原因见剔除记录。{detail}")
 
 
 def run_all(store: Store, dataset: dict, years: list[str], today: str) -> list[dict]:

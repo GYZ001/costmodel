@@ -77,32 +77,45 @@ def gold_tables(store: Store) -> dict:
 # identity that holds when - and only when - they are in the same unit:
 #
 #   F ~ L  WDI official exchange rate = WDI GDP in LCU ÷ GDP in US$ (the factor the
-#          World Bank itself applies to that year's LCU figures)      within TOL_FX
+#          World Bank itself applies to that year's LCU figures)
 #   P ~ L  WDI household PPP = WDI household consumption in LCU ÷ in international $
-#                                                                     within TOL_FX
-#   C ~ P  healthy-diet cost in LCU ÷ the same cost in PPP $ = WDI PPP within TOL_UNIT
-#   W ~ F  ILOSTAT wage in LCU ÷ WDI exchange rate = ILOSTAT's own US$ figure  TOL_UNIT
-#   W ~ P  ILOSTAT wage in LCU ÷ WDI PPP = ILOSTAT's own PPP figure          TOL_UNIT
+#   C ~ P  healthy-diet cost in LCU ÷ the same cost in PPP $ = WDI PPP
+#   W ~ F  ILOSTAT wage in LCU ÷ WDI exchange rate = ILOSTAT's own US$ figure
+#   W ~ P  ILOSTAT wage in LCU ÷ WDI PPP = ILOSTAT's own PPP figure
 #   W ~ L  OECD constant-price wage in national currency ÷ the same in US$ PPP =
-#          WDI PPP of OECD's base year (TOL_UNIT); or the currency the publisher states
-#          (OECD unit code, NBS 元, BLS dollars) equals a currency proven for L below
+#          WDI PPP of OECD's base year; or the currency the publisher states (OECD
+#          unit code, NBS 元, BLS dollars) equals a currency proven for L below
+#
+# "=" means: equal within MAX_FACTOR (below).  Where a year lacks the WDI totals for
+# F ~ L or P ~ L, the previous year's proof carries over if the rate moved by less
+# than MAX_FACTOR, i.e. its unit cannot have changed in between.
 #
 # L is the unit of WDI's local-currency series, one per economy for all years.  The
 # currency code of L is whatever ILOSTAT's currency notes (T30) say for ILOSTAT
 # records joined to L, OECD's unit for an OECD series joined by its PPP identity, and
-# US dollars where the official rate is exactly 1.  A figure is computed only when
+# A figure is computed only when
 # all its inputs are joined to L; everything else is left out with the failing
 # identity and its numbers recorded (dataset["exclusions"]).
 # --------------------------------------------------------------------------------------
 
-# A currency-unit mismatch shows up as a fixed conversion factor; the smallest one
-# among real redenominations / euro changeovers is Latvia's 1 EUR = 0.702804 LVL
-# (×1.42).  Comparisons between publishers (different PPP vintages, exchange-rate
-# conventions) differ by a few percent to ~15 %, which is NOT a unit error: ±25 %.
-TOL_UNIT = 0.25
-# Identities inside one WDI release hold to rounding; 3 % also flags years in which
-# the World Bank converts with an exchange rate other than the official one.
-TOL_FX = 0.03
+# A currency-unit mismatch shows up as a fixed conversion factor.  The smallest one
+# among the redenominations and euro changeovers since 2000 is Latvia's
+# 1 EUR = 0.702804 LVL (×1.42); every other is ×1.7 or more (Cyprus ×1.71, BGN ×1.96,
+# HRK ×7.53, redenominations ×5 to ×1,000,000).  So two numbers whose ratio lies
+# within ×/÷1.4 cannot differ by a currency unit, and anything outside cannot be
+# trusted to be in the same unit.  Differences inside the bound are not unit errors:
+# PPP vintages, fiscal-year conversion (the World Bank converts fiscal-year national
+# accounts at fiscal-year average rates: Australia, Egypt, …), publishers' own rates.
+MAX_FACTOR = 1.4
+
+
+def same_unit(a: float, b: float) -> bool:
+    return 1 / MAX_FACTOR <= a / b <= MAX_FACTOR
+
+
+def factor(a: float, b: float) -> str:
+    r = a / b
+    return f"×{r:.3g}" if r >= 1 else f"÷{1 / r:.3g}"
 
 
 def _rel(a: float, b: float) -> float:
@@ -184,6 +197,26 @@ def ilo_record(store: Store, series: str, obs: Obs, ilo_dic: dict) -> IloRecord:
     )
 
 
+HOURS_IN_MONTH = 31 * 24  # 744: no monthly wage can be earned in more hours than a month has
+
+
+def _check_hours_implied(recs: list[IloRecord]) -> None:
+    """A monthly and an hourly figure of the same source, year and central tendency imply
+    the hours worked in a month.  Below 1 or above the 744 hours a month has, at least
+    one of the two is in a wrong unit, and nothing tells which: both are left out."""
+    by_key: dict[tuple[str, str], dict[str, IloRecord]] = defaultdict(dict)
+    for r in recs:
+        if not r.unusable:
+            by_key[(r.source, r.concept)][r.unit] = r
+    for pair in by_key.values():
+        if "hour" in pair and "month" in pair:
+            h = pair["month"].obs.value / pair["hour"].obs.value
+            if not 1 <= h <= HOURS_IN_MONTH:
+                why = (f"同一来源同年的月薪 {pair['month'].obs.value:,.6g} ÷ 时薪 {pair['hour'].obs.value:,.6g} = 每月 {h:,.0f} 小时，"
+                       f"不在 1 到 {HOURS_IN_MONTH} 小时（一个月的总小时数）之间，至少其中一个数值的单位有误")
+                pair["hour"].unusable = pair["month"].unusable = why
+
+
 def ilo_notes(rec: IloRecord, ilo_dic: dict) -> str:
     """ILOSTAT's own labels for the notes that qualify a figure (English, verbatim)."""
     labels = [ilostat.label(c, ilo_dic) for c in ilostat.codes(rec.obs) if c.split(":", 1)[0] in CONCEPT_NOTES + ("I11",)]
@@ -209,6 +242,8 @@ class UnitGraph:
                 continue
             for y, o in self.store.series(series, area).items():
                 out[y].append(ilo_record(self.store, series, o, self.ilo_dic))
+        for recs in out.values():
+            _check_hours_implied(recs)
         return out
 
     # ---- per economy
@@ -232,51 +267,59 @@ class UnitGraph:
         checks: dict[str, dict] = {}
         codes: set[str] = set()
         # Pass 1: identities between numbers.
+        prev: dict[str, tuple[float, bool]] = {}  # last year's F / P value and whether it was proven
         for y in self.years:
             g = _UnionFind()
             c: dict = {}
             fx, ppp = s.get("fx_lcu_usd", area, y), s.get("ppp_hfce", area, y)
-            gl, gu = s.get("gdp_lcu", area, y), s.get("gdp_usd", area, y)
-            if fx and gl and gu and gu.value > 0:
-                implied = gl.value / gu.value
-                d = _rel(fx.value, implied)
-                c["F"] = (d <= TOL_FX, f"WDI 官方汇率 {fx.value:.6g}，世界银行 GDP 本币值 ÷ 美元值 = {implied:.6g}（相差 {d:.1%}）："
-                                       "官方汇率与世界银行本币序列的货币单位不同，或世界银行该年换算美元时未用官方汇率")
-                if d <= TOL_FX:
-                    g.union("F", "L")
-                    if fx.value == 1.0:
-                        codes.add("USD")
-            elif fx:
-                c["F"] = (None, "缺少世界银行 GDP 本币值或美元值，无法核对官方汇率")
-            hl, hi = s.get("hfce_lcu", area, y), s.get("hfce_intl", area, y)
-            if ppp and hl and hi and hi.value > 0:
-                implied = hl.value / hi.value
-                d = _rel(ppp.value, implied)
-                c["P"] = (d <= TOL_FX, f"WDI 居民消费 PPP {ppp.value:.6g}，居民消费本币值 ÷ 国际元值 = {implied:.6g}（相差 {d:.1%}）")
-                if d <= TOL_FX:
-                    g.union("P", "L")
-            elif ppp:
-                c["P"] = (None, "缺少世界银行居民消费本币值或国际元值，无法核对购买力平价")
+            for node, val, num, den, what, missing in (
+                ("F", fx, s.get("gdp_lcu", area, y), s.get("gdp_usd", area, y),
+                 "WDI 官方汇率 {v:.6g}，世界银行 GDP 本币值 ÷ 美元值 = {i:.6g}（{f}）：官方汇率与世界银行本币序列的货币单位不同，"
+                 "或世界银行换算该年美元数据时用的不是官方汇率（官方汇率与实际交易汇率严重脱节）",
+                 "缺少世界银行 GDP 本币值或美元值，无法核对官方汇率"),
+                ("P", ppp, s.get("hfce_lcu", area, y), s.get("hfce_intl", area, y),
+                 "WDI 居民消费 PPP {v:.6g}，居民消费本币值 ÷ 国际元值 = {i:.6g}（{f}）：货币单位不同",
+                 "缺少世界银行居民消费本币值或国际元值，无法核对购买力平价"),
+            ):
+                if not val:
+                    prev.pop(node, None)
+                    continue
+                if num and den and den.value > 0:
+                    implied = num.value / den.value
+                    ok = same_unit(val.value, implied)
+                    c[node] = (ok, what.format(v=val.value, i=implied, f=factor(val.value, implied)))
+                elif node in prev and prev[node][1] and same_unit(val.value, prev[node][0]):
+                    # No totals this year: the unit proven last year carries over, since the
+                    # value moved by less than any change of unit.
+                    ok = True
+                    c[node] = (True, "")
+                else:
+                    ok = None
+                    detail = missing
+                    if node in prev:
+                        last, proven = prev[node]
+                        detail += (f"；上一年也未能核对" if not proven else
+                                   f"；与上一年 {last:.6g} 相比 {factor(val.value, last)}，超出货币单位不可能改变的范围，不能沿用上一年的核对")
+                    c[node] = (None, detail)
+                if ok:
+                    g.union(node, "L")
+                prev[node] = (val.value, bool(ok))
             lcu, cost_ppp = s.get("cohd_total", area, y), s.get("cohd_total_ppp", area, y)
             if lcu and cost_ppp and ppp and cost_ppp.value > 0:
                 implied = lcu.value / cost_ppp.value
-                d = _rel(implied, ppp.value)
-                c["C"] = (d <= TOL_UNIT, f"健康饮食成本本币值 ÷ PPP 值 = {implied:.6g}，WDI 购买力平价 {ppp.value:.6g}（相差 {d:.0%}）：货币单位不同")
-                if d <= TOL_UNIT:
+                ok = same_unit(implied, ppp.value)
+                c["C"] = (ok, f"健康饮食成本本币值 ÷ PPP 值 = {implied:.6g}，WDI 购买力平价 {ppp.value:.6g}（{factor(implied, ppp.value)}）：货币单位不同")
+                if ok:
                     g.union("C", "P")
             for rec in ilo.get(y, []):
                 node = f"ilo:{rec.series}"
                 g.find(node)
                 if rec.unusable:
                     continue
-                if rec.usd and fx:
-                    d = _rel(rec.obs.value / fx.value, rec.usd.value)
-                    if d <= TOL_UNIT:
-                        g.union(node, "F")
-                if rec.ppp and ppp:
-                    d = _rel(rec.obs.value / ppp.value, rec.ppp.value)
-                    if d <= TOL_UNIT:
-                        g.union(node, "P")
+                if rec.usd and fx and same_unit(rec.obs.value / fx.value, rec.usd.value):
+                    g.union(node, "F")
+                if rec.ppp and ppp and same_unit(rec.obs.value / ppp.value, rec.ppp.value):
+                    g.union(node, "P")
             if oecd_ppp[0]:
                 g.union("oecd", "L")
             graphs[y], checks[y] = g, c
@@ -310,10 +353,10 @@ class UnitGraph:
         implied = q[y].value / qp[y].value
         ppp = s.get("ppp_hfce", area, base)
         hl, hi = s.get("hfce_lcu", area, base), s.get("hfce_intl", area, base)
-        if not (ppp and hl and hi) or _rel(ppp.value, hl.value / hi.value) > TOL_FX:
+        if not (ppp and hl and hi) or not same_unit(ppp.value, hl.value / hi.value):
             return (None, f"无法核对 {base} 年的 WDI 购买力平价")
-        d = _rel(implied, ppp.value)
-        return (d <= TOL_UNIT, f"OECD 工资（{base} 年不变价）本币值 ÷ PPP 美元值 = {implied:.6g}，WDI {base} 年居民消费 PPP {ppp.value:.6g}（相差 {d:.0%}）")
+        return (same_unit(implied, ppp.value), f"OECD 工资（{base} 年不变价）本币值 ÷ PPP 美元值 = {implied:.6g}，"
+                                                f"WDI {base} 年居民消费 PPP {ppp.value:.6g}（{factor(implied, ppp.value)}）")
 
     # ---- reasons for what is left out
     def explain(self, area: str, year: str, has_data: bool) -> None:
@@ -324,7 +367,9 @@ class UnitGraph:
         names = {"F": "fx", "P": "ppp", "C": "cohd"}
         for k, scope in names.items():
             ok, detail = c.get(k, (True, ""))
-            if ok is not True and detail:
+            # Only what is finally not joined to L is left out; a direct check that could
+            # not be made does not matter when another identity joined the node.
+            if ok is not True and detail and not g.linked(k):
                 self._exclude(area, year, scope, detail)
         if self.store.get("oecd_avg_annual_wage", area, year) and not g.linked("oecd"):
             self._exclude(area, year, "wage:oecd", "OECD 工资未能证明与世界银行本币序列同一货币单位：" + a["oecd_ppp"][1]

@@ -23,8 +23,8 @@ export function ChinaUs({ ds }: Scope) {
             <table className="data">
               <thead>
                 <tr>
-                  <th>口径</th><th>月均（元）</th><th>折合时薪（元，按实际工时）</th><th>每小时可换黄金（克）</th>
-                  <th>挣一天健康饮食要工作</th><th className="l">说明</th>
+                  <th>口径</th><th>月均（元）</th><th>折合时薪（元，按调查工时）</th><th>每小时可换黄金（克）</th>
+                  <th>挣一天健康饮食要工作</th>
                 </tr>
               </thead>
               <tbody>
@@ -35,16 +35,26 @@ export function ChinaUs({ ds }: Scope) {
                     <td>{fmt(w.hourly_lcu, 1)}</td>
                     <td>{sig(w.hourly_gold_g)}</td>
                     <td>{minutes(w.minutes_per_cohd_day)}</td>
-                    <td className="l small ink2">{w.caveat}</td>
                   </tr>
                 ))}
               </tbody>
             </table>
           </div>
+          <details>
+            <summary>各口径的统计范围与定义（国家统计局原文）</summary>
+            <dl className="small ink2" style={{ margin: "6px 0 0" }}>
+              {cnRow.wages.filter((w) => w.key.startsWith("cn_") && w.caveat).map((w) => (
+                <div key={w.key} style={{ marginBottom: 8 }}>
+                  <dt style={{ fontWeight: 600, color: "var(--ink)" }}>{w.label}（{w.source}）</dt>
+                  <dd style={{ margin: "2px 0 0" }}>{w.caveat}</dd>
+                </div>
+              ))}
+            </dl>
+          </details>
           <p className="note">
             实际工时：国家统计局月度劳动力调查“全国企业就业人员周平均工作时间”，{cnYear} 年已公布月份
             （{cnHours.map(([p, v]) => `${Number(p.slice(5))}月 ${v}`).join("、")} 小时）的平均。
-            国家统计局不单独公布 1 月数据。工时调查覆盖企业就业人员，与工资统计的覆盖面不完全一致，这是近似。
+            本项目存档的发布中没有单独的 1 月数值（1—2 月合并发布）。工时调查覆盖企业就业人员，与工资统计的覆盖面不完全一致，这是近似。
             黄金：{cnYear} 年世界银行月均金价的年平均 × 该年人民币年均汇率 = {fmt(cnRow.gold_lcu_g, 1)} 元/克。
           </p>
         </div>
@@ -157,7 +167,14 @@ function UsBasket({ ds }: { ds: Scope["ds"] }) {
       <p className="note">
         BLS CPI 平均价格（美国城市平均，未季调），含食品，也含汽油和居民电价。磅、加仑已换算为千克、升。
         商品名称与计量单位按 BLS 序列编号由本项目整理，BLS API 的响应里不含名称和单位，因此未能与存档文件核对。
-        {gaps.length > 0 && <>最近 24 个月中缺少数值的月份：{gaps.map((g) => `${g.period}（${g.series.filter((id) => ids.has(id)).map((id) => labelOf[id] ?? id).join("、")}；${g.note ? `BLS 注：${g.note}` : "BLS 未返回该月数据，无说明"}）`).join("；")}。</>}
+        {gaps.length > 0 && <>最近 24 个月中缺少数值的月份：{gaps.map((g) => {
+          const inBasket = g.series.filter((id) => ids.has(id));
+          const others = [...ids].filter((id) => !inBasket.includes(id));
+          const which = others.length === 0 ? "全部商品"
+            : others.length < inBasket.length ? `除${others.map((id) => labelOf[id] ?? id).join("、")}外的全部商品`
+            : inBasket.map((id) => labelOf[id] ?? id).join("、");
+          return `${g.period}（${which}；${g.note ? `BLS 注：${g.note}` : "BLS 未返回该月数据，无说明"}）`;
+        }).join("；")}。</>}
         时薪为同月 BLS 私营非农平均时薪；“＊”表示所用时薪仍是 BLS 标注的初值。黄金为同月世界银行月均金价。{countryName(ds.countries.USA)}的数字仅供感受量级，商品规格与中国市场常见规格不同，不做逐项跨国对比。
       </p>
     </div>

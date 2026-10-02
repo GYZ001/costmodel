@@ -225,3 +225,14 @@ def test_units_oecd_wage_joined_by_its_ppp_identity():
     u = build.UnitGraph(s, DIC, ["2025"])
     assert build.oecd_variant(s, u, "AAA", "2025") is not None
     assert build.oecd_variant(s, u, "BBB", "2025") is None
+
+
+def test_units_physically_impossible_hours_drop_both_records():
+    # ILOSTAT ZAF 2017 (same source): median monthly 3500, median hourly 0.102 -> 34,000 hours a month.
+    s = _store(*_wdi("AAA", "2017", 13.3, 6.0),
+               Obs("ilo_monthly_mean@BA:1", "AAA", "2017", 3500.0, "s", "T8:128 T9:133"),
+               Obs("ilo_monthly_mean_usd@BA:1", "AAA", "2017", 263.0, "s"),
+               Obs("ilo_hourly_mean@BA:1", "AAA", "2017", 0.102, "s", "T8:128 T9:133"),
+               Obs("ilo_hourly_mean_usd@BA:1", "AAA", "2017", 0.0077, "s"))
+    u = build.UnitGraph(s, DIC, ["2017"])
+    assert build.ilo_variants(s, u, "AAA", "2017", DIC) == []

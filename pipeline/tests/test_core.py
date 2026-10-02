@@ -162,6 +162,7 @@ DIC = {"note_indicator": {
     "T30:1": "Currency: XXX - Euro (EUR)", "T30:2": "Currency: XXX - Old unit (OLD)",
     "S4:31": "Geographical coverage: Urban areas only",
 }, "note_source": {}, "source": {}}
+META = {a: {"is_economy": True, "name_en": a} for a in ("AAA", "BBB")}
 
 
 def _store(*obs):
@@ -183,7 +184,7 @@ def test_units_official_rate_in_other_unit_is_not_used():
     s = _store(*_wdi("AAA", "2005", 200.0, 0.6, lcu_unit_fx=1.0),
                Obs("ilo_monthly_mean@X:1", "AAA", "2005", 1500.0, "s", "T8:127 T9:133 T30:1"),
                Obs("ilo_monthly_mean_ppp@X:1", "AAA", "2005", 2500.0, "s"))
-    u = build.UnitGraph(s, DIC, ["2005"])
+    u = build.UnitGraph(s, DIC, ["2005"], META)
     g = u.year("AAA", "2005")
     assert not g.linked("F") and g.linked("P") and g.linked("ilo:ilo_monthly_mean@X:1")
     assert u.currency("AAA") == "EUR"
@@ -195,7 +196,7 @@ def test_units_wage_in_old_currency_is_left_out():
     s = _store(*_wdi("AAA", "2018", 8.0, 3.0),
                Obs("ilo_monthly_mean@X:1", "AAA", "2018", 2_000_000.0, "s", "T30:2"),  # 1000× the unit of FX/PPP
                Obs("ilo_monthly_mean_usd@X:1", "AAA", "2018", 250.0, "s"))  # ILOSTAT's own (correct) USD figure
-    u = build.UnitGraph(s, DIC, ["2018"])
+    u = build.UnitGraph(s, DIC, ["2018"], META)
     assert not u.year("AAA", "2018").linked("ilo:ilo_monthly_mean@X:1")
     assert build.ilo_variants(s, u, "AAA", "2018", DIC) == []
     u.explain("AAA", "2018", True)
@@ -208,7 +209,7 @@ def test_units_ilostat_notes_set_concept_and_exclude_real_values():
                Obs("ilo_monthly_mean_usd@X:1", "AAA", "2019", 380.0, "s"),
                Obs("ilo_hourly_mean@X:2", "AAA", "2019", 20.0, "s", "T8:127 T9:131"),
                Obs("ilo_hourly_mean_usd@X:2", "AAA", "2019", 2.0, "s"))
-    u = build.UnitGraph(s, DIC, ["2019"])
+    u = build.UnitGraph(s, DIC, ["2019"], META)
     vs = build.ilo_variants(s, u, "AAA", "2019", DIC)
     assert [(v.key, v.restricted) for v in vs] == [("ilo_median_monthly", True)]  # median per its note; real-value record dropped
     assert "Urban areas only" in vs[0].caveat
@@ -222,7 +223,7 @@ def test_units_oecd_wage_joined_by_its_ppp_identity():
                # a second economy whose OECD series is in another unit than WDI's LCU series
                *[Obs(*o) for o in _wdi("BBB", "2025", 1.8, 0.39, lcu_unit_fx=0.92)],
                Obs("oecd_avg_annual_wage", "BBB", "2025", 28000.0, "s", "BGN"))
-    u = build.UnitGraph(s, DIC, ["2025"])
+    u = build.UnitGraph(s, DIC, ["2025"], META)
     assert build.oecd_variant(s, u, "AAA", "2025") is not None
     assert build.oecd_variant(s, u, "BBB", "2025") is None
 
@@ -234,8 +235,63 @@ def test_units_physically_impossible_hours_drop_both_records():
                Obs("ilo_monthly_mean_usd@BA:1", "AAA", "2017", 263.0, "s"),
                Obs("ilo_hourly_mean@BA:1", "AAA", "2017", 0.102, "s", "T8:128 T9:133"),
                Obs("ilo_hourly_mean_usd@BA:1", "AAA", "2017", 0.0077, "s"))
-    u = build.UnitGraph(s, DIC, ["2017"])
+    u = build.UnitGraph(s, DIC, ["2017"], META)
     assert build.ilo_variants(s, u, "AAA", "2017", DIC) == []
+
+
+def test_units_wage_matching_both_factors_does_not_join_them():
+    # Dollarisation year: WDI's LCU series is in US$, the official rate still in colones (×8.75);
+    # ILOSTAT converted its wage with both, so it "agrees" with each - that proves nothing.
+    s = _store(*_wdi("AAA", "2000", 8.75, 0.5, lcu_unit_fx=1.0),
+               Obs("ilo_monthly_mean@X:1", "AAA", "2000", 3000.0, "s", "T8:127 T9:133"),
+               Obs("ilo_monthly_mean_usd@X:1", "AAA", "2000", 3000.0 / 8.75, "s"),
+               Obs("ilo_monthly_mean_ppp@X:1", "AAA", "2000", 3000.0 / 0.5, "s"))
+    u = build.UnitGraph(s, DIC, ["2000"], META)
+    g = u.year("AAA", "2000")
+    assert g.linked("P") and not g.linked("F") and not g.linked("ilo:ilo_monthly_mean@X:1")
+    u.explain("AAA", "2000", True)
+    assert any("无法确定" in e["detail"] for e in u.log)
+
+
+def test_units_ppp_proven_by_icp_price_level_and_carried_both_ways():
+    # No household-consumption totals in WDI: the PPP is checked in 2021 against ICP's price
+    # level (US = 1) × the official rate, and carried to adjacent years that moved < ×1.4.
+    rows = []
+    for y, fx, ppp in (("2020", 150.0, 140.0), ("2021", 155.0, 155.7), ("2022", 160.0, 171.4), ("2023", 400.0, 205.2)):
+        rows += [("fx_lcu_usd", "AAA", y, fx, "s"), ("ppp_hfce", "AAA", y, ppp, "s"),
+                 ("gdp_lcu", "AAA", y, fx * 1000, "s"), ("gdp_usd", "AAA", y, 1000.0, "s")]
+    s = _store(*rows, ("icp21_pli_wl_hfce", "AAA", "2021", 50.0, "s", "A"),
+               ("icp21_pli_wl_hfce", "USA", "2021", 49.8, "s", "United States"))
+    u = build.UnitGraph(s, DIC, ["2020", "2021", "2022", "2023"], META)
+    assert [u.year("AAA", y).linked("P") for y in ("2020", "2021", "2022", "2023")] == [True, True, True, True]
+    s = _store(*rows, ("icp21_pli_wl_hfce", "AAA", "2021", 5.0, "s", "A"),  # PPP 10× the ICP price level
+               ("icp21_pli_wl_hfce", "USA", "2021", 49.8, "s", "United States"))
+    u = build.UnitGraph(s, DIC, ["2020", "2021", "2022", "2023"], META)
+    assert not any(u.year("AAA", y).linked("P") for y in ("2020", "2021", "2022", "2023"))
+
+
+def test_units_time_check_only_among_same_currency_figures():
+    # A monthly figure published in another currency (×100) is left out for its currency,
+    # and must not knock out the hourly figure it would contradict.
+    s = _store(*_wdi("AAA", "2018", 100.0, 80.0),
+               Obs("ilo_monthly_mean@X:1", "AAA", "2018", 3000.0, "s", "T8:127 T9:133"),  # in another currency
+               Obs("ilo_monthly_mean_usd@X:1", "AAA", "2018", 3500.0, "s"),
+               Obs("ilo_hourly_mean@X:2", "AAA", "2018", 1800.0, "s", "T8:127 T9:133"),
+               Obs("ilo_hourly_mean_usd@X:2", "AAA", "2018", 18.0, "s"),
+               Obs("ilo_weekly_hours@X:2", "AAA", "2018", 38.0, "s"))
+    u = build.UnitGraph(s, DIC, ["2018"], META)
+    assert [v.key for v in build.ilo_variants(s, u, "AAA", "2018", DIC)] == ["ilo_mean_hourly"]
+    # Same currency, but the hourly figure is 100× too small against OECD's wage and hours.
+    s = _store(*_wdi("AAA", "2018", 100.0, 80.0),
+               Obs("ilo_hourly_mean@X:2", "AAA", "2018", 18.0, "s", "T8:127 T9:133"),
+               Obs("ilo_hourly_mean_usd@X:2", "AAA", "2018", 0.18, "s"),
+               Obs("oecd_avg_annual_wage", "AAA", "2018", 3_600_000.0, "s", "AAD"),
+               Obs("oecd_avg_annual_wage_q", "AAA", "2018", 3_600_000.0, "s", "AAD 2018"),
+               Obs("oecd_avg_annual_wage_q_usdppp", "AAA", "2018", 45000.0, "s", "USD_PPP 2018"),
+               Obs("oecd_usual_weekly_hours_ft", "AAA", "2018", 40.0, "s"))
+    u = build.UnitGraph(s, DIC, ["2018"], META)
+    assert build.ilo_variants(s, u, "AAA", "2018", DIC) == []
+    assert build.oecd_variant(s, u, "AAA", "2018") is not None
 
 
 def test_nbs_split_wage_releases():

@@ -1,6 +1,7 @@
 """Tidy observation model shared by all sources."""
 from __future__ import annotations
 
+import math
 from collections import defaultdict
 from dataclasses import dataclass, field
 
@@ -62,4 +63,5 @@ def annual_mean(monthly: dict[str, Obs], year: str) -> tuple[float, int] | None:
     vals = [monthly[f"{year}-{m:02d}"].value for m in range(1, 13) if f"{year}-{m:02d}" in monthly]
     if len(vals) != 12:
         return None
-    return sum(vals) / 12, 12
+    # math.fsum is exactly rounded, so the result does not depend on the Python version
+    return math.fsum(vals) / 12, 12

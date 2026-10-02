@@ -25,7 +25,7 @@ import csv
 import io
 import re
 
-from ..fetch import Fetcher
+from ..fetch import Fetcher, FetchError
 from ..model import Obs
 from .common import check_csv_header, to_float
 
@@ -57,6 +57,10 @@ def collect(f: Fetcher, start: int = 2000) -> tuple[list[Obs], dict[str, dict[st
             if v is None or v <= 0 or r["sex"] != "SEX_T" or suffix is None:
                 continue
             out.append(Obs(f"{base}{suffix}@{r['source']}", r["ref_area"], r["time"], v, snap.key, note=_notes(r)))
+            if suffix == "" and (r.get("obs_status") or "").strip():
+                # ILOSTAT's observation status (e.g. B = break, U = unreliable), kept with the value.
+                out.append(Obs(f"{base}__status@{r['source']}", r["ref_area"], r["time"], 0.0, snap.key,
+                               note=r["obs_status"].strip()))
     ind, base = HOURS
     snap = f.get(f"ilostat/{ind}", DATA.format(id=ind, extra="", start=start), ext="csv",
                  check=check_csv_header("ref_area", "source", "time", "obs_value"))
@@ -66,8 +70,19 @@ def collect(f: Fetcher, start: int = 2000) -> tuple[list[Obs], dict[str, dict[st
             continue
         out.append(Obs(f"{base}@{r['source']}", r["ref_area"], r["time"], v, snap.key, note=_notes(r)))
     dictionaries = {}
-    for var in ("source", "note_source", "note_indicator"):
-        snap = f.get(f"ilostat/dic_{var}", DIC.format(var=var), ext="csv", check=check_csv_header(var, f"{var}.label"))
+    # Note and status labels say what a figure is (build.py reads them), so they are
+    # required.  ref_area labels only name ILOSTAT's economy codes, used to match the few
+    # that differ from WDI's (Kosovo is KOS, WDI uses XKX); without them those codes stay
+    # unmatched, which build.py logs.
+    for var in ("source", "note_source", "note_indicator", "obs_status", "ref_area"):
+        try:
+            snap = f.get(f"ilostat/dic_{var}", DIC.format(var=var), ext="csv", check=check_csv_header(var, f"{var}.label"))
+        except FetchError as exc:
+            if var != "ref_area":
+                raise
+            print(f"[skip] ilostat dictionary {var}: {exc}")
+            dictionaries[var] = {}
+            continue
         rows = csv.DictReader(io.StringIO(snap.read().decode("utf-8-sig")))
         dictionaries[var] = {r[var]: r[f"{var}.label"] for r in rows}
     return out, dictionaries
@@ -99,6 +114,10 @@ def label(code: str, dic: dict) -> str:
 
 
 CURRENCY_RE = re.compile(r"\(([A-Z]{3})\)\s*$")
+
+
+def status_label(code: str, dic: dict) -> str:
+    return dic.get("obs_status", {}).get(code) or code
 
 
 def currency(o: Obs, dic: dict) -> str | None:

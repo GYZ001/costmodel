@@ -100,7 +100,7 @@ def _build_and_write(store, f, meta, ilo_dic, today, save) -> int:
     gold = build.gold_tables(store)
     pink = f.used.get("worldbank/CMO-Historical-Data-Monthly")
     gold["source_updated"] = pinksheet.updated_on(pink.read()) if pink else None
-    units = build.UnitGraph(store, ilo_dic, years)
+    units = build.UnitGraph(store, ilo_dic, years, meta)
     dataset = {
         "generated_at": datetime.now(timezone.utc).replace(microsecond=0).isoformat(),
         "constants": {"grams_per_troy_ounce": GRAMS_PER_TROY_OUNCE, "weeks_per_month": build.WEEKS_PER_MONTH,

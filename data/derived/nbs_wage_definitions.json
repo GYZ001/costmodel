@@ -2,7 +2,8 @@
  "nbs/release/202302/t20230203_1901452": {
   "title": "2021年农民工监测调查报告",
   "url": "https://www.stats.gov.cn/sj/zxfb/202302/t20230203_1901452.html",
-  "year": "2021"
+  "year": "2021",
+  "definition": null
  },
  "nbs/release/202302/t20230203_1901472": {
   "title": "2021年城镇非私营单位就业人员年平均工资106837元",
@@ -18,13 +19,14 @@
    {
     "text": "具体包括国有单位、城镇集体单位、联营、股份制、外商投资、港澳台商投资等单位。",
     "series": [
-     "cn_wage_nonprivate",
-     "cn_wage_private"
+     "cn_wage_nonprivate"
     ]
    },
    {
     "text": "工资统计主要统计法人单位的就业人员，而个体就业人员、自由职业者等非单位就业人员不在工资统计范围内。",
-    "series": null
+    "series": [
+     "cn_wage_nonprivate"
+    ]
    }
   ],
   "comparable": null,
@@ -43,7 +45,9 @@
    },
    {
     "text": "工资统计主要统计法人单位的就业人员，而个体就业人员、自由职业者等非单位就业人员不在工资统计范围内。",
-    "series": null
+    "series": [
+     "cn_wage_private"
+    ]
    }
   ],
   "comparable": null,
@@ -67,7 +71,8 @@
  "nbs/release/202304/t20230427_1939124": {
   "title": "2022年农民工监测调查报告",
   "url": "https://www.stats.gov.cn/sj/zxfb/202304/t20230427_1939124.html",
-  "year": "2022"
+  "year": "2022",
+  "definition": "农民工月均收入：指农民工本年度从业收入和从业时间（月）的比值。"
  },
  "nbs/release/202305/t20230509_1939286": {
   "title": "2022年城镇私营单位就业人员年平均工资65237元",
@@ -82,7 +87,9 @@
    },
    {
     "text": "劳动工资统计主要统计法人单位的就业人员，而个体就业人员、自由职业者等非单位就业人员不在统计范围内。",
-    "series": null
+    "series": [
+     "cn_wage_private"
+    ]
    }
   ],
   "comparable": null,
@@ -117,13 +124,14 @@
    {
     "text": "具体包括国有单位、城镇集体单位、联营、股份制、外商投资、港澳台商投资等单位。",
     "series": [
-     "cn_wage_nonprivate",
-     "cn_wage_private"
+     "cn_wage_nonprivate"
     ]
    },
    {
     "text": "劳动工资统计主要统计法人单位的就业人员，而个体就业人员、自由职业者等非单位就业人员不在统计范围内。",
-    "series": null
+    "series": [
+     "cn_wage_nonprivate"
+    ]
    }
   ],
   "comparable": null,
@@ -132,7 +140,8 @@
  "nbs/release/202404/t20240430_1948783": {
   "title": "2023年农民工监测调查报告",
   "url": "https://www.stats.gov.cn/sj/zxfb/202404/t20240430_1948783.html",
-  "year": "2023"
+  "year": "2023",
+  "definition": "农民工月均收入：指农民工本年度从业收入和从业时间（月）的比值。"
  },
  "nbs/release/202405/t20240520_1950434": {
   "title": "2023年城镇单位就业人员年平均工资情况",
@@ -168,7 +177,8 @@
  "nbs/release/202504/t20250430_1959523": {
   "title": "2024年农民工监测调查报告",
   "url": "https://www.stats.gov.cn/sj/zxfb/202504/t20250430_1959523.html",
-  "year": "2024"
+  "year": "2024",
+  "definition": "农民工月均收入：指农民工本年度从业收入和从业时间（月）的比值。"
  },
  "nbs/release/202505/t20250516_1959826": {
   "title": "2024年城镇单位就业人员年平均工资情况",
@@ -211,7 +221,8 @@
  "nbs/release/202604/t20260430_1963472": {
   "title": "2025年农民工监测调查报告",
   "url": "https://www.stats.gov.cn/sj/zxfb/202604/t20260430_1963472.html",
-  "year": "2025"
+  "year": "2025",
+  "definition": "农民工月均收入：指农民工本年度从业收入和从业时间（月）的比值。"
  },
  "nbs/release/202605/t20260515_1963707": {
   "title": "2025年城镇单位就业人员年平均工资情况",

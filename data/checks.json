@@ -31,9 +31,9 @@
  },
  {
   "id": "cn_ilo_nbs",
-  "title": "中国：ILOSTAT 月薪 = 国家统计局私营单位年薪 ÷ 12",
+  "title": "中国：历年图中的 ILOSTAT 月薪 = 国家统计局私营单位年薪 ÷ 12",
   "status": "pass",
-  "detail": "重叠年份 2020, 2021, 2022；最大偏差 0.008%（2022：ILOSTAT×12 = 65,232，国家统计局 65,237）"
+  "detail": "ILOSTAT FX:216；重叠年份 2020, 2021, 2022；最大偏差 0.008%（2022：ILOSTAT×12 = 65,232，国家统计局 65,237）"
  },
  {
   "id": "us_ppp_1",
@@ -43,14 +43,14 @@
  },
  {
   "id": "record_gates",
-  "title": "货币单位逐年核对（恒等关系）",
-  "status": "pass",
-  "detail": "未能证明与世界银行本币序列同一货币单位的输入不参与计算，原因见剔除记录。area：10 个经济体（COK, FLK, GGY, JEY, MSR, NIU, REU, SHN, TKL, WLF）；健康饮食成本：28 个经济体（ABW, ARG, BGR, BHS, BMU, COD, CUW, CYM, GMB, GNQ, KNA, LBR…）；官方汇率：24 个经济体（AGO, BDI, BGR, CYP, EST, GIB, GRC, HRV, IRN, LBN, LBR, LTU…）；购买力平价：12 个经济体（BRB, GUY, LBR, MMR, SSD, SUR, SXM, TCA, UGA, VEN, VGB, ZWE）；工资：58 个经济体（AND, ARE, ARG, AZE, BGR, BHR, CUB, CUW, CYP, CZE, DNK, EST…）"
+  "title": "不参与计算的输入（按原因）",
+  "status": "info",
+  "detail": "原因和数字逐条列在剔除记录中。无法证明同一货币单位：66 个经济体（ABW, AGO, AND, ARG, BDI, BGR, BHS, BMU, BRB, COD, CUB, CUW…）；发布方未发布该年数值：57 个经济体（ABW, ALB, AND, ARG, BHS, BIH, BMU, COD, CUB, CUW, CYM, ETH…）；发布方的注释或观测状态表明不能使用：13 个经济体（ARE, AZE, BHR, CUW, GRC, GUM, MLT, QAT, SAU, SYC, YEM, ZAF…）；数量级、时间单位或工时核对不通过：7 个经济体（FIN, ISL, NRU, PRY, SLB, SVK, ZAF）；地区代码无法对应：10 个经济体（COK, FLK, GGY, JEY, MSR, NIU, REU, SHN, TKL, WLF）"
  },
  {
   "id": "identity_chain",
   "title": "恒等式：克金/小时 × 每克金购买力 = PPP 实际时薪",
   "status": "pass",
-  "detail": "2745 条记录，最大相对误差 4.2e-16"
+  "detail": "2748 条记录，最大相对误差 4.2e-16"
  }
 ]

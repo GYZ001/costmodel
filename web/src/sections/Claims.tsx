@@ -29,12 +29,17 @@ const SAID = {
   ],
 };
 
-/** "X价格(同比)?上涨/下降N%" where X starts a clause, so "非食品价格" is not read as "食品价格". */
-function findChange(sentences: string[], item: string): { dir: string; value: number; sentence: string } | null {
+type Release = Dataset["cn_cpi_yoy"][number];
+
+/** "X价格(同比)?上涨/下降N%" where X starts a clause, so "非食品价格" is not read as "食品价格".
+ *  Releases are searched in the order given (the CPI release before the economy release). */
+function findChange(releases: Release[], item: string): { dir: string; value: number; sentence: string; release: Release } | null {
   const rx = new RegExp(`(?:^|[，；、：。]|其中)${item}价格(?:同比)?(上涨|下降)([\\d.]+)%`);
-  for (const s of sentences) {
-    const m = s.match(rx);
-    if (m) return { dir: m[1], value: Number(m[2]), sentence: s };
+  for (const release of releases) {
+    for (const sentence of release.sentences) {
+      const m = sentence.match(rx);
+      if (m) return { dir: m[1], value: Number(m[2]), sentence, release };
+    }
   }
   return null;
 }
@@ -188,25 +193,39 @@ export function Claims({ ds }: { ds: Dataset }) {
     });
   }
 
-  const cpi = ds.cn_cpi_yoy.find((r) => r.period === SAID.cpiMonth);
-  if (!cpi) {
+  const cpiReleases = ds.cn_cpi_yoy
+    .filter((r) => r.period === SAID.cpiMonth)
+    .sort((a, b) => (a.kind === b.kind ? 0 : a.kind === "cpi" ? -1 : 1));
+  const cpiSaid = "中国 2026 年 8 月食品价格同比下降 1.4%，粮食下降 0.6%，猪肉下降 11.8%";
+  if (!cpiReleases.length) {
     claims.push({
-      said: "中国 2026 年 8 月食品价格同比下降 1.4%，粮食下降 0.6%，猪肉下降 11.8%",
+      said: cpiSaid,
       verdict: "mid",
-      label: "本项目尚未存档该月 CPI 发布",
-      why: <>本项目存档的国家统计局居民消费价格月度发布中没有 {SAID.cpiMonth}，无法核对。</>,
+      label: "本项目尚未存档该月发布",
+      why: <>本项目存档的国家统计局居民消费价格与国民经济运行月度发布中没有 {SAID.cpiMonth} 的同比原句，无法核对。</>,
     });
   } else {
-    const found = SAID.cpi.map((c) => ({ ...c, hit: findChange(cpi.sentences, c.item) }));
-    const allSame = found.every((f) => f.hit && f.hit.dir === f.dir && Math.abs(f.hit.value - f.value) < 1e-9);
-    const anyDiff = found.some((f) => f.hit && (f.hit.dir !== f.dir || Math.abs(f.hit.value - f.value) > 1e-9));
-    const quotes = [...new Set(found.flatMap((f) => (f.hit ? [f.hit.sentence] : [])))];
+    const found = SAID.cpi.map((c) => ({ ...c, hit: findChange(cpiReleases, c.item) }));
+    const same = (f: (typeof found)[number]) => f.hit && f.hit.dir === f.dir && Math.abs(f.hit.value - f.value) < 1e-9;
+    const allSame = found.every(same);
+    const anyDiff = found.some((f) => f.hit && !same(f));
+    const bySource = new Map<string, { release: Release; sentences: Set<string> }>();
+    for (const f of found) {
+      if (!f.hit) continue;
+      const g = bySource.get(f.hit.release.url) ?? { release: f.hit.release, sentences: new Set<string>() };
+      g.sentences.add(f.hit.sentence);
+      bySource.set(f.hit.release.url, g);
+    }
+    const notFound = found.filter((f) => !f.hit).map((f) => f.item);
     claims.push({
-      said: "中国 2026 年 8 月食品价格同比下降 1.4%，粮食下降 0.6%，猪肉下降 11.8%",
+      said: cpiSaid,
       verdict: allSame ? "ok" : anyDiff ? "bad" : "mid",
       label: allSame ? "属实" : anyDiff ? "与原文不符" : "原文中未全部找到",
-      why: <>国家统计局《<a href={cpi.url}>{cpi.title}</a>》原文（已存档）：{quotes.map((q) => `“${q}”`).join(" ")}
-        {found.filter((f) => !f.hit).length > 0 && <> 原文同比部分未找到：{found.filter((f) => !f.hit).map((f) => f.item).join("、")}。</>}
+      why: <>
+        {[...bySource.values()].map(({ release, sentences }) => (
+          <span key={release.url}>国家统计局《<a href={release.url}>{release.title}</a>》原文（已存档）：{[...sentences].map((q) => `“${q}”`).join(" ")} </span>
+        ))}
+        {notFound.length > 0 && <>同比原句中未找到：{notFound.join("、")}。</>}
         但同比涨跌只说明价格的变化方向，不能说明两国价格水平谁高谁低。</>,
     });
   }

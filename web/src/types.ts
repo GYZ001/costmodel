@@ -131,8 +131,9 @@ export interface Dataset {
     to: string | null;
     groups: { kind: string; count: number; first: string; last: string; example: string }[];
   } | null;
-  /** Year-on-year sentences quoted verbatim from each archived NBS monthly CPI release. */
-  cn_cpi_yoy: { period: string; title: string; url: string; snapshot: string; sha256: string; sentences: string[] }[];
+  /** This month's year-on-year CPI sentences, quoted verbatim from archived NBS releases
+   *  (the monthly CPI release, and the CPI paragraph of the monthly economy release). */
+  cn_cpi_yoy: { period: string; kind: "cpi" | "economy"; title: string; url: string; snapshot: string; sha256: string; sentences: string[] }[];
   /** Months BLS lists without a value, with BLS's own footnote. */
   bls_unavailable: { period: string; note: string; series: string[] }[];
   exclusions: { area: string; year: string; scope: string; detail: string }[];

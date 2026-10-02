@@ -75,19 +75,34 @@ def test_nbs_wage_release_older_wording():
     assert obs[("cn_wage_private", "2023")] == 68340
 
 
-def test_nbs_q3_release_month_from_text():
+def test_nbs_q3_release_month_from_publication_date():
     html = "<p>2025/10/20 10:00</p><p>9 月份，全国城镇调查失业率为 5.2% 。全国企业就业人员周平均工作时间为 48.5 小时。</p>"
     obs = nbs.parse_release(html, "前三季度经济运行稳中有进", "nbs/release/202510/t20251020_1")
     assert [(o.period, o.value) for o in obs] == [("2025-09", 48.5)]
 
 
-def test_nbs_rejects_title_text_month_mismatch():
-    html = "<p>2025/10/20 10:00</p><p>8 月份，全国城镇调查失业率为 5.2% 。全国企业就业人员周平均工作时间为 48.5 小时。</p>"
+def test_nbs_half_year_recap_does_not_move_the_month():
+    # 2022 H1 release (re-posted in Feb 2023): April is recapped right before the hours sentence, which is June's.
+    html = ("<p>2022/07/15 10:00</p><p>上半年，全国城镇调查失业率平均为 5.7% 。4 月份，全国城镇调查失业率为 6.1% ； 5 、 6 月份连续回落，"
+            "分别为 5.9% 、 5.5% 。 6 月份，本地户籍人口调查失业率为 5.3% 。全国企业就业人员周平均工作时间为 47.7 小时。</p>")
+    obs = nbs.parse_release(html, "有力应对超预期因素影响 国民经济企稳回升", "nbs/release/202302/t20230203_1901513")
+    assert [(o.period, o.value) for o in obs] == [("2022-06", 47.7)]
+
+
+def _raises(html: str, title: str) -> bool:
     try:
-        nbs.parse_release(html, "9月份国民经济运行", "nbs/release/202510/t20251020_1")
+        nbs.parse_release(html, title, "nbs/release/x")
     except ValueError:
-        return
-    raise AssertionError("mismatch not detected")
+        return True
+    return False
+
+
+def test_nbs_rejects_inconsistent_month():
+    hours = "全国企业就业人员周平均工作时间为 48.5 小时。"
+    # Title names a month the publication date does not imply.
+    assert _raises(f"<p>2025/10/20 10:00</p><p>8 月份，全国城镇调查失业率为 5.2% 。{hours}</p>", "8月份国民经济运行")
+    # Text never mentions the month the publication date implies.
+    assert _raises(f"<p>2025/10/20 10:00</p><p>8 月份，全国城镇调查失业率为 5.2% 。{hours}</p>", "前三季度经济运行")
 
 
 def test_cpi_yoy_sentences_follow_stated_basis():
@@ -105,4 +120,18 @@ def test_cpi_yoy_sentences_follow_stated_basis():
         "其中，城市上涨0.8%，农村上涨0.7%；食品价格下降1.4%，非食品价格上涨1.2%。",
         "一、各类商品及服务价格同比变动情况8月份，食品烟酒及在外餐饮类价格同比下降0.7%。",
         "食品中，畜肉类价格下降5.1%，其中猪肉价格下降11.8%；粮食价格下降0.6%。",
+    ]
+
+
+def test_economy_release_cpi_sentences_stay_in_cpi_paragraph():
+    # Wording of the NBS release of 2026-09-15 ("8月份国民经济…").
+    text = ("全国企业就业人员周平均工作时间为48.2小时。七、居民消费价格温和回升，工业生产者价格同比涨幅扩大8月份，"
+            "全国居民消费价格（CPI）同比上涨0.8%，涨幅比上月扩大0.3个百分点；环比上涨0.4%。"
+            "分类别看，食品烟酒及在外餐饮价格同比下降0.7%，衣着价格上涨1.3%。"
+            "在食品烟酒及在外餐饮价格中，猪肉价格下降11.8%，鲜菜价格下降2.8%，粮食价格下降0.6%，鲜果价格下降0.5%。"
+            "1—8月份，全国居民消费价格同比上涨0.9%。8月份，全国工业生产者出厂价格同比上涨3.8%。"
+            "其中，生活资料价格上涨1.0%。八、房地产开发投资同比下降5.0%，新建商品房销售价格同比下降2.0%。")
+    assert nbs.yoy_sentences(text, topic="居民消费价格") == [
+        "分类别看，食品烟酒及在外餐饮价格同比下降0.7%，衣着价格上涨1.3%。",
+        "在食品烟酒及在外餐饮价格中，猪肉价格下降11.8%，鲜菜价格下降2.8%，粮食价格下降0.6%，鲜果价格下降0.5%。",
     ]

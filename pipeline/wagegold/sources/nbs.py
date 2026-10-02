@@ -67,9 +67,19 @@ POSITION_KEYS = ["cn_wage_large_ent", "cn_wage_large_ent_managers", "cn_wage_lar
                  "cn_wage_large_ent_clerks", "cn_wage_large_ent_services", "cn_wage_large_ent_production"]
 MIGRANT_RE = re.compile(r"农民工月均收入\s*为?\s*(\d+)\s*元\s*，\s*比上年增加\s*(\d+)\s*元\s*，\s*增长\s*([\d.]+)\s*%")
 HOURS_RE = re.compile(r"全国企业就业人员周平均工作时间为\s*([\d.]+)\s*小时")
-HOURS_MONTH_RE = re.compile(r"(\d{1,2})\s*月份，全国城镇调查失业率")
 PUBDATE_META_RE = re.compile(r'name="PubDate"\s+content="(\d{4})/(\d{2})/(\d{2})')
 PUBDATE_TEXT_RE = re.compile(r"(20\d\d)/(\d\d)/(\d\d) \d\d:\d\d")
+
+
+def reference_month(html: str, text: str) -> tuple[int, int]:
+    """Reference month of a monthly economic-performance release.  NBS publishes
+    them in the month after the reference month (January-February combined in
+    March, reported as February; December/annual in January), so the month comes
+    from the page's own publication date.  The text alone is not enough: quarterly
+    and half-year releases recap earlier months ("4月份，全国城镇调查失业率为6.1%；
+    5、6月份连续回落") right before the hours sentence, which refers to the latest month."""
+    ry, rm = published(html, text)
+    return (ry, rm - 1) if rm > 1 else (ry - 1, 12)
 
 
 def published(html: str, text: str) -> tuple[int, int]:
@@ -144,40 +154,80 @@ def body_text(html: str) -> str:
     return page_text(html[html.index(">", i) + 1 : j if j >= 0 else len(html)])
 
 
-def yoy_sentences(text: str) -> list[str]:
-    """Sentences of a CPI release that report year-on-year changes.
+RANGE_RE = re.compile(r"\d{1,2}\s*[—–-]\s*\d{1,2}\s*月|季度|上半年|全年")
+HEADING_RE = re.compile(r"^[一二三四五六七八九十]+、")
+
+
+def _basis(s: str) -> set[str]:
+    named = set()
+    if "环比" in s:
+        named.add("mom")
+    if "比上年同期" in s or ("同比" in s and RANGE_RE.search(s)):
+        named.add("ytd")  # cumulative: "1—8月平均…比上年同期", "1—8月份…同比"
+    elif "同比" in s:
+        named.add("yoy")
+    return named
+
+
+def yoy_sentences(text: str, topic: str | None = None) -> list[str]:
+    """Sentences that report this month's year-on-year price changes.
 
     NBS names the comparison basis ("同比" year-on-year, "环比" month-on-month,
-    "比上年同期" year-to-date) once and the following sentences inherit it until the
-    basis is named again, e.g. "8月份，全国居民消费价格环比上涨0.4%。其中，…食品价格上涨0.4%".
-    So the basis is tracked sentence by sentence; a sentence naming more than one
-    basis is ambiguous and suspends tracking until a single basis is named again."""
+    "比上年同期"/a month range for year-to-date) once and the following sentences
+    inherit it until the basis is named again, e.g. "8月份，全国居民消费价格环比上涨0.4%。
+    其中，…食品价格上涨0.4%".  So the basis is tracked sentence by sentence; a sentence
+    naming more than one basis is ambiguous and suspends tracking until a single basis
+    is named again.
+
+    With ``topic`` (e.g. "居民消费价格"), only sentences inside that topic are kept:
+    it starts at a sentence naming the topic and ends at the next numbered heading
+    ("八、…") or sentence about producer prices that does not name it.  Used for the
+    monthly economy releases, which cover CPI in one paragraph among many."""
     out: list[str] = []
     basis = None
+    inside = topic is None
     for raw in text.split("。"):
         s = re.sub(r"\s+", "", raw)
-        named = {b for b, word in (("mom", "环比"), ("ytd", "比上年同期"), ("yoy", "同比")) if word in s}
+        if topic is not None:
+            if topic in s:
+                inside = True
+            elif HEADING_RE.match(s) or "工业生产者" in s:
+                inside = False
+        named = _basis(s)
         if named:
             basis = named.pop() if len(named) == 1 else None
-        if basis == "yoy" and "价格" in s and "%" in s:
+        if inside and basis == "yoy" and "价格" in s and "%" in s:
             out.append(s + "。")
     return out
 
 
 def write_cpi_quotes(snaps: list[tuple[Snapshot, str]]) -> None:
+    """Verbatim year-on-year CPI sentences, per reference month, from the CPI release
+    itself and from the monthly economy release (which names some items, e.g. grain,
+    that the CPI release does not)."""
     import json
 
     from ..config import DATA_DIR
 
     rows = []
     for snap, title in snaps:
+        html = snap.read().decode("utf-8", "replace")
         if m := CPI_TITLE.match(title):
-            html = snap.read().decode("utf-8", "replace")
-            rows.append({"period": f"{m.group(1)}-{int(m.group(2)):02d}", "title": title, "url": snap.url,
-                         "snapshot": snap.key, "sha256": snap.sha256, "sentences": yoy_sentences(body_text(html))})
+            kind, period = "cpi", f"{m.group(1)}-{int(m.group(2)):02d}"
+            sentences = yoy_sentences(body_text(html))
+        elif is_economy_release(title) and HOURS_RE.search(page_text(html)):
+            year, month = reference_month(html, page_text(html))
+            kind, period = "economy", f"{year}-{month:02d}"
+            sentences = yoy_sentences(body_text(html), topic="居民消费价格")
+        else:
+            continue
+        if sentences:
+            rows.append({"period": period, "kind": kind, "title": title, "url": snap.url,
+                         "snapshot": snap.key, "sha256": snap.sha256, "sentences": sentences})
     path = DATA_DIR / "derived" / "nbs_cpi_yoy_sentences.json"
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(json.dumps(sorted(rows, key=lambda r: r["period"]), ensure_ascii=False, indent=1) + "\n", encoding="utf-8")
+    rows.sort(key=lambda r: (r["period"], r["kind"] != "cpi", r["snapshot"]))
+    path.write_text(json.dumps(rows, ensure_ascii=False, indent=1) + "\n", encoding="utf-8")
 
 
 def cpi_quotes() -> list[dict]:
@@ -267,14 +317,11 @@ def parse_release(html: str, title: str, snapshot: str) -> list[Obs]:
     elif is_economy_release(title):
         hit = HOURS_RE.search(text)
         if hit:
-            near = list(HOURS_MONTH_RE.finditer(text[: hit.start()]))
-            if not near:
-                raise ValueError(f"{snapshot}: weekly hours found but no reference month in the text")
-            month = int(near[-1].group(1))
+            year, month = reference_month(html, text)
             stated = economy_month(title)
             if stated is not None and stated != month:
-                raise ValueError(f"{snapshot}: title says month {stated}, text near the hours sentence says {month}")
-            ry, rm = published(html, text)
-            year = ry if month <= rm else ry - 1
+                raise ValueError(f"{snapshot}: title says month {stated}, publication date implies {month}")
+            if not re.search(rf"(?<!\d){month}\s*月份", text):
+                raise ValueError(f"{snapshot}: publication date implies month {month}, but the text never mentions {month}月份")
             out.append(Obs("cn_weekly_hours_enterprise", "CHN", f"{year}-{month:02d}", float(hit.group(1)), snapshot))
     return out

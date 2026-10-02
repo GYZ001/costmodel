@@ -19,7 +19,7 @@ from .config import GRAMS_PER_TROY_OUNCE, SITE_DATA_DIR
 from .fetch import Fetcher, FetchError
 from .model import Store
 from .msg import M, canonical
-from .sources import ilostat, imf, nbs, oecd, pinksheet, worldbank
+from .sources import ilostat, imf, nbs, oecd, pinksheet, probe, worldbank
 from .sources_meta import describe
 
 
@@ -60,6 +60,7 @@ def main(argv=None) -> int:
         ("oecd average wages", lambda: oecd.collect(f), False),
         # Survey publishers' own releases of series ILOSTAT republishes (build.UnitGraph._extend).
         ("nbs (china) urban private-unit wages", lambda: nbs.collect(f), False),
+        ("probe (temporary)", lambda: probe.collect(f), False),
     ):
         run(name, fn, required)
     ilo = run("ilostat", lambda: ilostat.collect(f), into_store=False)

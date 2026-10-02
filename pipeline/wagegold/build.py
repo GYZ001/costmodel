@@ -14,38 +14,36 @@ from collections import defaultdict
 from dataclasses import dataclass, field
 from typing import Callable
 
-from .catalog import G20, US_ITEMS
+from .catalog import G20
 from .config import GRAMS_PER_TROY_OUNCE
 from .model import Obs, Store, annual_mean
+from .msg import M, Msg, Part, canonical, key_of
 from .sources import ilostat
 
 WEEKS_PER_MONTH = 52 / 12  # 4.333…: converts weekly hours to monthly hours
-# The earlier conversation converted Chinese annual wages to hourly with 250 days × 8 h.
-# Shown only as that conversation's assumption; the site's own figures use NBS's survey hours.
-ASSUMED_HOURS_CN = 2000
 COHD_GROUPS = ["staples", "vegetables", "fruits", "animal", "legumes", "oils"]
 
 
 @dataclass
 class WageVariant:
     key: str
-    label: str
+    label: Msg
     concept: str
-    source: str  # human-readable source line
+    source: Msg | str  # source line (a message, or the publisher's own name for its survey)
     monthly_lcu: float | None  # average (or median) monthly earnings
     hourly_lcu: float | None
     hours_week: float | None  # hours used for the hourly conversion (None when the source is hourly)
-    method: str
+    method: Msg
     snapshots: list[str]
-    caveat: str = ""
+    caveat: list[Part] = field(default_factory=list)  # this project's notes and the publisher's note labels (verbatim)
     restricted: bool = False  # coverage limited, as the publisher states (e.g. urban units, private sector only)
     currency: str | None = None  # currency the publisher states for the figure
-    label_hourly: str | None = None  # label when the hourly figure is derived from a monthly one
+    label_hourly: Msg | None = None  # label when the hourly figure is derived from a monthly one
     series_id: str = ""  # the publisher's series and the notes defining it (a change between years is a change of concept or source)
     source_id: str = ""  # publisher and survey, e.g. "ILOSTAT BA:463", "OECD", "NBS"
     series_key: str = ""  # publisher's series, e.g. "ILOSTAT ilo_monthly_mean@BA:463"
     notes_sig: list[str] = field(default_factory=list)  # labels of the notes that define what the figure measures
-    quote: str = ""  # the publisher's own definitions, verbatim (caveat holds notes written by this project)
+    quote: str = ""  # the publisher's own definitions, verbatim in its language (caveat holds this project's notes)
 
 
 # --------------------------------------------------------------------------------------
@@ -145,11 +143,6 @@ def same_unit(a: float, b: float, bound: float = MAX_FACTOR) -> bool:
     return 1 / bound <= a / b <= bound
 
 
-def factor(a: float, b: float) -> str:
-    r = a / b
-    return f"×{r:.3g}" if r >= 1 else f"÷{1 / r:.3g}"
-
-
 class _UnionFind:
     def __init__(self):
         self.parent: dict[str, str] = {}
@@ -179,14 +172,14 @@ class IloRecord:
     obs: Obs
     usd: Obs | None
     ppp: Obs | None
-    unusable: str | None  # what ILOSTAT's own notes or status say makes the value unusable
+    unusable: Msg | None  # what ILOSTAT's own notes or status say makes the value unusable
     restricted: bool  # coverage limited (area, population, establishment size, sector, activity, group, working time)
     currency: str | None
     signature: tuple  # concept-defining notes; a change between years breaks a series
     break_in_series: bool
     status: str | None  # ILOSTAT's observation status label, if any
-    rejected: str | None = None  # left out by this project's magnitude / time-unit checks (with the numbers)
-    unsure: str | None = None  # kept, but its time unit could not be confirmed against another source
+    rejected: Msg | None = None  # left out by this project's magnitude / time-unit checks (with the numbers)
+    unsure: Msg | None = None  # kept, but its time unit could not be confirmed against another source
 
     @property
     def usable(self) -> bool:
@@ -240,21 +233,21 @@ def ilo_record(store: Store, series: str, obs: Obs, ilo_dic: dict) -> IloRecord:
         elif lab(c).endswith(": Mean") or lab(c).endswith(": Weighted mean"):
             concept = "mean"
         else:  # minimum wages and other measures are not average earnings
-            unusable = f"ILOSTAT 注明该值为“{lab(c)}”，不是平均或中位工资"
+            unusable = M("d.ilo.not_average", label=lab(c))
     for c in ilostat.note_of(obs, "I19"):
-        unusable = f"ILOSTAT 注明该值为“{lab(c)}”，是最低工资，不是平均或中位工资"
+        unusable = M("d.ilo.minimum_wage", label=lab(c))
     for c in ilostat.note_of(obs, "T9"):
         if not lab(c).endswith("Nominal values"):
-            unusable = f"ILOSTAT 注明该值为“{lab(c)}”（不是当年名义值），不能按当年汇率和金价换算"
+            unusable = M("d.ilo.real_values", label=lab(c))
     for c in ilostat.note_of(obs, "T7"):
         if not lab(c).endswith("Per hour" if unit == "hour" else "Per month"):
-            unusable = f"ILOSTAT 注明该值的时间单位为“{lab(c)}”，与指标（{'每小时' if unit == 'hour' else '每月'}）不符"
+            unusable = M(f"d.ilo.time_unit_{unit}", label=lab(c))
     st = store.get(f"{base}__status@{source}", obs.area, obs.period)
     status = ilostat.status_label(st.note, ilo_dic) if st else None
     if status and "reliab" in status.lower():  # "Unreliable" / "Low reliability"
-        unusable = f"ILOSTAT 将该值的观测状态标为“{status}”"
+        unusable = M("d.ilo.status", status=status)
     elif status and "real value" in status.lower():
-        unusable = f"ILOSTAT 将该值的观测状态标为“{status}”（不是当年名义值），不能按当年汇率和金价换算"
+        unusable = M("d.ilo.status_real", status=status)
     restricted = any(restricts(p, lab(c)) for p in COVERAGE_NOTES for c in ilostat.note_of(obs, p))
     signature = tuple(sorted(c for c in ilostat.codes(obs) if c.split(":", 1)[0] in CONCEPT_NOTES))
     return IloRecord(
@@ -278,10 +271,9 @@ def ilo_note_labels(codes: list[str], ilo_dic: dict) -> list[str]:
     return list(dict.fromkeys(lab for c, lab in labels if lab and lab != c and lab != "None"))
 
 
-def ilo_notes(rec: IloRecord, ilo_dic: dict) -> str:
-    """All of ILOSTAT's notes on a figure, plus its observation status."""
-    labels = ilo_note_labels(ilostat.codes(rec.obs), ilo_dic) + ([f"Observation status: {rec.status}"] if rec.status else [])
-    return "；".join(labels)
+def ilo_notes(rec: IloRecord, ilo_dic: dict) -> list[str]:
+    """All of ILOSTAT's notes on a figure, plus its observation status (English, verbatim)."""
+    return ilo_note_labels(ilostat.codes(rec.obs), ilo_dic) + ([f"Observation status: {rec.status}"] if rec.status else [])
 
 
 HOURS_IN_MONTH = 31 * 24  # 744: no monthly wage can be earned in more hours than a month has
@@ -297,11 +289,11 @@ class _Point:
     source: str  # ILOSTAT source id, or "OECD"
     rec: IloRecord | None  # None for OECD's reference figure
     monthly: float | None  # value on a monthly basis (hourly × weekly hours × 52/12), if it can be put on one
-    desc: str  # how the figure is described in reasons
+    desc: Msg  # how the figure is described in reasons
     own_hours: bool = True  # the monthly basis uses the same survey's hours (False: other sources' hours)
 
 
-Jump = Callable[[IloRecord], tuple[float, str] | None]
+Jump = Callable[[IloRecord], tuple[float, Msg] | None]
 
 
 def _check_time_units(points: list[_Point], jump: Jump) -> None:
@@ -330,11 +322,11 @@ def _check_time_units(points: list[_Point], jump: Jump) -> None:
     while the other's does not is the wrong one.  Whatever stays undecided is left out
     on both sides - the data cannot say which is wrong.  Verdicts are taken on the same
     evidence for all, then applied."""
-    disputes: dict[int, list[tuple[_Point, float, str]]] = defaultdict(list)
+    disputes: dict[int, list[tuple[_Point, float, Msg]]] = defaultdict(list)
     vouched: dict[int, bool] = defaultdict(bool)
-    unsure: dict[int, list[str]] = defaultdict(list)
+    unsure: dict[int, list[Msg]] = defaultdict(list)
 
-    def note(p: _Point, q: _Point, gap: float, why: str) -> None:
+    def note(p: _Point, q: _Point, gap: float, why: Msg) -> None:
         disputes[id(p)].append((q, gap, why))
         disputes[id(q)].append((p, gap, why))
 
@@ -347,32 +339,31 @@ def _check_time_units(points: list[_Point], jump: Jump) -> None:
                 implied = m.value / h.value
                 if not 1 <= implied <= HOURS_IN_MONTH:
                     note(p, q, implied / HOURS_IN_MONTH if implied > HOURS_IN_MONTH else 1 / implied,
-                         f"{m.desc} ÷ {h.desc} = 每月 {implied:,.0f} 小时，不在 1 到 {HOURS_IN_MONTH} 小时（一个月的总小时数）之间")
+                         M("d.tu.hours_range", m=m.desc, h=h.desc, implied=implied, max=HOURS_IN_MONTH))
                 elif h.monthly is not None:
                     gap = max(m.value / h.monthly, h.monthly / m.value)
                     if (gap > TIME_FACTOR) if h.own_hours else (gap >= UNIT_GAP):
-                        note(p, q, gap,
-                             f"{h.desc}与{m.desc}相差 {factor(h.monthly, m.value)}"
-                             + ("（同一调查的两种时间单位按其实测工时应在 ×/÷2.08 以内）" if h.own_hours else
-                                "（按其他来源的工时折算，达到 ×/÷4.33，即一个“周”与“月”之差）"))
+                        note(p, q, gap, M("d.tu.same_survey" if h.own_hours else "d.tu.other_hours",
+                                          h=h.desc, m=m.desc, r=h.monthly / m.value,
+                                          bound=TIME_FACTOR if h.own_hours else UNIT_GAP))
             elif p.source != q.source and p.concept == q.concept and p.monthly is not None and q.monthly is not None:
                 gap = max(p.monthly / q.monthly, q.monthly / p.monthly)
                 if gap <= TIME_FACTOR:
                     vouched[id(p)] = vouched[id(q)] = True
                 elif gap >= UNIT_GAP:
-                    note(p, q, gap, f"{p.desc}与{q.desc}相差 {factor(p.monthly, q.monthly)}（达到 ×/÷4.33，即一个“周”与“月”之差）")
+                    note(p, q, gap, M("d.tu.cross", p=p.desc, q=q.desc, r=p.monthly / q.monthly, bound=UNIT_GAP))
                 else:
                     for a, b in ((p, q), (q, p)):
-                        unsure[id(a)].append(f"与{b.desc}相差 {factor(a.monthly, b.monthly)}")
+                        unsure[id(a)].append(M("d.tu.unsure_part", q=b.desc, r=a.monthly / b.monthly))
     trusted = lambda q: q.rec is None or vouched[id(q)]  # noqa: E731
-    out: dict[int, str] = {}
+    out: dict[int, Msg] = {}
     for p in points:
         if p.rec is None or not disputes[id(p)] or vouched[id(p)]:
             continue
         against = disputes[id(p)]
-        why = "；".join(dict.fromkeys(t for _q, _g, t in against[:2]))
+        why = list({canonical(t): t for _q, _g, t in against[:2]}.values())
         if any(trusted(q) for q, _g, _t in against):
-            out[id(p)] = f"{why}；对照的数值有其他来源佐证（或是 OECD 按年薪发布的参照），该数值没有，因此判断是该数值有误"
+            out[id(p)] = M("d.tu.verdict_vouched", why=why)
             continue
         mine = jump(p.rec)
         verdicts = []
@@ -384,11 +375,10 @@ def _check_time_units(points: list[_Point], jump: Jump) -> None:
         if all(q_odd and not p_odd for p_odd, q_odd, _t in verdicts):
             continue  # the figures it contradicts are the odd ones and are left out themselves
         if any(p_odd and not q_odd for p_odd, q_odd, _t in verdicts):
-            other = ("对照的数值没有" if all(t is not None for _p, _q, t in verdicts)
-                     else "对照的数值没有相邻年份可核对")
-            out[id(p)] = f"{why}；该数值与同一来源相邻年份也相差同一量级（{mine[1]}），{other}，因此判断是该数值有误"
+            out[id(p)] = M("d.tu.verdict_jump" if all(t is not None for _p, _q, t in verdicts) else "d.tu.verdict_jump_no_series",
+                           why=why, jump=mine[1])
         else:
-            out[id(p)] = f"{why}；仅凭这些数无法判断哪一个有误，一并不用"
+            out[id(p)] = M("d.tu.verdict_undecided", why=why)
     # Whatever still contradicts each other after the verdicts is undecided: leave out both.
     decided = set(out)
     for p in points:
@@ -396,7 +386,7 @@ def _check_time_units(points: list[_Point], jump: Jump) -> None:
             continue
         for q, _g, t in disputes[id(p)]:
             if q.rec is None or id(q) not in decided:
-                out[id(p)] = f"{t}；仅凭这些数无法判断哪一个有误，一并不用"
+                out[id(p)] = M("d.tu.verdict_undecided", why=[t])
                 break
     for p in points:
         if p.rec is None:
@@ -404,8 +394,7 @@ def _check_time_units(points: list[_Point], jump: Jump) -> None:
         if id(p) in out:
             p.rec.rejected = out[id(p)]
         elif unsure[id(p)] and not vouched[id(p)]:
-            p.rec.unsure = ("；".join(unsure[id(p)]) + "：大于同一时间单位的数值通常的差异（×/÷2.08），又不到一个“周”与“月”之差（×/÷4.33），"
-                            "可能是口径不同，也可能是时间单位有误，无法确认")
+            p.rec.unsure = M("d.tu.unsure", parts=unsure[id(p)], low=TIME_FACTOR, high=UNIT_GAP)
 
 
 def _wage_scope(rec: IloRecord) -> str:
@@ -424,12 +413,12 @@ class UnitGraph:
         self.level_bounds = self._level_bounds()
 
     # ---- bookkeeping
-    def _exclude(self, area: str, year: str, scope: str, detail: str, kind: str) -> None:
+    def _exclude(self, area: str, year: str, scope: str, detail: Part, kind: str) -> None:
         """kind: unit (cannot be shown to be in the same currency unit), identity (an
         identity fails although the unit is the same, cause unknown), missing (the
         publisher has no value), notes (by the publisher's own notes not a nominal
         average or median wage of the year, or its status is unreliable), check (fails
-        this project's magnitude, time-unit or hours checks), area."""
+        this project's magnitude, time-unit or hours checks), area.  year "*" = every year."""
         self.log.append({"area": area, "year": year, "scope": scope, "kind": kind, "detail": detail})
 
     def _match_ilo_areas(self, meta: dict) -> dict[str, str]:
@@ -446,8 +435,8 @@ class UnitGraph:
             if name in names:
                 out[names[name]] = code
             elif not meta.get(code):  # WDI aggregates are not economies: nothing to log
-                self._exclude(code, "全部年份", "area",
-                              f"ILOSTAT 的地区代码 {code}（{name or '无名称'}）不在世界银行经济体名录中，按名称也无法对应", "area")
+                self._exclude(code, "*", "area", M("d.area.unmatched", code=code, name=name) if name
+                              else M("d.area.unmatched_unnamed", code=code), "area")
         return out
 
     def ilo_area(self, area: str) -> str:
@@ -466,7 +455,7 @@ class UnitGraph:
         return out
 
     # ---- hours
-    def _hours(self, area: str) -> tuple[dict[str, dict[str, float]], list[tuple[str, str]]]:
+    def _hours(self, area: str) -> tuple[dict[str, dict[str, float]], list[tuple[str, Msg]]]:
         """Weekly hours that can be used, by year and source ("OECD" for OECD's usual
         hours of full-time employees), and the reasons for those that cannot.  An
         ILOSTAT value must be a possible number of hours in a week, and agree within
@@ -480,7 +469,7 @@ class UnitGraph:
         ilo = {s.split("@", 1)[1]: self.store.series(s, src) for s in self.store.series_names(src, "ilo_weekly_hours@")}
         oecd = {y: o.value for y, o in self.store.series("oecd_usual_weekly_hours_ft", area).items()}
         out: dict[str, dict[str, float]] = defaultdict(dict)
-        bad: list[tuple[str, str]] = []
+        bad: list[tuple[str, Msg]] = []
         for y, v in oecd.items():
             out[y]["OECD"] = v
         possible = {s: {y: o.value for y, o in series.items() if 0 < o.value <= HOURS_IN_WEEK} for s, series in ilo.items()}
@@ -488,43 +477,41 @@ class UnitGraph:
             for y, o in sorted(series.items()):
                 v = o.value
                 if y not in possible[s]:
-                    bad.append((y, f"ILOSTAT {s} 每周工时 {v:g} 小时，不可能（一周只有 {HOURS_IN_WEEK} 小时），不使用"))
+                    bad.append((y, M("d.hours.impossible", source=s, v=v, max=HOURS_IN_WEEK)))
                     continue
-                others = [(f"{t} {possible[t][y]:g}", possible[t][y]) for t in sorted(possible) if t != s and y in possible[t]]
-                others += [(f"OECD {oecd[y]:g}", oecd[y])] if y in oecd else []
+                others = [(M("d.hours.cmp", source=t, v=possible[t][y]), possible[t][y]) for t in sorted(possible) if t != s and y in possible[t]]
+                others += [(M("d.hours.cmp", source="OECD", v=oecd[y]), oecd[y])] if y in oecd else []
                 if not others:
                     ys = sorted(possible[s])
                     i = ys.index(y)
-                    others = [(f"{n} 年 {possible[s][n]:g}", possible[s][n]) for n in ys[max(0, i - 1):i + 2] if n != y]
+                    others = [(M("d.hours.cmp_year", year=n, v=possible[s][n]), possible[s][n]) for n in ys[max(0, i - 1):i + 2] if n != y]
                 if others and not any(same_unit(v, w, TIME_FACTOR) for _d, w in others):
-                    bad.append((y, f"ILOSTAT {s} 每周工时 {v:g} 小时，与可对照的工时（{'、'.join(d for d, _w in others)}）都相差 ×/÷2.08 以上，"
-                                   "无法确认其时间单位或数量级，不使用"))
+                    bad.append((y, M("d.hours.unconfirmed", source=s, v=v, others=[d for d, _w in others], bound=TIME_FACTOR)))
                     continue
                 out[y][s] = v
         return out, bad
 
     def _time_check(self, area: str, year: str, recs: list[IloRecord], oecd_monthly: float | None,
                     hours: dict[str, float], jump: Jump) -> None:
-        def monthly_hours(source: str) -> tuple[float, str, bool] | None:
+        def monthly_hours(source: str) -> tuple[float, Msg, bool] | None:
             if source in hours:
-                return hours[source] * WEEKS_PER_MONTH, f"同一调查实测每周 {hours[source]:g} 小时", True
+                return hours[source] * WEEKS_PER_MONTH, M("d.hours.own", h=hours[source]), True
             if hours:
                 vals = sorted(hours.values())
                 mid = vals[len(vals) // 2] if len(vals) % 2 else (vals[len(vals) // 2 - 1] + vals[len(vals) // 2]) / 2
-                return mid * WEEKS_PER_MONTH, (f"该年其他来源每周工时的中位数 {mid:g} 小时"
-                                               + ("（含 OECD 全职雇员通常工时）" if "OECD" in hours else "")), False
+                return mid * WEEKS_PER_MONTH, M("d.hours.median_with_oecd" if "OECD" in hours else "d.hours.median", h=mid), False
             return None
 
-        cname = {"mean": "平均", "median": "中位"}
         points = []
         for r in recs:
-            what = f"ILOSTAT {r.source} {cname[r.concept]}{'时薪' if r.unit == 'hour' else '月薪'} {r.obs.value:,.6g}"
+            what = M(f"d.pt.ilo_{r.concept}_{r.unit}", source=r.source, v=r.obs.value)
             if r.unit == "month":
                 points.append(_Point("month", r.concept, r.obs.value, r.source, r, r.obs.value, what))
             else:
                 h = monthly_hours(r.source)
                 points.append(_Point("hour", r.concept, r.obs.value, r.source, r, r.obs.value * h[0] if h else None,
-                                     what + (f"（按{h[1]}折合月薪 {r.obs.value * h[0]:,.6g}）" if h else ""), h[2] if h else True))
+                                     M("d.pt.with_hours", pt=what, hours=h[1], m=r.obs.value * h[0]) if h else what,
+                                     h[2] if h else True))
         # Magnitude: a month's pay must lie between a week's worth of household consumption
         # per head and a year's worth of GDP per head - beyond either, the figure is most
         # likely a weekly or an annual one (the week/month and month/year factors).  The
@@ -535,43 +522,42 @@ class UnitGraph:
         gdp, hfce = s.get("gdp_lcu", area, year), s.get("hfce_lcu", area, year)
         top = gdp.value / pop.value if gdp and pop else None
         floor = hfce.value / pop.value / 12 / WEEKS_PER_MONTH if hfce and pop else None
-        groups: dict[tuple[str, str], str] = {}
+        groups: dict[tuple[str, str], Msg] = {}
         for p in points:
             if p.monthly is None:
                 continue
             if top is not None and p.monthly > top:
-                groups.setdefault((p.source, p.unit), f"{p.desc} 超过该年人均全年 GDP（{top:,.6g}），一个月的工资多于全年人均产出，"
-                                                      "最可能是年薪被标成了月薪")
+                groups.setdefault((p.source, p.unit), M("d.mag.above_gdp", p=p.desc, top=top))
             elif floor is not None and p.monthly < floor:
-                groups.setdefault((p.source, p.unit), f"{p.desc} 不到该年人均一周的居民消费（{floor:,.6g}），"
-                                                      "一个月的工资少于一周的人均消费，最可能是周薪或数量级有误")
+                groups.setdefault((p.source, p.unit), M("d.mag.below_consumption", p=p.desc, floor=floor))
         for p in points:
             if (p.source, p.unit) in groups:
-                p.rec.rejected = groups[(p.source, p.unit)] + "；该调查同一时间单位的数字（平均数和中位数）时间单位或数量级都无法确定，一并不用"
+                p.rec.rejected = M("d.mag.survey", reason=groups[(p.source, p.unit)])
         points = [p for p in points if p.rec.rejected is None]
         if oecd_monthly is not None:
-            points.append(_Point("month", "mean", oecd_monthly, "OECD", None, oecd_monthly,
-                                 f"OECD 全职当量平均年薪 ÷ 12 = {oecd_monthly:,.6g}"))
+            points.append(_Point("month", "mean", oecd_monthly, "OECD", None, oecd_monthly, M("d.pt.oecd", v=oecd_monthly)))
         _check_time_units(points, jump)
 
     # ---- continuity of a series
-    YARDSTICKS = (("hfce_lcu", "人均居民消费"), ("gdp_lcu", "人均 GDP"))
+    # Message describing each yardstick: d.yard.hfce_lcu (household consumption per head),
+    # d.yard.gdp_lcu (GDP per head).
+    YARDSTICKS = ("hfce_lcu", "gdp_lcu")
 
     def nominal_growth(self, area: str, y0: str, y1: str, gdp: bool = True) -> tuple[float, str] | None:
         """Growth of nominal income per head from y0 to y1, in WDI's local-currency
         series: household consumption per head, or GDP per head where WDI has no
         household consumption for both years."""
         g = self._growths(area, y0, y1)
-        for series, what in self.YARDSTICKS[:2 if gdp else 1]:
+        for series in self.YARDSTICKS[:2 if gdp else 1]:
             if series in g:
-                return g[series], what
+                return g[series], series
         return None
 
     def _growths(self, area: str, y0: str, y1: str) -> dict[str, float]:
         s = self.store
         p0, p1 = s.get("population", area, y0), s.get("population", area, y1)
         out = {}
-        for series, _what in self.YARDSTICKS:
+        for series in self.YARDSTICKS:
             a, b = s.get(series, area, y0), s.get(series, area, y1)
             if p0 and p1 and a and b and a.value > 0 and b.value > 0:
                 out[series] = (b.value / p1.value) / (a.value / p0.value)
@@ -582,7 +568,7 @@ class UnitGraph:
         change in what it measures, by yardstick (household consumption or GDP per head)
         and by number of years apart: the widest such move seen in OECD's harmonised
         average-wage series (same currency) over that many years or fewer, in the archive."""
-        widest: dict[str, dict[int, float]] = {series: {} for series, _w in self.YARDSTICKS}
+        widest: dict[str, dict[int, float]] = {series: {} for series in self.YARDSTICKS}
         for area in sorted(self.store.areas("oecd_avg_annual_wage")):
             w = self.store.series("oecd_avg_annual_wage", area)
             ys = sorted(w)
@@ -609,7 +595,7 @@ class UnitGraph:
         spans = [k for k in b if k <= years_apart]
         return b[max(spans)] if spans else (b[min(b)] if b else None)
 
-    def shift(self, area: str, y0: str, v0: float, y1: str, v1: float, same_concept: bool = True) -> tuple[bool | None, str]:
+    def shift(self, area: str, y0: str, v0: float, y1: str, v1: float, same_concept: bool = True) -> tuple[bool | None, Msg]:
         """Whether a change from y0 to y1 within one series is in line with nominal income
         per head.  For the same concept in both years: within the widest move OECD's own
         same-concept wage series made against the same yardstick over as many years; a
@@ -622,19 +608,20 @@ class UnitGraph:
         bounds = {series: self.level_bound(series, k) if same_concept else TIME_FACTOR for series in g}
         g = {series: v for series, v in g.items() if bounds[series] is not None}
         if not g:
-            return None, (f"{y0}→{y1} 年缺少世界银行的名义人均收入数据，或档案中没有 OECD 同口径工资可用来确定变化幅度的上限，无法核对")
+            return None, M("d.shift.no_data", y0=y0, y1=y1)
         r = v1 / v0
         parts, flags = [], []
-        for series, what in self.YARDSTICKS:
+        for series in self.YARDSTICKS:
             if series not in g:
                 continue
             bound = bounds[series]
             flags.append(not same_unit(r, g[series], bound))
-            parts.append(f"同期{what}（名义）{factor(g[series], 1.0)}"
-                         + (f"，OECD 同口径工资 {k} 年内相对它的最大偏离 ×/÷{bound:.2f}" if same_concept else ""))
-        detail = (f"同一来源 {y0}→{y1} 年 {factor(v1, v0)}，" + "；".join(parts)
-                  + ("" if same_concept else "；两年的口径注释不同或注明序列中断，相差超过 ×/÷2.08 时可能是口径变化，也可能是时间单位不同"))
-        return (not all(flags)), detail
+            yard = M(f"d.yard.{series}")
+            parts.append(M("d.shift.vs_bound", yard=yard, g=g[series], years=k, bound=bound) if same_concept
+                         else M("d.shift.vs", yard=yard, g=g[series]))
+        if not same_concept:
+            parts.append(M("d.shift.concept_changed", bound=TIME_FACTOR))
+        return (not all(flags)), M("d.shift", y0=y0, y1=y1, r=r, parts=parts)
 
 
     def _neighbours(self, rec: IloRecord, ilo: dict[str, list[IloRecord]], graphs: dict[str, _UnionFind],
@@ -656,22 +643,22 @@ class UnitGraph:
         a = self.area(area)
         return self._consistent(area, rec, a["ilo"], a["years"], final)
 
-    def _consistent(self, area, rec, ilo, graphs, final) -> tuple[bool | None, str]:
+    def _consistent(self, area, rec, ilo, graphs, final) -> tuple[bool | None, list[Msg]]:
         verdicts = []
         for n in self._neighbours(rec, ilo, graphs, final):
             first, second = sorted([n, rec], key=lambda r: r.obs.period)
             same = first.signature == second.signature and not second.break_in_series
             verdicts.append(self.shift(area, first.obs.period, first.obs.value, second.obs.period, second.obs.value, same))
         if any(v[0] is False for v in verdicts):
-            return False, "；".join(v[1] for v in verdicts if v[0] is False)
+            return False, [v[1] for v in verdicts if v[0] is False]
         if verdicts and all(v[0] for v in verdicts):
-            return True, ""
-        return None, ""
+            return True, []
+        return None, []
 
     def _jump(self, area, ilo, graphs) -> Jump:
         """For the time-unit tie-break: the largest move (in log terms) of a record against
         its series' nearest usable years, relative to nominal income per head."""
-        def jump(rec: IloRecord) -> tuple[float, str] | None:
+        def jump(rec: IloRecord) -> tuple[float, Msg] | None:
             out = None
             for n in self._neighbours(rec, ilo, graphs, final=False):
                 first, second = sorted([n, rec], key=lambda r: r.obs.period)
@@ -680,8 +667,8 @@ class UnitGraph:
                     continue
                 size = abs(math.log((second.obs.value / first.obs.value) / g[0]))
                 if out is None or size > out[0]:
-                    out = (size, f"{first.obs.period}→{second.obs.period} 年 {factor(second.obs.value, first.obs.value)}，"
-                                 f"同期{g[1]}（名义）{factor(g[0], 1.0)}")
+                    out = (size, M("d.jump", y0=first.obs.period, y1=second.obs.period, r=second.obs.value / first.obs.value,
+                                   yard=M(f"d.yard.{g[1]}"), g=g[0]))
             return out
         return jump
 
@@ -698,13 +685,14 @@ class UnitGraph:
         codes = self.area(area)["codes"]
         return next(iter(codes)) if len(codes) == 1 else None
 
-    def _prove(self, values: dict[str, float], direct: dict[str, tuple[bool | None, str]],
-               failed: str) -> dict[str, tuple[bool | None, str, str]]:
+    def _prove(self, values: dict[str, float], direct: dict[str, tuple[bool | None, list[Msg]]],
+               failed: Msg) -> dict[str, tuple[bool | None, list[Msg], str]]:
         """Year-by-year verdict on whether a factor (F or P) is in L, as (verdict, detail,
         kind): that year's identity, or else an adjacent year's proof carried over when the
         value moved by less than MAX_FACTOR (first forwards, then backwards).
 
-        direct[y] holds the identity's verdict and numbers (or why it cannot be checked).
+        direct[y] holds the identity's verdict and numbers (or why it cannot be checked), as
+        a list of messages.
         A year whose identity fails although its value is linked to a proven year by
         year-to-year moves within MAX_FACTOR cannot be in another unit (the premise of the
         carry-over): the failure has another cause, unknown, and the year is left out as
@@ -715,7 +703,7 @@ class UnitGraph:
                 n = str(int(y) - step)
                 if y in values and out[y][0] is None and n in values and out[n][0] is True \
                         and same_unit(values[y], values[n]):
-                    out[y] = (True, "", "")
+                    out[y] = (True, [], "")
         # Identity failures linked to a proven year by moves of less than MAX_FACTOR.
         anchor = {y: y for y, v in out.items() if v[0] is True}
         changed = True
@@ -728,19 +716,18 @@ class UnitGraph:
                 if close:
                     n = close[0]
                     a = anchor[n]
-                    link = f"{n} 年已证明" if a == n else f"{n} 年经逐年变化都不到 ×/÷1.4 与已证明的 {a} 年相连"
-                    out[y] = (None, f"{detail}，恒等关系不成立；但该值与 {n} 年的 {values[n]:.6g} 只差 {factor(values[y], values[n])}，"
-                                    f"而 {link}，货币单位不可能在其间改变，所以这一不一致另有原因（原因不明），该年不使用", "identity")
+                    link = M("d.prove.link_direct", n=n) if a == n else M("d.prove.link_chain", n=n, a=a, bound=MAX_FACTOR)
+                    out[y] = (None, [M("d.prove.chain", detail=detail, n=n, vn=values[n], r=values[y] / values[n], link=link)],
+                              "identity")
                     anchor[y] = a
                     changed = True
         for y, (ok, detail, kind) in list(out.items()):
             if ok is False:
-                out[y] = (False, f"{detail}，超出 ×/÷1.4：{failed}", "unit")
+                out[y] = (False, [M("d.prove.failed", detail=detail, bound=MAX_FACTOR, failed=failed)], "unit")
             elif ok is None and kind == "unit":
                 near = [n for n in (str(int(y) - 1), str(int(y) + 1)) if n in values and out[n][0] is True]
-                out[y] = (None, detail + ("".join(f"；与 {n} 年的 {values[n]:.6g} 相比 {factor(values[y], values[n])}，"
-                                                  "超出货币单位不可能改变的范围，不能沿用该年的核对" for n in near)
-                                          or "；相邻年份也未能核对"), "unit")
+                out[y] = (None, detail + ([M("d.prove.no_carry", n=n, vn=values[n], r=values[y] / values[n]) for n in near]
+                                          or [M("d.prove.no_neighbour")]), "unit")
         return out
 
     def _factors(self, area: str) -> tuple[dict, dict]:
@@ -749,35 +736,29 @@ class UnitGraph:
         fx = {y: o.value for y in self.years if (o := s.get("fx_lcu_usd", area, y))}
         ppp = {y: o.value for y in self.years if (o := s.get("ppp_hfce", area, y))}
 
-        def identity(val, num, den, what, missing):
+        def identity(val, num, den, what, missing) -> tuple[bool | None, list[Msg]]:
             if num and den and den.value > 0:
                 implied = num.value / den.value
-                return (same_unit(val, implied), what.format(v=val, i=implied, f=factor(val, implied)))
-            return (None, missing)
+                return same_unit(val, implied), [M(what, v=val, i=implied, r=val / implied)]
+            return None, [M(missing)]
 
-        f = self._prove(fx, {y: identity(
-            v, s.get("gdp_lcu", area, y), s.get("gdp_usd", area, y),
-            "WDI 官方汇率 {v:.6g}，世界银行 GDP 本币值 ÷ 美元值 = {i:.6g}（{f}）",
-            "缺少世界银行 GDP 本币值或美元值，无法核对官方汇率") for y, v in fx.items()},
-            "无法证明官方汇率与世界银行本币序列同一货币单位（可能是货币单位不同，也可能是世界银行换算该年美元数据时用的不是官方汇率）")
+        f = self._prove(fx, {y: identity(v, s.get("gdp_lcu", area, y), s.get("gdp_usd", area, y), "d.fx.identity", "d.fx.missing_gdp")
+                             for y, v in fx.items()}, M("d.fx.failed"))
         direct = {}
         for y, v in ppp.items():
-            ok, detail = identity(v, s.get("hfce_lcu", area, y), s.get("hfce_intl", area, y),
-                                  "WDI 居民消费 PPP {v:.6g}，居民消费本币值 ÷ 国际元值 = {i:.6g}（{f}）",
-                                  "缺少世界银行居民消费本币值或国际元值，无法核对购买力平价")
+            ok, detail = identity(v, s.get("hfce_lcu", area, y), s.get("hfce_intl", area, y), "d.ppp.identity", "d.ppp.missing_hfce")
             if ok is None and y == ICP_YEAR:
                 lvl = self.icp_price_level(area)
                 if lvl is None:
-                    detail += f"；ICP {ICP_YEAR} 也没有该经济体的居民消费价格水平"
+                    detail.append(M("d.ppp.no_icp", icp=ICP_YEAR))
                 elif f.get(y, (None,))[0] is not True:
-                    detail += f"；{y} 年的官方汇率未能证明与世界银行本币序列同一单位，也无法用 ICP 价格水平核对"
+                    detail.append(M("d.ppp.icp_fx_unproven", year=y))
                 else:
                     implied = lvl * fx[y]
                     ok = same_unit(v, implied)
-                    detail = (f"WDI 居民消费 PPP {v:.6g}，ICP {ICP_YEAR} 居民消费价格水平（美国 = 1）{lvl:.4g} × 官方汇率 {fx[y]:.6g} = "
-                              f"{implied:.6g}（{factor(v, implied)}）")
+                    detail = [M("d.ppp.icp", v=v, icp=ICP_YEAR, lvl=lvl, fx=fx[y], i=implied, r=v / implied)]
             direct[y] = (ok, detail)
-        return f, self._prove(ppp, direct, "无法证明购买力平价与世界银行本币序列同一货币单位（可能是货币单位不同，也可能是世界银行这几项数据的口径或版本不一致）")
+        return f, self._prove(ppp, direct, M("d.ppp.failed"))
 
     def icp_price_level(self, area: str) -> float | None:
         """ICP 2021 household-consumption price level relative to the United States."""
@@ -793,7 +774,7 @@ class UnitGraph:
         f_ok, p_ok = self._factors(area)
         graphs: dict[str, _UnionFind] = {}
         checks: dict[str, dict] = {}
-        ambiguous: dict[tuple[str, str], str] = {}
+        ambiguous: dict[tuple[str, str], Msg] = {}
         for y in self.years:
             g = _UnionFind()
             c: dict = {}
@@ -808,13 +789,11 @@ class UnitGraph:
                 if cost_ppp and ppp and cost_ppp.value > 0:
                     implied = lcu.value / cost_ppp.value
                     ok = same_unit(implied, ppp.value)
-                    c["C"] = (ok, f"健康饮食成本本币值 ÷ PPP 值 = {implied:.6g}，WDI 购买力平价 {ppp.value:.6g}（{factor(implied, ppp.value)}），"
-                                  "超出 ×/÷1.4：无法证明同一货币单位")
+                    c["C"] = (ok, M("d.cohd.failed", i=implied, ppp=ppp.value, r=implied / ppp.value, bound=MAX_FACTOR))
                     if ok:
                         g.union("C", "P")
                 else:
-                    c["C"] = (None, "世界银行未发布该年按 PPP 计的健康饮食成本，无法核对其货币单位" if not cost_ppp
-                              else "缺少该年 WDI 购买力平价，无法核对健康饮食成本的货币单位")
+                    c["C"] = (None, M("d.cohd.missing_ppp_cost") if not cost_ppp else M("d.cohd.missing_ppp"))
             # W: attach a wage to a proven F or P.
             f_in, p_in = g.linked("F"), g.linked("P")
             f_out, p_out = c.get("F", (None,))[0] is False, c.get("P", (None,))[0] is False
@@ -826,9 +805,7 @@ class UnitGraph:
                 agrees_f = bool(rec.usd and fx and same_unit(rec.obs.value / fx.value, rec.usd.value))
                 agrees_p = bool(rec.ppp and ppp and same_unit(rec.obs.value / ppp.value, rec.ppp.value))
                 if (agrees_f and f_out and agrees_p and p_in) or (agrees_p and p_out and agrees_f and f_in):
-                    ambiguous[(y, rec.series)] = (
-                        "ILOSTAT 的美元换算与官方汇率一致、PPP 换算与购买力平价一致，但这一年官方汇率和购买力平价中一个已证明与世界银行本币序列"
-                        "同一单位，另一个与之相差超出 ×/÷1.4（见该年的核对），这条记录的货币单位无法确定")
+                    ambiguous[(y, rec.series)] = M("d.ilo.ambiguous", bound=MAX_FACTOR)
                     continue
                 if (agrees_f and f_in) or (agrees_p and p_in):
                     g.union(node, "L")
@@ -850,8 +827,7 @@ class UnitGraph:
                 if codes == {code}:
                     g.union(node, "L")
         if len(codes) > 1:
-            self._exclude(area, "全部年份", "currency",
-                          f"与世界银行本币序列相符的记录给出了不同的货币代码：{', '.join(sorted(codes))}；不使用按货币代码对应的数据（OECD、国家统计机构）", "unit")
+            self._exclude(area, "*", "currency", M("d.currency.conflict", codes=", ".join(sorted(codes))), "unit")
         # Hours, then magnitudes and time units, among figures now known to be in the same
         # currency unit (decided for every year on the same evidence, then applied).
         hours, bad_hours = self._hours(area)
@@ -866,7 +842,7 @@ class UnitGraph:
         return {"years": graphs, "checks": checks, "codes": codes, "ilo": ilo, "oecd_ppp": oecd_ppp,
                 "oecd_unit": oecd_unit, "ambiguous": ambiguous, "hours": hours}
 
-    def _oecd_ppp_identity(self, area: str) -> tuple[bool | None, str, str | None]:
+    def _oecd_ppp_identity(self, area: str) -> tuple[bool | None, Msg, str | None]:
         """OECD national-currency wages at constant prices ÷ the same in US$ PPPs is the
         PPP of OECD's base year; it must equal WDI's household PPP of that year.
         Returns (verdict, detail, unit of OECD's national-currency series)."""
@@ -874,16 +850,15 @@ class UnitGraph:
         q, qp = s.series("oecd_avg_annual_wage_q", area), s.series("oecd_avg_annual_wage_q_usdppp", area)
         common = sorted(set(q) & set(qp))
         if not common:
-            return (None, "OECD 未发布该经济体按购买力平价换算的工资", None)
+            return (None, M("d.oecd.no_ppp"), None)
         y = common[-1]
         unit, base = q[y].note.split()
         implied = q[y].value / qp[y].value
         ppp = s.get("ppp_hfce", area, base)
         hl, hi = s.get("hfce_lcu", area, base), s.get("hfce_intl", area, base)
         if not (ppp and hl and hi) or not same_unit(ppp.value, hl.value / hi.value):
-            return (None, f"无法核对 {base} 年的 WDI 购买力平价", unit)
-        return (same_unit(implied, ppp.value), f"OECD 工资（{base} 年不变价）本币值 ÷ PPP 美元值 = {implied:.6g}，"
-                                                f"WDI {base} 年居民消费 PPP {ppp.value:.6g}（{factor(implied, ppp.value)}）", unit)
+            return (None, M("d.oecd.base_unverified", base=base), unit)
+        return (same_unit(implied, ppp.value), M("d.oecd.identity", base=base, i=implied, ppp=ppp.value, r=implied / ppp.value), unit)
 
     # ---- reasons for what is left out
     def explain(self, area: str, year: str, has_data: bool) -> None:
@@ -892,56 +867,54 @@ class UnitGraph:
         if not has_data or g is None:
             return
         s = self.store
-        for k, scope, series, what in (("F", "fx", "fx_lcu_usd", "官方汇率（PA.NUS.FCRF）"),
-                                       ("P", "ppp", "ppp_hfce", "居民消费购买力平价（PA.NUS.PRVT.PP）")):
+        for k, scope, series in (("F", "fx", "fx_lcu_usd"), ("P", "ppp", "ppp_hfce")):
             if not s.get(series, area, year):
-                self._exclude(area, year, scope, f"世界银行未发布该年{what}", "missing")
+                self._exclude(area, year, scope, M(f"d.missing.{scope}"), "missing")
                 continue
-            ok, detail, kind = c.get(k, (True, "", ""))
+            ok, detail, kind = c.get(k, (True, [], ""))
             if not g.linked(k) and ok is not True and detail:
                 self._exclude(area, year, scope, detail, kind)
         if "C" in c and not g.linked("C"):
             ok, detail = c["C"]
             if ok is True:  # the diet cost matches the PPP, but the PPP itself is not proven
-                detail = "健康饮食成本与购买力平价同一货币单位，但该年购买力平价未能证明与世界银行本币序列同一单位"
-            self._exclude(area, year, "cohd", detail, "missing" if detail.startswith("世界银行未发布") else "unit")
+                detail = M("d.cohd.ppp_unproven")
+            self._exclude(area, year, "cohd", detail, "missing" if key_of(detail) == "d.cohd.missing_ppp_cost" else "unit")
         if s.get("oecd_avg_annual_wage", area, year) and not g.linked("oecd"):
             unit = a["oecd_unit"].get(year)
-            self._exclude(area, year, "wage:oecd", "OECD 工资未能证明与世界银行本币序列同一货币单位：" + a["oecd_ppp"][1]
-                          + f"；OECD 标注的货币 {unit}，与世界银行本币序列相符的记录给出的货币 {', '.join(sorted(a['codes'])) or '无'}", "unit")
-        for node, code, series, who in (("cn", "CNY", ("cn_wage_nonprivate", "cn_wage_private", "cn_wage_large_ent", "cn_migrant_monthly"), "国家统计局"),
-                                         ("bls", "USD", ("us_ahe_all_nsa",), "美国劳工统计局")):
+            self._exclude(area, year, "wage:oecd", M("d.oecd.unproven", detail=a["oecd_ppp"][1], unit=unit,
+                                                     codes=", ".join(sorted(a["codes"])) or M("d.none")), "unit")
+        for node, code, series in (("cn", "CNY", ("cn_wage_nonprivate", "cn_wage_private", "cn_wage_large_ent", "cn_migrant_monthly")),
+                                   ("bls", "USD", ("us_ahe_all_nsa",))):
             has = any(s.get(x, area, year) for x in series) or any(p.startswith(year) for x in series for p in s.series(x, area))
             if has and not g.linked(node):
-                self._exclude(area, year, f"wage:{node}",
-                              f"{who}的工资以 {code} 发布，但与世界银行本币序列相符的记录给出的货币代码为 "
-                              f"{', '.join(sorted(a['codes'])) or '无'}，无法确认同一货币单位", "unit")
+                self._exclude(area, year, f"wage:{node}", M("d.nso.currency", who=M(f"d.pub.{node}"), code=code,
+                                                             codes=", ".join(sorted(a["codes"])) or M("d.none")), "unit")
         fx, ppp = s.get("fx_lcu_usd", area, year), s.get("ppp_hfce", area, year)
         for rec in a["ilo"].get(year, []):
             if rec.unusable or rec.rejected:
-                self._exclude(area, year, _wage_scope(rec), f"{rec.series}：{rec.unusable or rec.rejected}",
+                self._exclude(area, year, _wage_scope(rec), M("d.series", series=rec.series, reason=rec.unusable or rec.rejected),
                               "notes" if rec.unusable else "check")
             elif (year, rec.series) in a["ambiguous"]:
-                self._exclude(area, year, _wage_scope(rec), f"{rec.series}：{a['ambiguous'][(year, rec.series)]}", "unit")
+                self._exclude(area, year, _wage_scope(rec), M("d.series", series=rec.series, reason=a["ambiguous"][(year, rec.series)]), "unit")
             elif not g.linked(f"ilo:{rec.series}"):
                 parts = []
                 if not fx:
-                    parts.append("世界银行未发布该年官方汇率")
+                    parts.append(M("d.wage.no_fx"))
                 elif not rec.usd:
-                    parts.append("ILOSTAT 未发布美元换算值")
+                    parts.append(M("d.wage.no_usd"))
                 elif same_unit(rec.obs.value / fx.value, rec.usd.value):
-                    parts.append("与 ILOSTAT 自己的美元换算一致，但该年官方汇率未能证明与世界银行本币序列同一单位")
+                    parts.append(M("d.wage.usd_agrees"))
                 else:
-                    parts.append(f"本币 {rec.obs.value:,.6g} ÷ WDI 汇率 = {rec.obs.value / fx.value:,.4g} 美元，ILOSTAT 自身折合 {rec.usd.value:,.4g} 美元")
+                    parts.append(M("d.wage.usd", v=rec.obs.value, usd=rec.obs.value / fx.value, ilo=rec.usd.value))
                 if not ppp:
-                    parts.append("世界银行未发布该年购买力平价")
+                    parts.append(M("d.wage.no_ppp"))
                 elif not rec.ppp:
-                    parts.append("ILOSTAT 未发布 PPP 换算值")
+                    parts.append(M("d.wage.no_ppp_value"))
                 elif same_unit(rec.obs.value / ppp.value, rec.ppp.value):
-                    parts.append("与 ILOSTAT 自己的 PPP 换算一致，但该年购买力平价未能证明与世界银行本币序列同一单位")
+                    parts.append(M("d.wage.ppp_agrees"))
                 else:
-                    parts.append(f"÷ WDI 购买力平价 = {rec.obs.value / ppp.value:,.4g}，ILOSTAT 自身折合 {rec.ppp.value:,.4g} 国际元")
-                self._exclude(area, year, _wage_scope(rec), f"{rec.series}：无法证明与世界银行本币序列同一货币单位。" + "；".join(parts), "unit")
+                    parts.append(M("d.wage.ppp", i=rec.obs.value / ppp.value, ilo=rec.ppp.value))
+                self._exclude(area, year, _wage_scope(rec), M("d.wage.unit", series=rec.series, parts=parts), "unit")
 
 
 # --------------------------------------------------------------------------------------
@@ -952,6 +925,10 @@ def _usable_linked(units: UnitGraph, area: str) -> dict[str, list[IloRecord]]:
     a = units.area(area)
     return {y: [r for r in recs if r.usable and a["years"][y].linked(f"ilo:{r.series}")]
             for y, recs in a["ilo"].items() if y in a["years"]}
+
+
+def _label(key: str, restricted: bool) -> Msg:
+    return M("w.restricted", label=M(key)) if restricted else M(key)
 
 
 def ilo_variants(store: Store, units: UnitGraph, area: str, year: str, ilo_dic: dict) -> list[WageVariant]:
@@ -983,14 +960,15 @@ def ilo_variants(store: Store, units: UnitGraph, area: str, year: str, ilo_dic: 
     def src_label(r: IloRecord) -> str:
         return f"ILOSTAT · {ilo_dic.get('source', {}).get(r.source, r.source)}"
 
-    def caveat(r: IloRecord) -> str:
+    def caveat(r: IloRecord) -> list[Part]:
         ok, why = units.series_consistent(area, r)
-        shift = (f"与同一来源最近的其他年份相比变化过大（{why}）：该来源的口径或数量级可能有变化，与其他年份比较须谨慎"
-                 if ok is False else "")
+        out: list[Part] = [M("d.cav.shift", why=why)] if ok is False else []
+        if r.unsure:
+            out.append(r.unsure)
         mean = chosen.get(("mean", r.unit))
-        above = (f"同一来源同年的中位数（{r.obs.value:,.6g}）高于平均数（{mean.obs.value:,.6g}）"
-                 if r.concept == "median" and mean is not None and mean.source == r.source and r.obs.value > mean.obs.value else "")
-        return _join([shift, r.unsure or "", above, ilo_notes(r, ilo_dic)])
+        if r.concept == "median" and mean is not None and mean.source == r.source and r.obs.value > mean.obs.value:
+            out.append(M("d.cav.median_above_mean", median=r.obs.value, mean=mean.obs.value))
+        return out + ilo_notes(r, ilo_dic)
 
     def ids(r: IloRecord) -> dict:
         return {"source_id": f"ILOSTAT {r.source}", "series_key": f"ILOSTAT {r.series}",
@@ -1002,12 +980,11 @@ def ilo_variants(store: Store, units: UnitGraph, area: str, year: str, ilo_dic: 
     for concept in ("mean", "median"):
         direct = chosen.get((concept, "hour"))
         monthly = chosen.get((concept, "month"))
-        cname = "平均" if concept == "mean" else "中位"
         if direct:
             out.append(WageVariant(
-                key=f"ilo_{concept}_hourly", label=f"雇员{cname}时薪" + ("（覆盖范围有限）" if direct.restricted else ""),
+                key=f"ilo_{concept}_hourly", label=_label(f"w.ilo_{concept}_hourly", direct.restricted),
                 concept=concept, source=src_label(direct), monthly_lcu=None, hourly_lcu=direct.obs.value, hours_week=None,
-                method="ILOSTAT 直接发布的时薪", snapshots=[direct.obs.snapshot], caveat=caveat(direct),
+                method=M("d.method.ilo_hourly"), snapshots=[direct.obs.snapshot], caveat=caveat(direct),
                 restricted=direct.restricted, currency=direct.currency, **ids(direct),
             ))
         if monthly:
@@ -1016,18 +993,16 @@ def ilo_variants(store: Store, units: UnitGraph, area: str, year: str, ilo_dic: 
             hours = hours_by_source.get(monthly.source)
             hours_obs = store.get(f"ilo_weekly_hours@{monthly.source}", units.ilo_area(area), year) if hours else None
             derive = hours is not None and direct is None
-            label = f"雇员{cname}月薪" + ("（覆盖范围有限）" if monthly.restricted else "")
+            label = _label(f"w.ilo_{concept}_monthly", monthly.restricted)
             out.append(WageVariant(
                 key=f"ilo_{concept}_monthly", label=label, concept=concept, source=src_label(monthly),
                 monthly_lcu=monthly.obs.value,
                 hourly_lcu=monthly.obs.value / (hours * WEEKS_PER_MONTH) if derive else None,
                 hours_week=hours if derive else None,
-                method=("月薪 ÷（同一调查的每周实际工时 × 52/12）" if derive else
-                        "仅用于月薪口径（同口径时薪已直接发布）" if direct else
-                        "同一调查没有可用的工时数据，不折算时薪，只用于月薪口径"),
+                method=M("d.method.ilo_derived" if derive else "d.method.ilo_monthly_only" if direct else "d.method.ilo_no_hours"),
                 snapshots=[monthly.obs.snapshot] + ([hours_obs.snapshot] if derive else []),
                 caveat=caveat(monthly), restricted=monthly.restricted, currency=monthly.currency,
-                label_hourly=f"{label}（按同一调查的工时折算为时薪）" if derive else None, **ids(monthly),
+                label_hourly=M("w.derived_hourly", label=label) if derive else None, **ids(monthly),
             ))
     return out
 
@@ -1039,24 +1014,18 @@ def oecd_variant(store: Store, units: UnitGraph, area: str, year: str) -> WageVa
     h = store.get("oecd_usual_weekly_hours_ft", area, year)
     zero = store.get("oecd_usual_weekly_hours_ft__zero", area, year)
     return WageVariant(
-        key="oecd_fte", label="全职当量平均工资（OECD）", concept="mean", source="OECD · Average annual wages",
+        key="oecd_fte", label=M("w.oecd_fte"), concept="mean", source="OECD · Average annual wages",
         monthly_lcu=w.value / 12,
         hourly_lcu=w.value / (h.value * 52) if h else None,
         hours_week=h.value if h else None,
-        method=(f"全职当量平均年薪 ÷（全职雇员通常周工时 {h.value:.1f} 小时 × 52）" if h else
-                "OECD 公布的该国全职雇员通常周工时为 0（视为缺失），只用于月薪口径" if zero else
-                "OECD 未公布该国该年全职雇员通常周工时，只用于月薪口径"),
+        method=(M("d.method.oecd", h=h.value) if h else M("d.method.oecd_zero_hours") if zero else M("d.method.oecd_no_hours")),
         snapshots=[w.snapshot] + ([h.snapshot] if h else []),
-        caveat="国民经济核算口径：工资总额 ÷ 全职当量雇员数，含高收入者；时薪按全职雇员通常工时折算（含带薪假期）",
+        caveat=[M("d.cav.oecd")],
         currency=w.note, series_id="OECD AV_AN_WAGE", source_id="OECD", series_key="OECD AV_AN_WAGE",
     )
 
 
-CN_SERIES = (
-    ("cn_wage_nonprivate", "城镇非私营单位平均工资"),
-    ("cn_wage_private", "城镇私营单位平均工资"),
-    ("cn_wage_large_ent", "规模以上企业就业人员平均工资"),
-)
+CN_SERIES = ("cn_wage_nonprivate", "cn_wage_private", "cn_wage_large_ent")  # labels: w.<series>
 
 
 def china_variants(store: Store, units: UnitGraph, year: str, definitions: dict) -> list[WageVariant]:
@@ -1067,51 +1036,50 @@ def china_variants(store: Store, units: UnitGraph, year: str, definitions: dict)
         return []
     hours = china_annual_hours(store, year)
     n_months = len([p for p in store.series("cn_weekly_hours_enterprise", "CHN") if p.startswith(year + "-")])
-    no_hours = (f"本项目存档的国家统计局发布中，该年只有 {n_months} 个月的企业就业人员周平均工作时间（少于 6 个月），不折算时薪" if n_months
-                else "本项目存档的国家统计局发布中没有该年的企业就业人员周平均工作时间，不折算时薪")
-    hours_note = "时薪按国家统计局月度发布的“全国企业就业人员周平均工作时间”折算；该工时是全国企业就业人员的平均，与这一工资口径的覆盖面不完全一致"
+    no_hours = M("d.method.cn_few_months", n=n_months) if n_months else M("d.method.cn_no_hours")
+    hours_note = M("d.cav.cn_hours")
 
-    def source(o: Obs) -> str:
+    def source(o: Obs) -> Msg:
         d = definitions.get(o.snapshot)
-        return f"国家统计局《{d['title']}》" if d else "国家统计局"
+        return M("d.src.nbs_release", title=d["title"]) if d else M("d.pub.cn")
 
     out = []
-    for series, label in CN_SERIES:
+    for series in CN_SERIES:
         o = store.get(series, "CHN", year)
         if not o:
             continue
         d = definitions.get(o.snapshot, {})
         monthly = o.value / 12
         scope = [x for x in d.get("scope", []) if x["series"] is None or series in x["series"]]
-        notes = []
+        notes: list[Part] = []
         comp = store.get(f"{series}__comparable_growth", "CHN", year)
         if comp:
             nominal = float(o.note.split("growth_pct=")[1]) if "growth_pct=" in o.note else None
-            notes.append("国家统计局注明该年统计覆盖范围有变化：" + (f"名义{_rate(nominal)}，" if nominal is not None else "")
-                         + f"按可比口径{_rate(comp.value)}" + ("（可比口径的定义见原文摘录）" if d.get("comparable") else ""))
+            rates = ([M("d.rate.nominal", rate=_rate(nominal))] if nominal is not None else []) + [M("d.rate.comparable", rate=_rate(comp.value))]
+            notes.append(M("d.cav.cn_coverage", rates=rates, definition=M("d.cav.cn_comparable_def") if d.get("comparable") else ""))
         if hours:
             notes.append(hours_note)
         quote = excerpts_quote(scope + [d.get("gross"), d.get("comparable") if comp else None])
         out.append(WageVariant(
-            key=series, label=label, concept="mean", source=source(o),
+            key=series, label=M(f"w.{series}"), concept="mean", source=source(o),
             monthly_lcu=monthly,
             hourly_lcu=monthly / (hours["mean"] * WEEKS_PER_MONTH) if hours else None,
             hours_week=hours["mean"] if hours else None,
-            method=(f"年工资 ÷ 12 ÷（企业就业人员周平均工作时间 {hours['mean']:.1f} 小时 × 52/12）" if hours else no_hours),
+            method=M("d.method.cn", h=hours["mean"]) if hours else no_hours,
             snapshots=[o.snapshot] + (hours["snapshots"] if hours else []),
-            caveat=_join(notes), quote=quote, restricted=True, currency="CNY",
+            caveat=notes, quote=quote, restricted=True, currency="CNY",
             series_id=f"NBS {series}", source_id="NBS", series_key=f"NBS {series}",
         ))
     o = store.get("cn_migrant_monthly", "CHN", year)
     if o:
         out.append(WageVariant(
-            key="cn_migrant", label="农民工月均收入", concept="mean", source=source(o),
+            key="cn_migrant", label=M("w.cn_migrant"), concept="mean", source=source(o),
             monthly_lcu=o.value,
             hourly_lcu=o.value / (hours["mean"] * WEEKS_PER_MONTH) if hours else None,
             hours_week=hours["mean"] if hours else None,
-            method=(f"月均收入 ÷（企业就业人员周平均工作时间 {hours['mean']:.1f} 小时 × 52/12）" if hours else no_hours),
+            method=M("d.method.cn_migrant", h=hours["mean"]) if hours else no_hours,
             snapshots=[o.snapshot] + (hours["snapshots"] if hours else []),
-            caveat=(hours_note + "；本项目存档的农民工监测调查报告未公布农民工工时") if hours else "",
+            caveat=[hours_note, M("d.cav.cn_migrant_hours")] if hours else [],
             quote=excerpts_quote([definitions.get(o.snapshot, {}).get("definition")]),
             restricted=True, currency="CNY", series_id="NBS cn_migrant_monthly", source_id="NBS",
             series_key="NBS cn_migrant_monthly",
@@ -1119,10 +1087,9 @@ def china_variants(store: Store, units: UnitGraph, year: str, definitions: dict)
     return out
 
 
-def _rate(pct: float) -> str:
-    """A growth rate in NBS's wording: 增长 x% / 下降 x%."""
-    x = abs(pct)
-    return f"{'增长' if pct >= 0 else '下降'} {x:.1f}%" if round(x, 1) == x else f"{'增长' if pct >= 0 else '下降'} {x:g}%"
+def _rate(pct: float) -> Msg:
+    """A growth rate as NBS words it: a rise (增长) or a fall (下降) of x%."""
+    return M("d.rate.up" if pct >= 0 else "d.rate.down", pct=abs(pct))
 
 
 def excerpts_quote(excerpts: list[dict | None]) -> str:
@@ -1139,14 +1106,6 @@ def excerpts_quote(excerpts: list[dict | None]) -> str:
             out.append(f"{x['section']}：“{x['text']}")
         prev = x
     return "；".join(o + "”" for o in out)
-
-
-def _join(parts: list[str]) -> str:
-    """Notes joined with "；", without doubling the "。" a quoted sentence ends with."""
-    out = ""
-    for x in (p for p in parts if p):
-        out += ("" if not out or out.endswith("。") else "；") + x
-    return out
 
 
 def china_annual_hours(store: Store, year: str) -> dict | None:
@@ -1169,10 +1128,10 @@ def us_bls_variant(store: Store, units: UnitGraph, year: str) -> WageVariant | N
         return None
     snaps = sorted({o.snapshot for p, o in store.series("us_ahe_all_nsa", "USA").items() if p.startswith(year)})
     return WageVariant(
-        key="bls_ces_ahe", label="私营非农雇员平均时薪（BLS CES）", concept="mean",
-        source="美国劳工统计局 BLS · Current Employment Statistics", monthly_lcu=None, hourly_lcu=m[0], hours_week=None,
-        method="CEU0500000003 十二个月（未季调）的简单平均", snapshots=snaps,
-        caveat="按企业工资单统计的每小时工资（含带薪休假小时），不含农业、政府雇员和自雇", restricted=True, currency="USD",
+        key="bls_ces_ahe", label=M("w.bls_ces_ahe"), concept="mean",
+        source=M("d.src.bls"), monthly_lcu=None, hourly_lcu=m[0], hours_week=None,
+        method=M("d.method.bls"), snapshots=snaps,
+        caveat=[M("d.cav.bls")], restricted=True, currency="USD",
         series_id="BLS CEU0500000003", source_id="BLS", series_key="BLS CEU0500000003",
     )
 
@@ -1380,55 +1339,14 @@ def icp_codes(store: Store, meta: dict) -> dict[str, str]:
 
 
 def icp_levels(store: Store, meta: dict) -> dict:
-    """Category price levels of economies relative to the United States."""
+    """Category price level indices of economies as ICP publishes them (world = 100)."""
     cats = sorted({s for (s, _a, _p) in store.items if s.startswith("icp21_pli_wl_")})
     out: dict[str, dict] = defaultdict(dict)
     for iso, code in sorted(icp_codes(store, meta).items()):
         for series in cats:
-            us, o = store.get(series, "USA", ICP_YEAR), store.get(series, code, ICP_YEAR)
-            if us and o:
-                out[iso][series.removeprefix("icp21_pli_wl_")] = o.value / us.value
+            if o := store.get(series, code, ICP_YEAR):
+                out[iso][series.removeprefix("icp21_pli_wl_")] = o.value
     return dict(out)
-
-
-# --------------------------------------------------------------------------------------
-# United States monthly (long history) and supermarket items
-# --------------------------------------------------------------------------------------
-
-def us_monthly(store: Store, gold: dict) -> dict:
-    gm = dict((p, v) for p, v in gold["monthly"])
-    series = {}
-    for key in ("us_ahe_pns_sa", "us_ahe_all_sa"):
-        rows = []
-        for p, o in sorted(store.series(key, "USA").items()):
-            if p in gm:
-                rows.append([p, o.value, o.value / (gm[p] / GRAMS_PER_TROY_OUNCE), "preliminary" in o.note])
-        series[key] = rows
-    return series
-
-
-def us_items(store: Store, gold: dict) -> dict:
-    gm = dict((p, v) for p, v in gold["monthly"])
-    ahe = store.series("us_ahe_all_sa", "USA")
-    out = {}
-    for item, (label, bls_unit, unit, factor) in US_ITEMS.items():
-        s = store.series(item, "USA")
-        if not s:
-            continue
-        rows = []
-        for p, o in sorted(s.items()):
-            price = o.value * factor
-            wage = ahe.get(p)
-            g = gm.get(p)
-            rows.append({
-                "period": p, "price_bls_unit": o.value, "price": price,
-                "minutes": price / wage.value * 60 if wage else None,
-                "gold_mg": price / (g / GRAMS_PER_TROY_OUNCE) * 1000 if g else None,
-                "preliminary": "preliminary" in o.note,
-                "wage_preliminary": bool(wage and "preliminary" in wage.note),
-            })
-        out[item] = {"label": label, "bls_unit": bls_unit, "unit": unit, "series_id": next(iter(s.values())).note.split("|")[0], "rows": rows}
-    return out
 
 
 # --------------------------------------------------------------------------------------
@@ -1476,19 +1394,19 @@ def wage_gold_history(store: Store, gold: dict, meta: dict, ilo_dic: dict, units
             for c in sorted(cands[chosen], key=lambda c: c["y"]):
                 r = c["rec"]
                 if r is not None:
-                    why = ("ILOSTAT 注明序列中断" if r.break_in_series else
-                           "ILOSTAT 对该值的口径注释与上一个点不同" if prev is not None and r.signature != prev["rec"].signature else "")
+                    why = (M("d.hist.ilo_break") if r.break_in_series else
+                           M("d.hist.ilo_notes_changed") if prev is not None and r.signature != prev["rec"].signature else None)
                     src = f"ILOSTAT · {ilo_dic.get('source', {}).get(r.source, r.source)}"
                 else:
-                    why = "OECD 标注的货币与上一个点不同" if prev is not None and c["unit"] != prev["unit"] else ""
+                    why = M("d.hist.oecd_currency_changed") if prev is not None and c["unit"] != prev["unit"] else None
                     src = "OECD · Average annual wages ÷ 12"
                 pts[c["y"]] = {"v": c["v"], "src": src, "why": why, "rec": r}
                 prev = c
         if area == "CHN":
             for y, o in store.series("cn_wage_private", "CHN").items():
                 if a["years"].get(y) and a["years"][y].linked("cn") and a["years"][y].linked("F"):
-                    why = "国家统计局注明该年统计覆盖范围有变化" if store.get("cn_wage_private__comparable_growth", "CHN", y) else ""
-                    pts[y] = {"v": o.value / 12, "src": "国家统计局 · 城镇私营单位平均工资 ÷ 12", "why": why, "rec": None}
+                    why = M("d.hist.cn_coverage") if store.get("cn_wage_private__comparable_growth", "CHN", y) else None
+                    pts[y] = {"v": o.value / 12, "src": M("d.hist.src_cn"), "why": why, "rec": None}
         rows, drawn = [], []
         for y in sorted(pts):
             fx = store.get("fx_lcu_usd", area, y)
@@ -1499,9 +1417,8 @@ def wage_gold_history(store: Store, gold: dict, meta: dict, ilo_dic: dict, units
             why = p["why"]
             if rows and not why:
                 ok, detail = units.shift(area, rows[-1][0], rows[-1][1], y, p["v"])
-                why = "" if ok else (f"与上一个点相比的变化，超出 OECD 同口径工资在同样年数内相对名义人均收入出现过的最大偏离，不能确认可比：{detail}"
-                                     if ok is False else detail)
-            rows.append([y, p["v"], p["v"] / (g["usd_g"] * fx.value), p["src"], bool(why and rows), why if rows else ""])
+                why = None if ok else M("d.hist.shift", detail=detail) if ok is False else detail
+            rows.append([y, p["v"], p["v"] / (g["usd_g"] * fx.value), p["src"], bool(why and rows), why if rows else None])
             drawn.append(p["rec"])
         if len(rows) >= 3:
             recs = [r for r in drawn if r is not None]
@@ -1511,72 +1428,18 @@ def wage_gold_history(store: Store, gold: dict, meta: dict, ilo_dic: dict, units
             for r in recs:
                 for note in ilo_note_labels([c for c in ilostat.codes(r.obs) if c.split(":", 1)[0] in COVERAGE_NOTES + ("I13",)], ilo_dic):
                     years_of[note].append(r.obs.period)
-            notes = [note if len(ys) == len(rows) else f"{note}（{'、'.join(ys)} 年）" for note, ys in years_of.items()]
+            notes: list[Part] = [note if len(ys) == len(rows) else M("d.hist.note_years", note=note, years=ys)
+                                 for note, ys in years_of.items()]
             if area == "CHN":
-                label = "城镇私营单位平均工资（国家统计局；更早年份为 ILOSTAT 转载的同一序列）"
+                label = M("w.hist_cn")
             elif chosen == "OECD":
-                label = "全职当量平均工资 ÷ 12（OECD）"
+                label = M("w.hist_oecd")
             else:
-                scope = ("" if not restricted else "（覆盖范围有限）" if len(recs) == len(rows) and all(r.restricted for r in recs)
-                         else "（部分年份覆盖范围有限）")
-                label = (f"雇员平均月薪{scope}"
-                         f"（ILOSTAT · {ilo_dic.get('source', {}).get(chosen.split(' ', 1)[1], chosen)}）")
+                scope = ("" if not restricted else "_restricted" if len(recs) == len(rows) and all(r.restricted for r in recs)
+                         else "_partly_restricted")
+                label = M(f"w.hist_ilo{scope}", source=ilo_dic.get("source", {}).get(chosen.split(" ", 1)[1], chosen))
             out[area] = {"label": label, "source_id": chosen,
                          "restricted": restricted, "notes": notes, "points": rows}
-    return out
-
-
-# --------------------------------------------------------------------------------------
-# Latest month (United States and China)
-# --------------------------------------------------------------------------------------
-
-def latest_block(store: Store, gold: dict) -> dict:
-    """Gold, CNY rate and US wage for the latest month with all three available.
-
-    China publishes wages once a year, so the Chinese hourly figures here pair the
-    latest annual wage with the latest month's gold price; the periods are stated
-    explicitly in the output instead of being blended into one number."""
-    gm = dict((p, v) for p, v in gold["monthly"])
-    cny = store.series("fx_lcu_usd_ecb", "CHN")
-    ahe = store.series("us_ahe_all_sa", "USA")
-    months = sorted(p for p in gm if p in cny and p in ahe)
-    if not months:
-        return {}
-    p = months[-1]
-    usd_g = gm[p] / GRAMS_PER_TROY_OUNCE
-    cny_g = usd_g * cny[p].value
-    out = {
-        "period": p,
-        "gold_usd_oz": gm[p],
-        "gold_usd_g": usd_g,
-        "cny_per_usd": cny[p].value,
-        "gold_cny_g": cny_g,
-        "us_ahe": ahe[p].value,
-        "us_ahe_preliminary": "preliminary" in ahe[p].note,
-        "us_gold_g_per_hour": ahe[p].value / usd_g,
-        "cn": [],
-    }
-    for wage_year in sorted({y for (s, a, y) in store.items if s in ("cn_wage_nonprivate", "cn_wage_private") and a == "CHN"}):
-        hours = china_annual_hours(store, wage_year)
-        for series, label in (("cn_wage_nonprivate", "城镇非私营单位"), ("cn_wage_private", "城镇私营单位")):
-            o = store.get(series, "CHN", wage_year)
-            if not o:
-                continue
-            for basis, hrs in (("assumed", ASSUMED_HOURS_CN), ("actual", hours["mean"] * 52 if hours else None)):
-                if hrs is None:
-                    continue
-                hourly = o.value / hrs
-                out["cn"].append({"series": series, "label": label, "wage_year": wage_year, "annual": o.value,
-                                  "basis": basis, "hours_year": hrs, "hours_months": hours["months"] if basis == "actual" else None,
-                                  "hourly": hourly, "gold_g_per_hour": hourly / cny_g})
-    return out
-
-
-def fx_recent(store: Store, months: int = 36) -> dict:
-    out = {}
-    for area in sorted(store.areas("fx_lcu_usd_ecb")):
-        s = store.series("fx_lcu_usd_ecb", area)
-        out[area] = [[p, s[p].value] for p in sorted(s)[-months:]]
     return out
 
 

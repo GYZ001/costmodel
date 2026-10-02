@@ -11,9 +11,6 @@ parsed with patterns anchored on the sentences NBS uses every year:
 * 「YYYY年农民工监测调查报告」 - average monthly income of migrant workers.
 * Monthly 「…国民经济…」 releases - 全国企业就业人员周平均工作时间 (average weekly
   hours actually worked by enterprise employees, from the monthly labour force survey).
-* Monthly 「YYYY年M月份居民消费价格…」 releases - the sentences that report
-  year-on-year CPI changes, kept verbatim so statements about them can be checked
-  against the archived original text.
 """
 from __future__ import annotations
 
@@ -32,7 +29,6 @@ WAGE_TITLE = re.compile(r"^(\d{4})年城镇单位就业人员年平均工资情�
 WAGE_PART_TITLE = re.compile(r"^(\d{4})年城镇(非私营|私营)单位就业人员年平均工资\d+元$")
 LARGE_ENT_TITLE = re.compile(r"^(\d{4})年规模以上企业就业人员年平均工资情况$")
 MIGRANT_TITLE = re.compile(r"^(\d{4})年农民工监测调查报告$")
-CPI_TITLE = re.compile(r"^(\d{4})年(\d{1,2})月份居民消费价格")
 # Monthly "national economy" releases; the title fixes the reference month.
 ECONOMY_TITLES = [
     (re.compile(r"^(\d{1,2})月份国民经济"), lambda m: int(m.group(1))),
@@ -134,22 +130,17 @@ def page_text(html: str, paragraphs: bool = False) -> str:
     return re.sub(r"\s+", " ", text)
 
 
-def discover(f: Fetcher, pages: int = 64) -> tuple[list[Release], list[dict]]:
-    """Wanted releases, plus an index of every listed release whose title mentions
-    价格 (prices) - the evidence for which price statistics NBS currently publishes."""
+def discover(f: Fetcher, pages: int = 64) -> list[Release]:
     seen: dict[str, Release] = {}
-    price_titles: dict[str, dict] = {}
     for p in range(pages):
         url = LIST_URL + ("" if p == 0 else f"index_{p}.html")
         html = f.get_transient(url).decode("utf-8", "replace")
         for ym, tid, day, title in LINK_RE.findall(html):
             title = title.strip()
-            if re.search(r"价格|工资|收入", title):
-                price_titles[tid] = {"date": f"{day[:4]}-{day[4:6]}-{day[6:]}", "title": title, "url": f"{LIST_URL}{ym}/{tid}.html"}
             if tid not in seen and (WAGE_TITLE.match(title) or WAGE_PART_TITLE.match(title) or LARGE_ENT_TITLE.match(title)
-                                    or MIGRANT_TITLE.match(title) or CPI_TITLE.match(title) or is_economy_release(title)):
+                                    or MIGRANT_TITLE.match(title) or is_economy_release(title)):
                 seen[tid] = Release(f"{LIST_URL}{ym}/{tid}.html", f"nbs/release/{ym}/{tid}", title, day)
-    return list(seen.values()), sorted(price_titles.values(), key=lambda r: r["date"])
+    return list(seen.values())
 
 
 def collect(f: Fetcher) -> list[Obs]:
@@ -157,9 +148,7 @@ def collect(f: Fetcher) -> list[Obs]:
     if f.offline:
         snaps = [(s, _title_of(s)) for s in f.committed("nbs/release/")]
     else:
-        releases, price_titles = discover(f)
-        write_price_index(price_titles)
-        for rel in releases:
+        for rel in discover(f):
             # A published release does not change, so an existing snapshot is reused as is.
             snap = f.get(rel.key, rel.url, ext="html", check=_check_release(rel.title), immutable=True)
             snaps.append((snap, rel.title))
@@ -170,7 +159,6 @@ def collect(f: Fetcher) -> list[Obs]:
     out: list[Obs] = []
     for snap, title in snaps:
         out += parse_release(snap.read().decode("utf-8", "replace"), title, snap.key)
-    write_cpi_quotes(snaps)
     write_wage_definitions(snaps)
     return out
 
@@ -257,184 +245,14 @@ def wage_definitions() -> dict:
     return json.loads(path.read_text(encoding="utf-8")) if path.exists() else {}
 
 
-def body_text(html: str, tables: bool = True) -> str:
+def body_text(html: str) -> str:
     """Text of the release body without page chrome.  Release pages carry the
     article twice - a desktop copy ('txt-content') followed by a mobile copy
-    ('mobile-content') - so the desktop copy is taken, up to where the mobile one starts.
-    With tables=False, data tables are left out (their cells are not prose)."""
+    ('mobile-content') - so the desktop copy is taken, up to where the mobile one starts."""
     i = html.find('class="txt-content"')
     j = html.find('class="mobile-content', i) if i >= 0 else -1
     body = html if i < 0 else html[html.index(">", i) + 1 : j if j >= 0 else len(html)]
-    if not tables:
-        body = re.sub(r"<table\b.*?</table\s*>", "\n", body, flags=re.S | re.I)
     return page_text(body, paragraphs=True)
-
-
-# Period phrases that open a statement: a single month ("8月份", "2026年8月份"), several
-# months ("4、5月份") or a cumulative period ("1—8月份", "1—8月平均", "上半年", "一季度",
-# "前三季度", "全年").
-PERIOD_RE = re.compile(r"\d{1,2}\s*[—–-]\s*\d{1,2}\s*月|上半年|下半年|[一二三四]季度|前三季度|全年|\d{1,2}(?:\s*、\s*\d{1,2})*\s*月份")
-# A clause giving another period's value in passing ("上月为下降2.0%"), or describing how
-# a rate moved ("涨幅与上月持平", "涨幅比上月扩大0.3个百分点") rather than a price change;
-# what follows is again about the period named before it.
-ASIDE_RE = re.compile(r"上月为|上年同期为|去年同期为|涨幅|降幅|涨跌幅")
-# A price change: a rise or fall by a percentage, or "持平" (unchanged).
-CHANGE_RE = re.compile(r"(上涨|下降|增长|下跌|回落)\s*[\d.]+\s*%|持平")
-HEADING_RE = re.compile(r"^[一二三四五六七八九十]+、")
-
-
-def _period(s: str) -> str | None:
-    """'month:N' for one named month, 'months' for several, 'cumulative', or
-    'ambiguous' when a clause names periods of different kinds."""
-    kinds = set()
-    for m in PERIOD_RE.finditer(s):
-        months = re.fullmatch(r"(\d{1,2}(?:\s*、\s*\d{1,2})*)\s*月份", m.group(0))
-        if months:
-            ms = re.findall(r"\d{1,2}", months.group(1))
-            kinds.add(f"month:{int(ms[0])}" if len(ms) == 1 else "months")
-        else:
-            kinds.add("cumulative")
-    if not kinds:
-        return None
-    return kinds.pop() if len(kinds) == 1 else "ambiguous"
-
-
-def _comparison(s: str) -> str | None:
-    kinds = ({"mom"} if "环比" in s else set()) | ({"yoy"} if "同比" in s or "比上年同期" in s else set())
-    if not kinds:
-        return None
-    return kinds.pop() if len(kinds) == 1 else "ambiguous"
-
-
-def yoy_sentences(text: str, month: int, topic: str | None = None) -> list[dict]:
-    """Sentences reporting the year-on-year price changes of reference month ``month``,
-    as {"text": the sentence verbatim, "yoy": its clauses that do so}.
-
-    NBS names the period ("8月份" vs "1—8月份"/"1—8月平均"/"上半年"/"全年", or an earlier
-    month: "分月看，1月份…同比上涨2.1%") and the comparison ("同比" year-on-year vs "环比"
-    month-on-month) once, and what follows inherits both until they are named again:
-    "1—7月份，全国居民消费价格同比上涨0.9%。分类别看，食品烟酒…价格同比下降0.2%" is
-    still January-July cumulative, and in "核心CPI同比上涨0.8%，其中2月份同比上涨1.2%"
-    only the second clause is February's.  Both are therefore tracked clause by clause
-    (clauses end at "，", "；" and "。"); a clause naming two periods or two comparisons
-    is ambiguous, and so is what inherits from it, until a single one is named again.
-    A change is a rise or fall by a percentage, or "持平" (unchanged, 0%); clauses about
-    how a rate moved ("涨幅与上月持平") are not price changes.  Sentences end at "。" and at
-    paragraph ends; numbered headings are not statements and reset what is inherited.
-
-    With ``topic`` (e.g. "居民消费价格"), only text inside that topic is kept: it starts
-    at a sentence naming the topic and ends at the next numbered heading ("八、…") or
-    sentence about producer prices that does not name it.  Used for the monthly economy
-    releases, which cover CPI in one paragraph among many."""
-    out: list[dict] = []
-    period = comparison = None
-    inside = topic is None
-    for raw in re.split(r"(?<=。)|\n", text):
-        sentence = re.sub(r"\s+", "", raw)
-        if not sentence:
-            continue
-        heading = bool(HEADING_RE.match(sentence))
-        if topic is not None:
-            if topic in sentence:
-                inside = True
-            elif heading or "工业生产者" in sentence:
-                inside = False
-        if heading:
-            # A numbered heading starts a new section: nothing is inherited across it.  A
-            # heading on its own (no figure) is a title, not a statement for a period.
-            period = comparison = None
-            if not re.search(r"\d\s*%", sentence):
-                continue
-        hits = []
-        for clause in re.split(r"(?<=[，；])", sentence):
-            if ASIDE_RE.search(clause):
-                continue  # an aside neither reports this period's change nor changes what is inherited
-            period = _period(clause) or period
-            comparison = _comparison(clause) or comparison
-            if inside and period == f"month:{month}" and comparison == "yoy" and CHANGE_RE.search(clause):
-                hits.append(clause.rstrip("，；。"))
-        if hits:
-            out.append({"text": sentence, "yoy": hits})
-    return out
-
-
-def write_cpi_quotes(snaps: list[tuple[Snapshot, str]]) -> None:
-    """Verbatim year-on-year CPI sentences, per reference month, from the CPI release
-    itself and from the monthly economy release (which names some items, e.g. grain,
-    that the CPI release does not)."""
-    import json
-
-    from ..config import DATA_DIR
-
-    rows = []
-    for snap, title in snaps:
-        html = snap.read().decode("utf-8", "replace")
-        if m := CPI_TITLE.match(title):
-            kind, period = "cpi", f"{m.group(1)}-{int(m.group(2)):02d}"
-            sentences = yoy_sentences(body_text(html, tables=False), int(m.group(2)))
-        elif is_economy_release(title) and HOURS_RE.search(page_text(html)):
-            year, month = reference_month(html, page_text(html))
-            kind, period = "economy", f"{year}-{month:02d}"
-            sentences = yoy_sentences(body_text(html, tables=False), month, topic="居民消费价格")
-        else:
-            continue
-        if sentences:
-            rows.append({"period": period, "kind": kind, "title": title, "url": snap.url,
-                         "snapshot": snap.key, "sha256": snap.sha256, "sentences": sentences})
-    path = DATA_DIR / "derived" / "nbs_cpi_yoy_sentences.json"
-    path.parent.mkdir(parents=True, exist_ok=True)
-    rows.sort(key=lambda r: (r["period"], r["kind"] != "cpi", r["snapshot"]))
-    path.write_text(json.dumps(rows, ensure_ascii=False, indent=1) + "\n", encoding="utf-8")
-
-
-def cpi_quotes() -> list[dict]:
-    import json
-
-    from ..config import DATA_DIR
-
-    path = DATA_DIR / "derived" / "nbs_cpi_yoy_sentences.json"
-    return json.loads(path.read_text(encoding="utf-8")) if path.exists() else []
-
-
-def write_price_index(rows: list[dict]) -> None:
-    import json
-
-    from ..config import DATA_DIR
-
-    path = DATA_DIR / "derived" / "nbs_price_release_index.json"
-    path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(json.dumps({
-        "listing": LIST_URL,
-        "note": "Every release on the NBS '最新发布' listing pages scanned in this run whose title contains 价格, 工资 or 收入 "
-                "(the listing pages themselves are not archived).",
-        "releases": rows,
-    }, ensure_ascii=False, indent=1) + "\n", encoding="utf-8")
-
-
-def price_release_summary() -> dict | None:
-    """Group the committed index by release type (title with dates and numbers removed)."""
-    import json
-    import re as _re
-
-    from ..config import DATA_DIR
-
-    path = DATA_DIR / "derived" / "nbs_price_release_index.json"
-    if not path.exists():
-        return None
-    idx = json.loads(path.read_text(encoding="utf-8"))
-    groups: dict[str, dict] = {}
-    for r in idx["releases"]:
-        if "价格" not in r["title"]:
-            continue
-        name = _re.sub(r"^\d{4}年|^\d{1,2}月份?|^[上中下]旬|\s", "", _re.sub(r"^\d{4}年\d{1,2}月(份|[上中下]旬)", "", r["title"]))
-        kind = name[: name.index("价格") + 2] if "价格" in name else name
-        g = groups.setdefault(kind, {"kind": kind, "count": 0, "first": r["date"], "last": r["date"], "example": r["url"]})
-        g["count"] += 1
-        g["first"] = min(g["first"], r["date"])
-        g["last"] = max(g["last"], r["date"])
-    dates = [r["date"] for r in idx["releases"] if "价格" in r["title"]]
-    return {"listing": idx["listing"], "from": min(dates) if dates else None,
-            "to": max(dates) if dates else None, "groups": sorted(groups.values(), key=lambda g: -g["count"])}
 
 
 def _title_of(snap: Snapshot) -> str:

@@ -78,6 +78,10 @@ export function Methods({ ds }: { ds: Dataset }) {
           <ul className="small list">
             {li("m.c_median")}
             {li("m.c_ilostat")}
+            {li("m.c_extension", {
+              tol: k.extension_tol, mf: k.max_factor,
+              list: i.j(ds.sources.filter((s) => s.extends).map((s) => i.t(`src.${s.id}.publisher`)), "enum") || i.t("d.none"),
+            })}
             {li("m.c_excluded_notes")}
             {li("m.c_time_units", { tf: k.time_factor, ug: k.unit_gap, hours: k.hours_in_month })}
             {li("m.c_continuity", { tf: k.time_factor, hfce: levelBoundsText(i, ds, "hfce"), gdp: levelBoundsText(i, ds, "gdp") })}

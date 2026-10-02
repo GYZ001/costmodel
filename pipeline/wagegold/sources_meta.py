@@ -12,6 +12,8 @@ SOURCES = [
     {"prefix": "worldbank/commodity_markets_landing", "id": "cmo_landing", "landing": "https://www.worldbank.org/en/research/commodity-markets"},
     {"prefix": "ilostat/", "id": "ilostat", "landing": "https://ilostat.ilo.org/data/"},
     {"prefix": "oecd/", "id": "oecd", "landing": "https://data-explorer.oecd.org/"},
+    # Survey publishers whose own releases continue a series ILOSTAT republishes ("extends").
+    {"prefix": "nbs/", "id": "nbs", "landing": "https://www.stats.gov.cn/sj/zxfb/", "extends": True},
 ]
 
 

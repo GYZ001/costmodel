@@ -19,7 +19,7 @@ from .config import GRAMS_PER_TROY_OUNCE, SITE_DATA_DIR
 from .fetch import Fetcher, FetchError
 from .model import Store
 from .msg import M, canonical
-from .sources import ilostat, imf, oecd, pinksheet, worldbank
+from .sources import ilostat, imf, nbs, oecd, pinksheet, worldbank
 from .sources_meta import describe
 
 
@@ -58,6 +58,8 @@ def main(argv=None) -> int:
         ("worldbank icp 2021", lambda: worldbank.collect_icp2021(f), True),
         ("worldbank food prices for nutrition", lambda: worldbank.collect_fpn(f), True),
         ("oecd average wages", lambda: oecd.collect(f), False),
+        # Survey publishers' own releases of series ILOSTAT republishes (build.UnitGraph._extend).
+        ("nbs (china) urban private-unit wages", lambda: nbs.collect(f), False),
     ):
         run(name, fn, required)
     ilo = run("ilostat", lambda: ilostat.collect(f), into_store=False)
@@ -105,6 +107,7 @@ def _build_and_write(store, f, meta, ilo_dic, today, save) -> int:
                       "max_factor": build.MAX_FACTOR,
                       "time_factor": build.TIME_FACTOR, "unit_gap": build.UNIT_GAP,
                       "hours_in_month": build.HOURS_IN_MONTH, "history_min_years": build.HISTORY_MIN_YEARS,
+                      "extension_tol": build.EXTENSION_TOL,
                       # widest move of OECD's same-concept wages against nominal income per head, by
                       # yardstick and years apart (cumulative), used for the continuity check
                       "level_bounds": {k.split("_")[0]: {str(n): v for n, v in b.items()} for k, b in units.level_bounds.items()}},

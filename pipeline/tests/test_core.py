@@ -357,3 +357,27 @@ def test_oecd_vs_survey_summary():
     assert s["median"] == 0.8 and abs(s["below"] - 2 / 3) < 1e-12
     countries["CCC"] = {"years": {"2020": row(100.0, 90.0)}}
     assert build.oecd_vs_survey(countries)["median"] == (0.8 + 0.9) / 2  # even count: mean of the middle two
+
+
+def test_series_continued_with_its_publishers_release():
+    # ILOSTAT republishes X:1 to 2021; the publisher's own release has 2020-2023.
+    rows = []
+    for y, v in (("2019", 1000.0), ("2020", 1050.0), ("2021", 1100.0)):
+        rows += [Obs("ilo_monthly_mean@X:1", "AAA", y, v, "s", "T8:127 T9:133 T30:1"),
+                 Obs("ilo_monthly_mean_usd@X:1", "AAA", y, v / 2.0, "s")]
+    ext = [Obs("ext_ilo_monthly_mean@X:1", "AAA", y, v, "p", "pub") for y, v in
+           (("2020", 1050.0), ("2021", 1101.0), ("2022", 1150.0), ("2023", 5000.0))]
+    wdi = [r for y in ("2019", "2020", "2021", "2022", "2023") for r in _wdi("AAA", y, 2.0, 1.0)]
+    years = ["2019", "2020", "2021", "2022", "2023"]
+    u = build.UnitGraph(_store(*wdi, *rows, *ext), DIC, years, META)
+    recs = u.area("AAA")["ilo"]
+    r22 = next(r for r in recs["2022"] if r.series == "ilo_monthly_mean@X:1")
+    assert r22.publisher == "pub" and r22.obs.value == 1150.0 and r22.match["k"] == "d.ext.match"
+    assert u.year("AAA", "2022").linked("ilo:ilo_monthly_mean@X:1")  # carried from 2021 (×1.045)
+    assert not u.year("AAA", "2023").linked("ilo:ilo_monthly_mean@X:1")  # ×4.3 from 2022: unit not carried
+    assert all(r.publisher is None for r in recs["2021"])  # ILOSTAT's own years stay ILOSTAT's
+    # A release that disagrees with ILOSTAT on a common year continues nothing.
+    bad = [Obs("ext_ilo_monthly_mean@X:1", "AAA", y, v, "p", "pub") for y, v in (("2021", 1200.0), ("2022", 1250.0))]
+    u2 = build.UnitGraph(_store(*wdi, *rows, *bad), DIC, years, META)
+    assert not u2.area("AAA")["ilo"].get("2022")
+    assert any(e["detail"]["k"] == "d.ext.disagree" for e in u2.log)

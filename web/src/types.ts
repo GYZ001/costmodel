@@ -108,6 +108,8 @@ export interface SourceInfo {
   /** catalog keys src.<id>.publisher / .title / .license / .use */
   id: string;
   landing: string;
+  /** a survey publisher whose own release continues a series ILOSTAT republishes */
+  extends?: boolean;
   snapshots: SnapshotInfo[];
 }
 
@@ -121,6 +123,9 @@ export interface Dataset {
     hours_in_month: number;
     /** years a series needs to be drawn in the gold history */
     history_min_years: number;
+    /** largest relative difference allowed between a publisher's release and ILOSTAT's
+     *  republication for the release to continue the series */
+    extension_tol: number;
     /** By yardstick (hfce = household consumption per head, gdp = GDP per head) and years
      *  apart: the widest move OECD's same-concept average wage made against it over that
      *  many years or fewer (the continuity check's bound). */

@@ -45,6 +45,9 @@ export function GoldRuler({ ds, picks, slotOf }: Scope) {
       }));
   }, [ds, picks, slotOf]);
   const noHistory = picks.filter((iso) => !ds.wage_gold_history[iso]).map((iso) => countryName(ds.countries[iso]));
+  const breaks = picks
+    .filter((iso) => ds.wage_gold_history[iso])
+    .flatMap((iso) => ds.wage_gold_history[iso].points.filter((p) => p[4]).map((p) => `${countryName(ds.countries[iso])} ${p[0]}：${p[5]}`));
   const histOpt = useMemo(() => linesOption({ series: hist, yName: "月薪可换黄金（克）", format: (v) => sig(v, 2), log: true }), [hist, theme]);
 
   const first = pns[0];
@@ -63,7 +66,7 @@ export function GoldRuler({ ds, picks, slotOf }: Scope) {
           <>
             美国这一口径的时薪：{first[0]} 约合 <strong>{sig(first[2], 2)} 克</strong>黄金/小时，
             {peak[0].slice(0, 7)} 最高 <strong>{sig(peak[2], 2)} 克</strong>，{last[0]} 只有 <strong>{sig(last[2], 2)} 克</strong>；
-            同期美元时薪从 {fmt(first[1], 2)} 美元涨到 {fmt(last[1], 2)} 美元。克数的起落主要反映金价，而不是生活水平。
+            同期美元时薪从 {fmt(first[1], 2)} 美元涨到 {fmt(last[1], 2)} 美元{last[3] ? `（${last[0]} 的时薪为 BLS 初值，之后可能修订）` : ""}。克数的起落主要反映金价，而不是生活水平。
           </>
         )}
       </div>
@@ -93,8 +96,11 @@ export function GoldRuler({ ds, picks, slotOf }: Scope) {
         <Chart option={histOpt} height={360} ariaLabel="重点经济体月薪折合黄金克数" />
         <p className="note">
           每年的月薪用当年平均金价和平均汇率折算。口径：{hist.map((s) => `${s.name}＝${ds.wage_gold_history[s.iso].label}`).join("；")}。
-          发布方注明统计口径或覆盖范围变化（如 ILOSTAT 的“Break in series”、国家统计局的“可比口径”）的年份，折线在那里断开，不把两种口径连成一条线。
-          {noHistory.length > 0 && <>没有可核对的历年月薪序列：{noHistory.join("、")}。</>}
+          折线在这些地方断开，不把可能不可比的两个数连成一条线：发布方注明序列中断或口径、覆盖范围变化（如 ILOSTAT 的“Break in series”、国家统计局的“可比口径”）；
+          ILOSTAT 对数值的口径注释前后不同；同一来源相邻两点的变化与同期名义人均收入（世界银行居民消费或 GDP 除以人口）的变化相差超过 1.4 倍，或无法核对。
+          孤立的点（前后都断开）画成圆点。
+          {breaks.length > 0 && <> 所选经济体的断开处：{breaks.join("；")}。</>}
+          {noHistory.length > 0 && <> 没有同一来源 3 年以上可核对的月薪序列：{noHistory.join("、")}。</>}
         </p>
       </div>
     </section>

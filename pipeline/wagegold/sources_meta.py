@@ -79,7 +79,7 @@ SOURCES = [
         "title": "Public Data API v2：CES 平均时薪/工时、CPI 平均价格（AP）",
         "landing": "https://www.bls.gov/developers/",
         "license": "美国政府公共领域",
-        "use": "美国月度时薪（1964 年起）与超市单品月均价",
+        "use": "美国月度时薪（1964 年起）与常见商品平均价格",
     },
     {
         "prefix": "fred/",

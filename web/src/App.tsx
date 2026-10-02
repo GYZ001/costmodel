@@ -161,7 +161,7 @@ export default function App({ ds }: { ds: Dataset }) {
       </main>
       <footer className="wrap">
         数据与代码：<a href="https://github.com/GYZ001/costmodel">github.com/GYZ001/costmodel</a> ·
-        数据集由 GitHub Actions 定时从官方来源重新抓取并校验；任何数字都可以在“方法与来源”中找到原始文件与校验和。
+        数据集由 GitHub Actions 从官方来源重新抓取并校验（手动触发，合并到默认分支后每天自动运行）；任何数字都可以在“方法与来源”中找到原始文件与校验和。
       </footer>
     </>
   );

@@ -40,6 +40,9 @@ jobs:
         working-directory: web
       - run: npm run build
         working-directory: web
+        env:
+          # The site is built from the default branch; its snapshot links point there.
+          VITE_DATA_BRANCH: ${{ github.event.repository.default_branch }}
       - uses: actions/upload-pages-artifact@v3
         with:
           path: web/dist

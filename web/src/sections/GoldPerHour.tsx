@@ -58,7 +58,7 @@ export function GoldPerHour(scope: Scope) {
     <section className="block" id="gold">
       <h2>① 劳动 → 黄金：{scope.view === "hourly" ? "每小时" : "每月"}工资能换多少克黄金（{scope.year} 年）</h2>
       <p className="sub">
-        工资 ÷（{scope.year} 年国际金价年均 × 该年平均汇率）。这一步等价于把工资按市场汇率换成美元，再除以美元金价。
+        工资 ÷（{scope.year} 年国际金价年均 ÷ 31.1034768 克/盎司 × 该年平均汇率）。这一步等价于把工资按市场汇率换成美元，再除以每克的美元金价。
       </p>
       <div className="card">
         <div className="legend">
@@ -68,8 +68,9 @@ export function GoldPerHour(scope: Scope) {
         </div>
         <Chart option={option} height={rankingHeight(items.length)} ariaLabel="各经济体每小时工资可换黄金克数排名" />
         <p className="note">
-          工资：优先用 OECD 全职当量平均工资（时薪按 OECD 公布的全职雇员通常周工时折算）；OECD 没有该年工资或工时的，用国际劳工组织 ILOSTAT 的雇员平均/中位工资
-          （只有月薪的，用同一调查的每周实际工时折算）；再没有的，用国家统计机构自己的数据。
+          工资的选用顺序：OECD 全职当量平均工资（时薪按 OECD 公布的全职雇员通常周工时折算）→ 国际劳工组织 ILOSTAT 覆盖全国全体雇员的平均工资
+          （只有月薪的，用同一调查的每周实际工时折算）→ 国家统计机构自己的数据（中国国家统计局、美国劳工统计局，覆盖范围按其原文说明）→
+          ILOSTAT 注明覆盖范围有限的记录（如只含城镇、只含私营部门、只含全职）。某经济体的主要口径与上一年不同时，悬停提示里会注明。
           {cnW && <>中国 {scope.year} 年用的是：{wageLabel(cnW, scope.view)}（{cnW.source}）。</>}
           每个经济体所用口径与发布方的注释见悬停提示和数据表。
           金价：世界银行 Pink Sheet 月均价的年平均；汇率：世界银行 WDI 年均官方汇率，并逐年核对它就是世界银行自己换算该年美元数据所用的汇率。

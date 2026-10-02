@@ -85,7 +85,7 @@ export function PriceStructure(scope: Scope) {
       <p className="sub">
         世界银行国际比较项目（ICP）2021 年基准：用统一规格的商品和服务逐项比价，按市场汇率换算后与美国比较（美国 = 1）。
         红色表示比美国贵，蓝色表示比美国便宜。
-        在 {spread.food.n} 个经济体中，食品与非酒精饮料价格水平的中位数为美国的 {fmt(spread.food.q[1], 2)} 倍（中间一半的经济体在 {fmt(spread.food.q[0], 2)}–{fmt(spread.food.q[2], 2)} 之间）；
+        在 ICP 2021 中同时属于世界银行经济体名录的 {spread.food.n} 个经济体中，食品与非酒精饮料价格水平的中位数为美国的 {fmt(spread.food.q[1], 2)} 倍（中间一半的经济体在 {fmt(spread.food.q[0], 2)}–{fmt(spread.food.q[2], 2)} 之间）；
         而{spread.services.map((s) => `${s.name}中位数 ${fmt(s.q[1], 2)}（${fmt(s.q[0], 2)}–${fmt(s.q[2], 2)}）`).join("、")}。
         食品这类可以跨境贸易的商品，各国价格离美国更近；不能贸易的本地服务，价差大得多。
       </p>
@@ -100,7 +100,7 @@ export function PriceStructure(scope: Scope) {
           {cn.food_nonalc >= 1
             ? "按市场汇率，中国的食品整体并不比美国便宜，而住房、医疗等服务的价格水平远低于美国。"
             : `按市场汇率，中国的食品整体比美国便宜约 ${fmt((1 - cn.food_nonalc) * 100, 0)}%，但服务便宜得更多。`}
-          {cohdTrend && <> 这是 2021 年的情况。之后人民币汇率和两国食品价格都有变化：世界银行“一人一天最低成本健康饮食”的中国 ÷ 美国（按当年汇率）从 2021 年的 {fmt(cohdTrend.r21, 2)} 变为 {cohdTrend.last} 年的 {fmt(cohdTrend.rLast, 2)}；ICP 没有 2021 年之后的逐项比价。</>}
+          {cohdTrend && <> 这是 2021 年的情况。之后人民币汇率和两国食品价格都有变化：世界银行“一人一天最低成本健康饮食”的中国 ÷ 美国（按当年汇率）从 2021 年的 {fmt(cohdTrend.r21, 2)} 变为 {cohdTrend.last} 年的 {fmt(cohdTrend.rLast, 2)}；本项目只存档了 ICP 2021 的逐项比价。</>}
         </div>
       )}
       <div className="card">

@@ -22,6 +22,15 @@ export function RealWage(scope: Scope) {
   const usRow = scope.ds.countries.USA?.years[scope.year];
   const usW = primaryWage(usRow, scope.view);
 
+  // Economies with a primary wage that cannot be drawn: no proven exchange rate or PPP that year.
+  const undrawn = useMemo(
+    () => rows.filter(({ row }) => {
+      const w = primaryWage(row, scope.view);
+      return w && !((hourly ? w.hourly_gold_g : w.monthly_gold_g) && (hourly ? w.hourly_ppp : w.monthly_ppp));
+    }).map(({ c }) => countryName(c)),
+    [rows, hourly, scope.view],
+  );
+
   const dumb = useMemo(() => {
     const ug = hourly ? usW?.hourly_gold_g : usW?.monthly_gold_g;
     const up = hourly ? usW?.hourly_ppp : usW?.monthly_ppp;
@@ -115,7 +124,10 @@ export function RealWage(scope: Scope) {
         ) : (
           <p className="muted">该年美国缺少同口径数据，无法以美国为基准。</p>
         )}
-        <p className="note">对数刻度，美国 = 100。按黄金克数的比值与按市场汇率的美元工资比值相同，因为各地金价都等于美元金价乘以汇率。</p>
+        <p className="note">
+          对数刻度，美国 = 100。按黄金克数的比值与按市场汇率的美元工资比值相同，因为各地金价都等于美元金价乘以汇率。
+          {undrawn.length > 0 && <> 有{hourly ? "时薪" : "月薪"}但该年缺少可核对的汇率或购买力平价、因而没有画出：{undrawn.join("、")}（原因见“方法与来源”的剔除记录）。</>}
+        </p>
         <details>
           <summary>查看数据表</summary>
           <div className="table-scroll">

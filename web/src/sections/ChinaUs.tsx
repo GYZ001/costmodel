@@ -4,6 +4,8 @@ import { countryName, fmt, minutes, sig } from "../lib";
 
 export function ChinaUs({ ds }: Scope) {
   const L = ds.latest;
+  // The pipeline lists every NBS wage year; this card pairs the most recent one with the latest gold price.
+  const latestWageYear = L?.cn?.map((r) => r.wage_year).sort().pop();
   const cn = ds.countries.CHN;
   const cnYear = cn ? Object.keys(cn.years).filter((y) => cn.years[y].wages.some((w) => w.key === "cn_wage_nonprivate")).sort().pop() : undefined;
   const cnRow = cn && cnYear ? cn.years[cnYear] : undefined;
@@ -11,7 +13,7 @@ export function ChinaUs({ ds }: Scope) {
 
   return (
     <section className="block" id="cnus">
-      <h2>中美细看：口径、工时与超市价格</h2>
+      <h2>中美细看：口径、工时与常见商品价格</h2>
       <p className="sub">
         之前讨论里的中美对比，关键在三个口径：用哪种平均工资、一年按多少小时算、金价和工资是不是同一时期。
       </p>
@@ -52,10 +54,10 @@ export function ChinaUs({ ds }: Scope) {
             </dl>
           </details>
           <p className="note">
-            实际工时：国家统计局月度劳动力调查“全国企业就业人员周平均工作时间”，{cnYear} 年已公布月份
+            实际工时：国家统计局月度劳动力调查“全国企业就业人员周平均工作时间”，本项目存档的 {cnYear} 年各月
             （{cnHours.map(([p, v]) => `${Number(p.slice(5))}月 ${v}`).join("、")} 小时）的平均。
             本项目存档的发布中没有单独的 1 月数值（1—2 月合并发布）。工时调查覆盖企业就业人员，与工资统计的覆盖面不完全一致，这是近似。
-            黄金：{cnYear} 年世界银行月均金价的年平均 × 该年人民币年均汇率 = {fmt(cnRow.gold_lcu_g, 1)} 元/克。
+            黄金：{cnYear} 年世界银行月均金价的年平均 ÷ 31.1034768 克/盎司 × 该年人民币年均汇率 = {fmt(cnRow.gold_lcu_g, 1)} 元/克。
           </p>
         </div>
       )}
@@ -79,7 +81,7 @@ export function ChinaUs({ ds }: Scope) {
             <table className="data">
               <thead><tr><th>中国口径</th><th>年工资（元）</th><th>一年按多少小时</th><th>时薪（元）</th><th>按 {L.period} 金价可换黄金（克/小时）</th></tr></thead>
               <tbody>
-                {L.cn.map((r) => (
+                {L.cn.filter((r) => r.wage_year === latestWageYear).map((r) => (
                   <tr key={r.series + r.basis}>
                     <td>{r.label}（{r.wage_year}）</td>
                     <td>{fmt(r.annual, 0)}</td>

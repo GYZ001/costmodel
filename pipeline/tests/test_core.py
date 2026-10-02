@@ -105,26 +105,36 @@ def test_nbs_rejects_inconsistent_month():
     assert _raises(f"<p>2025/10/20 10:00</p><p>8 月份，全国城镇调查失业率为 5.2% 。{hours}</p>", "前三季度经济运行")
 
 
-def _yoy(text, topic=None):
-    return [c for x in nbs.yoy_sentences(text, topic) for c in x["yoy"]]
+def _yoy(text, month, topic=None):
+    return [c for x in nbs.yoy_sentences(text, month, topic) for c in x["yoy"]]
 
 
 def test_cpi_yoy_sentences_follow_stated_basis():
-    # Wording and spacing as on the NBS page for August 2026.
+    # Paragraphs of the archived NBS page for August 2026 (data/raw/nbs/release/202609/
+    # t20260909_1965263.html), spacing and soft hyphens as on other NBS pages.
     html = ('<div class="header">导航 价格 同比 1.0%。</div><div class="txt-content">'
-            "<p>2026 年 8 月份，全国居民消费价格同比上涨 0.8% 。其中，城市上涨 0.8% ，农村上涨 0.7% ；食品价格下降 1.4% ，非食品价格上涨 1.2% 。"
-            " 1\u00ad\u00ad — 8 月平均，全国居民消费价格比上年同期上涨 0.9% 。 8 月份，全国居民消费价格环比上涨 0.4% 。"
-            "其中，城市上涨 0.4% ；食品价格上涨 0.4% ，非食品价格上涨 0.3% 。</p>"
-            "<p>一、各类商品及服务价格同比变动情况 8 月份，食品烟酒及在外餐饮类价格同比下降 0.7% 。"
-            "食品中，畜肉类价格下降 5.1% ，其中猪肉价格下降 11.8% ；粮食价格下降 0.6% 。</p>"
-            "<p>二、各类商品及服务价格环比变动情况 8 月份，食品价格上涨 0.4% 。</p></div>"
+            "<p>\u3000\u30002026 年 8 月份，全国居民消费价格同比上涨 0.8% 。其中，城市上涨 0.8% ，农村上涨 0.7% ；"
+            "食品价格下降 1.4% ，非食品价格上涨 1.2% ；消费品价格上涨0.8%，服务价格上涨0.8%。"
+            "1\u00ad\u00ad—8月平均，全国居民消费价格比上年同期上涨0.9%。</p><p>\u2002</p>"
+            "<p>\u3000\u30008月份，全国居民消费价格环比上涨0.4%。其中，城市上涨0.4%，农村上涨0.4%。</p>"
+            "<p>\u3000\u3000一、各类商品及服务价格同比变动情况</p>"
+            "<p>8月份，食品烟酒及在外餐饮类价格同比下降0.7%，影响CPI（居民消费价格指数）下降约0.21个百分点。"
+            "食品中，畜肉类价格下降5.1%，影响CPI下降约0.21个百分点，其中猪肉价格下降11.8%；鲜菜价格下降2.8%，"
+            "影响CPI下降约0.05个百分点。</p>"
+            "<p>其他七大类价格同比六涨一降。其中，教育文化娱乐、衣着、生活用品及服务价格分别上涨1.4%、1.3%和0.7%；居住价格下降0.3%。</p>"
+            "<p>二、各类商品及服务价格环比变动情况</p>"
+            "<p>8月份，食品烟酒及在外餐饮类价格环比上涨0.3%。其中，居住、教育文化娱乐、医疗保健价格均持平。</p></div>"
             '<div class="mobile-content">2026 年 8 月份，全国居民消费价格同比上涨 0.8% 。</div>')
-    assert _yoy(nbs.body_text(html)) == [
+    got = nbs.yoy_sentences(nbs.body_text(html), 8)
+    assert [c for x in got for c in x["yoy"]] == [
         "全国居民消费价格同比上涨0.8%", "城市上涨0.8%", "农村上涨0.7%",
-        "食品价格下降1.4%", "非食品价格上涨1.2%",
+        "食品价格下降1.4%", "非食品价格上涨1.2%", "消费品价格上涨0.8%", "服务价格上涨0.8%",
         "食品烟酒及在外餐饮类价格同比下降0.7%",
-        "畜肉类价格下降5.1%", "其中猪肉价格下降11.8%", "粮食价格下降0.6%",
+        "畜肉类价格下降5.1%", "其中猪肉价格下降11.8%", "鲜菜价格下降2.8%",
+        "教育文化娱乐、衣着、生活用品及服务价格分别上涨1.4%、1.3%和0.7%", "居住价格下降0.3%",
     ]
+    # the heading paragraph is not glued to the sentence after it
+    assert next(x["text"] for x in got if "食品烟酒" in x["text"]).startswith("8月份，食品烟酒")
 
 
 def test_cumulative_period_is_inherited():
@@ -133,25 +143,39 @@ def test_cumulative_period_is_inherited():
             "分类别看，食品烟酒及在外餐饮价格同比下降0.2%，衣着价格上涨1.6%。"
             "在食品烟酒及在外餐饮价格中，猪肉价格下降13.4%，粮食价格下降0.3%。"
             "7月份，全国居民消费价格同比上涨0.5%，环比下降0.1%。其中，7月份核心CPI同比上涨0.9%。")
-    assert _yoy(text, topic="居民消费价格") == ["全国居民消费价格同比上涨0.5%", "7月份核心CPI同比上涨0.9%"]
+    assert _yoy(text, 7, topic="居民消费价格") == ["全国居民消费价格同比上涨0.5%", "7月份核心CPI同比上涨0.9%"]
     # Only the clause that names February is February's.
     text = "1—2月份，全国居民消费价格同比持平。扣除食品和能源价格后的核心CPI同比上涨0.8%，其中2月份同比上涨1.2%。"
-    assert _yoy(text, topic="居民消费价格") == ["其中2月份同比上涨1.2%"]
+    assert _yoy(text, 2, topic="居民消费价格") == ["其中2月份同比上涨1.2%"]
+
+
+def test_cpi_other_months_and_unchanged():
+    # 2023-02 economy release: January's value is recapped before February's.
+    text = "分月看，1月份全国居民消费价格同比上涨2.1%，2月份同比上涨1.0%。"
+    assert _yoy(text, 2, topic="居民消费价格") == ["2月份同比上涨1.0%"]
+    # 2022-06: a two-month recap is not the reference month; "上月为…" is an aside.
+    text = "4、5月份居民消费价格同比均上涨2.1%。6月份，全国居民消费价格同比上涨2.5%，上月为上涨2.1%，城市上涨2.5%。"
+    assert _yoy(text, 6, topic="居民消费价格") == ["全国居民消费价格同比上涨2.5%", "城市上涨2.5%"]
+    # 2023-06 CPI release: unchanged is a year-on-year change of 0.
+    text = "2023年6月份，全国居民消费价格同比持平。其中，城市持平，农村下降0.2%。"
+    assert _yoy(text, 6) == ["全国居民消费价格同比持平", "城市持平", "农村下降0.2%"]
 
 
 def test_economy_release_cpi_sentences_stay_in_cpi_paragraph():
-    # Wording of the NBS release of 2026-09-15 ("8月份国民经济…").
-    text = ("全国企业就业人员周平均工作时间为48.2小时。七、居民消费价格温和回升，工业生产者价格同比涨幅扩大8月份，"
+    # Wording of the NBS release of 2026-09-15 ("8月份国民经济…"); the heading is its own paragraph.
+    text = ("全国企业就业人员周平均工作时间为48.2小时。\n七、居民消费价格温和回升，工业生产者价格同比涨幅扩大\n8月份，"
             "全国居民消费价格（CPI）同比上涨0.8%，涨幅比上月扩大0.3个百分点；环比上涨0.4%。"
             "分类别看，食品烟酒及在外餐饮价格同比下降0.7%，衣着价格上涨1.3%。"
             "在食品烟酒及在外餐饮价格中，猪肉价格下降11.8%，鲜菜价格下降2.8%，粮食价格下降0.6%，鲜果价格下降0.5%。"
             "1—8月份，全国居民消费价格同比上涨0.9%。8月份，全国工业生产者出厂价格同比上涨3.8%。"
-            "其中，生活资料价格上涨1.0%。八、房地产开发投资同比下降5.0%，新建商品房销售价格同比下降2.0%。")
-    assert _yoy(text, topic="居民消费价格") == [
+            "其中，生活资料价格上涨1.0%。\n八、房地产开发投资同比下降5.0%，新建商品房销售价格同比下降2.0%。")
+    got = nbs.yoy_sentences(text, 8, topic="居民消费价格")
+    assert [c for x in got for c in x["yoy"]] == [
         "全国居民消费价格（CPI）同比上涨0.8%",
         "食品烟酒及在外餐饮价格同比下降0.7%", "衣着价格上涨1.3%",
         "猪肉价格下降11.8%", "鲜菜价格下降2.8%", "粮食价格下降0.6%", "鲜果价格下降0.5%",
     ]
+    assert got[0]["text"].startswith("8月份，全国居民消费价格")
 
 
 # ---- currency units proven by identities (build.UnitGraph)
@@ -292,6 +316,44 @@ def test_units_time_check_only_among_same_currency_figures():
     u = build.UnitGraph(s, DIC, ["2018"], META)
     assert build.ilo_variants(s, u, "AAA", "2018", DIC) == []
     assert build.oecd_variant(s, u, "AAA", "2018") is not None
+
+
+def _per_head(area, years, ppp, per_head):
+    """Population giving the stated household consumption per head with _wdi's totals."""
+    return [("population", area, y, ppp * 500 / v, "s") for y, v in zip(years, per_head)]
+
+
+def test_units_scale_error_singled_out_by_its_own_series():
+    # PRY BX:14043 2020: the hourly figure is 1/192 of its neighbours, the monthly one is in line.
+    years = ["2019", "2020", "2021"]
+    rows = [r for y in years for r in _wdi("AAA", y, 6000.0, 2500.0)] + _per_head("AAA", years, 2500.0, [100.0, 103.0, 113.0])
+    obs = []
+    for y, m, h in (("2019", 2_489_188.0, 15079.0), ("2020", 2_505_151.0, 78.482), ("2021", 2_584_029.0, 16570.0)):
+        obs += [Obs("ilo_monthly_mean@X:1", "AAA", y, m, "s", "T8:127 T9:133"), Obs("ilo_monthly_mean_usd@X:1", "AAA", y, m / 6000, "s"),
+                Obs("ilo_hourly_mean@X:1", "AAA", y, h, "s", "T8:127 T9:133"), Obs("ilo_hourly_mean_usd@X:1", "AAA", y, h / 6000, "s")]
+    s = _store(*rows, *obs)
+    u = build.UnitGraph(s, DIC, years, META)
+    assert [v.key for v in build.ilo_variants(s, u, "AAA", "2020", DIC)] == ["ilo_mean_monthly"]
+    assert [v.key for v in build.ilo_variants(s, u, "AAA", "2021", DIC)] == ["ilo_mean_hourly", "ilo_mean_monthly"]
+
+
+def test_history_breaks_at_level_shift_and_primary_switch_is_marked():
+    years = ["2021", "2022", "2023", "2024"]
+    rows = [r for y in years for r in _wdi("AAA", y, 1.0, 0.8)] + _per_head("AAA", years, 0.8, [100.0, 105.0, 110.0, 116.0])
+    obs = []
+    for y, m in zip(years, (1000.0, 1050.0, 1100.0, 1900.0)):  # 2023->2024: ×1.73 against ×1.05
+        obs += [Obs("ilo_monthly_mean@X:1", "AAA", y, m, "s", "T8:127 T9:133"), Obs("ilo_monthly_mean_usd@X:1", "AAA", y, m, "s")]
+    s = _store(*rows, *obs, Obs("gold_usd_oz", "WLD", "2021-01", 1800.0, "s"))
+    u = build.UnitGraph(s, DIC, years, META)
+    gold = {"annual": {y: {"usd_g": 60.0} for y in years}}
+    meta = {"AAA": {"is_economy": True, "name_en": "A"}}
+    pts = build.wage_gold_history(s, gold, meta, DIC, u)["AAA"]["points"]
+    assert [p[4] for p in pts] == [False, False, False, True] and "×/÷1.4" in pts[3][5]
+    assert "相邻年份的变化超出" in build.ilo_variants(s, u, "AAA", "2024", DIC)[0].caveat
+    recs = {"2023": {"wages": [{"role": None, "mrole": "primary", "series_id": "A", "label": "a", "source": "x"}]},
+            "2024": {"wages": [{"role": None, "mrole": "primary", "series_id": "B", "label": "b", "source": "y"}]}}
+    build.mark_switches(recs)
+    assert recs["2024"]["wages"][0]["mrole_switch"] == {"year": "2023", "label": "a", "source": "x"}
 
 
 def test_nbs_split_wage_releases():

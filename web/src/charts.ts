@@ -347,15 +347,24 @@ export function linesOption(opts: {
       axisPointer: { type: "line", lineStyle: { color: p.axis, width: 1 } },
       valueFormatter: (v: number) => (v == null ? "—" : opts.format(v)),
     },
-    series: opts.series.map((s) => ({
-      name: s.name,
-      type: "line",
-      showSymbol: false,
-      connectNulls: false,
-      lineStyle: { width: 2, color: p.series[s.colorIndex] },
-      itemStyle: { color: p.series[s.colorIndex] },
-      data: s.points,
-      emphasis: { focus: "series" },
-    })),
+    series: opts.series.map((s) => {
+      // A point with no neighbour to draw a line to (between series breaks) gets a marker,
+      // otherwise it would not be drawn at all.
+      const isolated = s.points.map(([, v], i) =>
+        v != null && (i === 0 || s.points[i - 1][1] == null) && (i === s.points.length - 1 || s.points[i + 1][1] == null));
+      return {
+        name: s.name,
+        type: "line",
+        showSymbol: isolated.some(Boolean),
+        showAllSymbol: true,
+        symbol: "circle",
+        symbolSize: (_v: unknown, params: { dataIndex: number }) => (isolated[params.dataIndex] ? 8 : 0),
+        connectNulls: false,
+        lineStyle: { width: 2, color: p.series[s.colorIndex] },
+        itemStyle: { color: p.series[s.colorIndex], borderColor: p.surface, borderWidth: 2 },
+        data: s.points,
+        emphasis: { focus: "series" },
+      };
+    }),
   };
 }

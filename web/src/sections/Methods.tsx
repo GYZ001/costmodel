@@ -30,8 +30,11 @@ function yearSpan(ys: string[]): string {
   return s.length === 1 ? s[0] : `${s[0]}–${s[s.length - 1]}（${s.length} 年）`;
 }
 
+// The branch the site and its dataset were built from (set by the Pages build, .github/workflows/pages.yml).
+const BRANCH: string = import.meta.env.VITE_DATA_BRANCH || "main";
+
 export function Methods({ ds }: { ds: Dataset }) {
-  const repo = "https://github.com/GYZ001/costmodel/blob/main/";
+  const repo = `https://github.com/GYZ001/costmodel/blob/${BRANCH}/`;
   return (
     <section className="block" id="method">
       <h2>方法与来源</h2>
@@ -48,14 +51,15 @@ export function Methods({ ds }: { ds: Dataset }) {
             <li>③ 购买力平价时薪 = 时薪 ÷ 居民消费 PPP = ① × ②（管道里对每条记录都做了这个恒等式校验）</li>
             <li>OECD 数据：时薪 = 全职当量平均年薪 ÷（全职雇员通常周工时 × 52）</li>
             <li>ILOSTAT 只有月薪的经济体：时薪 = 月薪 ÷（同一调查的每周实际工时 × 52 ÷ 12）；同一调查没有工时的，只用于月薪口径</li>
-            <li>中国：时薪 = 年工资 ÷ 12 ÷（企业就业人员周平均工作时间 × 52 ÷ 12），该年已公布月份的工时取平均</li>
+            <li>中国：时薪 = 年工资 ÷ 12 ÷（企业就业人员周平均工作时间 × 52 ÷ 12），工时取本项目存档的该年各月数值的平均（不少于 6 个月，否则不折算时薪）</li>
           </ul>
         </div>
         <div className="card">
           <h3>需要注意的口径差异</h3>
           <ul className="small" style={{ paddingLeft: 18, margin: "6px 0" }}>
             <li>平均工资被高收入者拉高；有中位数的经济体同时画出中位时薪（橙点）。</li>
-            <li>ILOSTAT 汇总各国官方来源（劳动力调查、企业调查、行政记录），口径因国而异。发布方对每条记录的注释（如只覆盖城镇、只含私营部门、税后、只含全职）原文显示在悬停提示和数据表里；覆盖范围受限的记录在标签上注明“覆盖范围有限”，排在全国性数据之后。</li>
+            <li>ILOSTAT 汇总各国官方来源（劳动力调查、企业调查、行政记录），口径因国而异。发布方对每条记录的注释（如只覆盖城镇、只含私营部门、税后、只含全职）原文显示在悬停提示和数据表里；注释表明只覆盖部分雇员的记录在标签上注明“覆盖范围有限”。
+              选用顺序：OECD → ILOSTAT 覆盖全国全体雇员的记录 → 国家统计机构自己的数据（覆盖范围按其原文说明）→ ILOSTAT 覆盖范围有限的记录。</li>
             <li>ILOSTAT 注明为“实际值”（按某基期价格）、不是平均或中位工资（如最低工资）、或时间单位与指标不符的记录，不参与计算。</li>
             <li>中国没有覆盖全体雇员的单一平均工资；国家统计局发布的城镇非私营单位、城镇私营单位、规模以上企业和农民工四种口径都列出（见“中美细看”），统计范围按其原文说明。</li>
             <li>“最低成本健康饮食”只覆盖食物，并且选的是最便宜的可得食物，不代表普通家庭的实际开销；住房、医疗、教育、社保等决定生活质量的大项不在食物篮子里，请结合“什么贵什么便宜”和购买力平价看。</li>
@@ -150,7 +154,8 @@ export function Methods({ ds }: { ds: Dataset }) {
         </div>
         <p className="note">
           快照 = 发布机构返回的原始字节，未做任何修改；SHA-256 可用于核对文件未被改动。
-          刷新方式：仓库 Actions 页面的 “data-refresh” 工作流每天自动运行，也可点击 “Run workflow” 手动运行。
+          刷新方式：在仓库 Actions 页面选择 “data-refresh”，点击 “Run workflow” 手动运行；工作流合并到默认分支后，还会每天 07:23（UTC）自动运行（GitHub 只按默认分支上的定时设置运行）。
+          原始文件链接指向构建本页的分支 {BRANCH}。
         </p>
       </div>
     </section>

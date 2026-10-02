@@ -52,10 +52,12 @@ export function wageCurrency(w: Wage, c: Country): string | null {
 export function wageNotes(w: Wage, view: View, c: Country, max = 0): string[] {
   const value = view === "hourly" ? `${money(w.hourly_lcu, wageCurrency(w, c))}/小时` : `${money(w.monthly_lcu, wageCurrency(w, c))}/月`;
   const caveat = max && w.caveat.length > max ? `${w.caveat.slice(0, max)}…` : w.caveat;
+  const sw = view === "hourly" ? w.role_switch : w.mrole_switch;
   return [
     `${wageLabel(w, view)}：${value}`,
     ...(view === "hourly" && w.hours_week ? [`工时：每周 ${w.hours_week.toFixed(1)} 小时（${w.method}）`] : []),
     w.source,
+    ...(sw ? [`注意：${sw.year} 年用的是另一序列（${sw.label}，${sw.source}），与上一年比较的变化含口径变化`] : []),
     ...(caveat ? [`口径注释：${caveat}`] : []),
   ];
 }

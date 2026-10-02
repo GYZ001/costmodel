@@ -12,10 +12,15 @@ export interface Wage {
   method: string;
   /** Notes that qualify the figure, verbatim from the publisher (ILOSTAT notes are in English). */
   caveat: string;
-  /** Geographical or institutional coverage limited (e.g. urban areas or private sector only). */
+  /** Coverage limited, as the publisher states (e.g. urban units, private sector, full-time workers only). */
   restricted: boolean;
   /** Currency the publisher states for the figure. */
   currency: string | null;
+  /** The publisher's series; a change between years is a change of concept or source. */
+  series_id: string;
+  /** Set on a primary figure whose series differs from the economy's previous year's primary one. */
+  role_switch: Switch | null;
+  mrole_switch: Switch | null;
   snapshots: string[];
   monthly_lcu: number | null;
   hourly_lcu: number | null;
@@ -27,6 +32,12 @@ export interface Wage {
   minutes_per_cohd_day: number | null;
   monthly_ppp: number | null;
   cohd_days_per_month: number | null;
+}
+
+export interface Switch {
+  year: string;
+  label: string;
+  source: string;
 }
 
 export type CohdKey = "total" | "staples" | "vegetables" | "fruits" | "animal" | "legumes" | "oils";
@@ -122,8 +133,8 @@ export interface Dataset {
   us_monthly: Record<"us_ahe_pns_sa" | "us_ahe_all_sa", [string, number, number, boolean][]>;
   us_items: Record<string, UsItem>;
   cn_hours_monthly: [string, number][];
-  /** [year, monthly wage in LCU, grams of gold, source line, series breaks before this point] */
-  wage_gold_history: Record<string, { label: string; points: [string, number, number, string, boolean][] }>;
+  /** [year, monthly wage in LCU, grams of gold, source line, series breaks before this point, why] */
+  wage_gold_history: Record<string, { label: string; points: [string, number, number, string, boolean, string][] }>;
   latest: {
     period: string;
     gold_usd_oz: number;

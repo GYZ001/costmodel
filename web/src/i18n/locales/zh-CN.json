@@ -124,6 +124,7 @@
  "d.cohd.missing_ppp_cost": "世界银行未发布该年按 PPP 计的健康饮食成本，无法核对其货币单位",
  "d.cohd.ppp_unproven": "健康饮食成本与购买力平价同一货币单位，但该年购买力平价未能证明与世界银行本币序列同一单位",
  "d.currency.conflict": "与世界银行本币序列相符的记录给出了不同的货币代码：{codes:enum}；OECD 数据因此只能通过 OECD 自身的购买力平价恒等关系对应，不能按货币代码对应",
+ "d.ext.break": "{publisher}注明该年这一序列的统计覆盖范围或方法有变化，该年与之前年份不能直接比较",
  "d.ext.carried": "没有 ILOSTAT 的换算值可核对其货币单位；与该序列 {year} 年（{prev:num}）相比变化 {r:factor}，超出 ×/÷{bound:d1}，不沿用货币单位",
  "d.ext.disagree": "{publisher}自己发布的该序列与 ILOSTAT 在 {year} 年不一致（{theirs:num} 对 {ilo:num}，相差超过 {tol:pct0}），因此不视为同一序列，不用于延续",
  "d.ext.match": "ILOSTAT 最新年份之后的数字取自{publisher}自己发布的这一序列；它与 ILOSTAT 在 {years:enum} 年的数字一致（最大相差 {worst:pct2}）",

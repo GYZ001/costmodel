@@ -14,6 +14,9 @@ listing by their official titles and saved as snapshots.
 
 Each release states the year's average and its increase on the previous year ("比上年增加
 N元"), so it also gives the previous year's figure; a year's own release is preferred.
+Where the sentence also gives growth "按可比口径" (on a comparable basis), NBS flags a
+change in the units covered that year (e.g. 2024: small and micro enterprises brought in
+by the fifth economic census): the year is marked as a break in the series.
 """
 from __future__ import annotations
 
@@ -31,7 +34,7 @@ WAGE_TITLE = re.compile(r"^(\d{4})年城镇单位就业人员年平均工资情�
 PRIVATE_TITLE = re.compile(r"^(\d{4})年城镇私营单位就业人员年平均工资\d+元$")
 # "全国城镇私营单位就业人员年平均工资为 X 元，比上年增加（减少） Y 元" - the wording varies
 # slightly by year ("为 68340 元" or "65237元"; optional footnote markers).
-PRIVATE_RE = re.compile(r"全国城镇私营单位就业人员年平均工资\s*为?\s*(\d+)\s*元\s*，\s*比上年(增加|减少)\s*(\d+)\s*元")
+PRIVATE_RE = re.compile(r"全国城镇私营单位就业人员年平均工资\s*为?\s*(\d+)\s*元\s*，\s*比上年(增加|减少)\s*(\d+)\s*元([^。]*)。")
 # Invisible formatting characters NBS pages sometimes carry inside numbers.
 INVISIBLE_RE = re.compile("[­​-‍⁠﻿]|&shy;")
 PAGES = 12  # listing pages scanned for new releases; older ones stay in the archive
@@ -78,18 +81,22 @@ def collect(f: Fetcher) -> list[Obs]:
     snaps += [(snap, _title_of(snap)) for snap in f.committed("nbs/release/") if snap.key not in seen]
     direct: dict[str, Obs] = {}
     implied: dict[str, Obs] = {}
+    breaks: list[Obs] = []
     for snap, title in snaps:
         if not is_wage_release(title):
             continue
-        year, value, prev = parse_release(snap.read().decode("utf-8", "replace"), title, snap.key)
+        year, value, prev, coverage_change = parse_release(snap.read().decode("utf-8", "replace"), title, snap.key)
         direct[str(year)] = Obs(SERIES, "CHN", str(year), value / 12, snap.key, PUBLISHER)
         implied[str(year - 1)] = Obs(SERIES, "CHN", str(year - 1), prev / 12, snap.key, PUBLISHER)
+        if coverage_change:
+            breaks.append(Obs(SERIES + "__break", "CHN", str(year), 1.0, snap.key, PUBLISHER))
     # A year's own release first; the next year's statement of it only where there is none.
-    return list({**implied, **direct}.values())
+    return list({**implied, **direct}.values()) + breaks
 
 
-def parse_release(html: str, title: str, snapshot: str) -> tuple[int, int, int]:
-    """(year, the year's annual average, the previous year's annual average)."""
+def parse_release(html: str, title: str, snapshot: str) -> tuple[int, int, int, bool]:
+    """(year, the year's annual average, the previous year's annual average, whether NBS
+    flags a change of coverage with a comparable-basis growth rate)."""
     m = WAGE_TITLE.match(title) or PRIVATE_TITLE.match(title)
     if not m:
         raise ValueError(f"{snapshot}: not a wage release: {title!r}")
@@ -97,7 +104,7 @@ def parse_release(html: str, title: str, snapshot: str) -> tuple[int, int, int]:
     if not hit:
         raise ValueError(f"{snapshot}: no urban private-unit average wage sentence")
     value, up, change = int(hit.group(1)), hit.group(2), int(hit.group(3))
-    return int(m.group(1)), value, value - change if up == "增加" else value + change
+    return int(m.group(1)), value, value - change if up == "增加" else value + change, "可比口径" in hit.group(4)
 
 
 def _title_of(snap: Snapshot) -> str:

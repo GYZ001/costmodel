@@ -194,6 +194,7 @@ class IloRecord:
     # the publisher's source id (catalog src.<id>) and how the series was matched.
     publisher: str | None = None
     match: Msg | None = None
+    break_note: Msg | None = None  # the publisher's own statement of a break in the series that year
 
     @property
     def usable(self) -> bool:
@@ -498,8 +499,8 @@ class UnitGraph:
         for ext in self.store.series_names(area, "ext_ilo_"):
             series = ext[len("ext_"):]
             base = series.split("@", 1)[0]
-            if base == "ilo_weekly_hours":
-                continue  # hours: see _hours
+            if base == "ilo_weekly_hours" or ext.endswith("__break"):
+                continue  # hours: see _hours; breaks: below
             theirs = {y: o for y, o in self.store.series(ext, area).items()}
             ours = {y: r for y, recs in out.items() for r in recs if r.series == series}
             common = sorted(set(theirs) & set(ours))
@@ -525,6 +526,9 @@ class UnitGraph:
                 # The notes travel with the observation (template.obs.note): same survey, same concept.
                 rec = ilo_record(self.store, series, Obs(series, src, y, o.value, o.snapshot, template.obs.note), self.ilo_dic)
                 rec.publisher, rec.match = publisher, match
+                if self.store.get(ext + "__break", area, y):
+                    rec.break_in_series = True
+                    rec.break_note = M("d.ext.break", publisher=M(f"src.{publisher}.publisher"))
                 out[y].append(rec)
 
     # ---- hours
@@ -1073,7 +1077,7 @@ def ilo_variants(store: Store, units: UnitGraph, area: str, year: str, ilo_dic: 
         mean = chosen.get(("mean", r.unit))
         if r.concept == "median" and mean is not None and mean.source == r.source and r.obs.value > mean.obs.value:
             out.append(M("d.cav.median_above_mean", median=r.obs.value, mean=mean.obs.value))
-        return out + ([r.match] if r.match else []) + ilo_notes(r, ilo_dic)
+        return out + ([r.break_note] if r.break_note else []) + ([r.match] if r.match else []) + ilo_notes(r, ilo_dic)
 
     def ids(r: IloRecord) -> dict:
         return {"source_id": f"ILOSTAT {r.source}", "series_key": f"ILOSTAT {r.series}",
@@ -1391,7 +1395,7 @@ def wage_gold_history(store: Store, gold: dict, meta: dict, ilo_dic: dict, units
             for c in sorted(cands[chosen], key=lambda c: c["y"]):
                 r = c["rec"]
                 if r is not None:
-                    why = (M("d.hist.ilo_break") if r.break_in_series else
+                    why = (r.break_note or M("d.hist.ilo_break") if r.break_in_series else
                            M("d.hist.ilo_notes_changed") if prev is not None and r.signature != prev["rec"].signature else None)
                     src = M("d.src.ext", source=r.source_name, publisher=M(f"src.{r.publisher}.publisher")) if r.publisher \
                         else f"ILOSTAT · {r.source_name}"

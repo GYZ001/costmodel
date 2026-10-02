@@ -130,6 +130,7 @@
  "d.cohd.missing_ppp_cost": "The World Bank has not published the year's diet cost in PPP terms, so its currency unit cannot be checked",
  "d.cohd.ppp_unproven": "The diet cost is in the same currency unit as the PPP, but the year's PPP could not be shown to be in the same unit as the World Bank's local-currency series",
  "d.currency.conflict": "Records matching the World Bank’s local-currency series give different currency codes: {codes:enum}; OECD figures are then matched only through OECD’s own PPP identity, not by currency code",
+ "d.ext.break": "{publisher} notes a change in the series’ coverage or method this year, so this year is not directly comparable with earlier years",
  "d.ext.carried": "there is no ILOSTAT conversion to check its currency unit against; compared with the same series in {year} ({prev:num}) it moved {r:factor}, beyond ×/÷{bound:d1}, so the unit is not carried over",
  "d.ext.disagree": "{publisher}’s own release of this series differs from ILOSTAT’s in {year} ({theirs:num} against {ilo:num}, more than {tol:pct0}), so it is not taken to be the same series and does not continue it",
  "d.ext.match": "Years after ILOSTAT’s latest come from {publisher}’s own release of this series, which equals ILOSTAT’s figures for {years:enum} (largest difference {worst:pct2})",

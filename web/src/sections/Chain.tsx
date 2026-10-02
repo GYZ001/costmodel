@@ -1,5 +1,5 @@
 import type { Scope } from "../App";
-import { countryName, fmt, minutes, money, primaryWage, sig } from "../lib";
+import { countryName, fmt, minutes, money, primaryWage, sig, wageCurrency, wageLabel } from "../lib";
 
 export function ChainSection({ ds, year, view, picks }: Scope) {
   const hourly = view === "hourly";
@@ -11,9 +11,9 @@ export function ChainSection({ ds, year, view, picks }: Scope) {
     const lcu = hourly ? w?.hourly_lcu : w?.monthly_lcu;
     return { iso, c, row, w, lcu };
   });
-  const rows = all.flatMap((r) => (r.c && r.row && r.w && r.lcu ? [{ ...r, c: r.c, row: r.row, w: r.w, lcu: r.lcu }] : []));
+  const rows = all.flatMap((r) => (r.c && r.row && r.w && r.lcu ? [{ ...r, c: r.c, row: r.row, w: r.w, lcu: r.lcu, cur: wageCurrency(r.w, r.c) }] : []));
   const missing = all.filter((r) => r.c && !rows.some((x) => x.iso === r.iso)).map((r) => countryName(r.c));
-  const ex = rows[0];
+  const ex = rows.find((r) => r.row.gold_lcu_g && r.row.cohd.total);
   const goldPer = (w: (typeof rows)[number]["w"]) => (hourly ? w.hourly_gold_g : w.monthly_gold_g);
   const pppPer = (w: (typeof rows)[number]["w"]) => (hourly ? w.hourly_ppp : w.monthly_ppp);
 
@@ -30,7 +30,7 @@ export function ChainSection({ ds, year, view, picks }: Scope) {
             <div className="k">① 劳动 → 黄金（{countryName(ex.c)}，{year} 年）</div>
             <div className="v">{sig(goldPer(ex.w))} 克/{unit}</div>
             <div className="f">
-              {hourly ? "时薪" : "月薪"} {money(ex.lcu, ex.c.currency)} ÷ 当地金价 {money(ex.row.gold_lcu_g, ex.c.currency)}/克
+              {hourly ? "时薪" : "月薪"} {money(ex.lcu, ex.cur)} ÷ 当地金价 {money(ex.row.gold_lcu_g, ex.cur)}/克
             </div>
           </div>
           <div className="arrow" aria-hidden>→</div>
@@ -38,7 +38,7 @@ export function ChainSection({ ds, year, view, picks }: Scope) {
             <div className="k">② 黄金 → 商品</div>
             <div className="v">1 克 ≈ {sig(ex.row.cohd_days_per_g)} 天健康饮食</div>
             <div className="f">
-              金价 {money(ex.row.gold_lcu_g, ex.c.currency)}/克 ÷ 一人一天最低成本健康饮食 {money(ex.row.cohd.total, ex.c.currency)}
+              金价 {money(ex.row.gold_lcu_g, ex.cur)}/克 ÷ 一人一天最低成本健康饮食 {money(ex.row.cohd.total, ex.cur)}
             </div>
           </div>
           <div className="arrow" aria-hidden>→</div>
@@ -77,12 +77,12 @@ export function ChainSection({ ds, year, view, picks }: Scope) {
               </tr>
             </thead>
             <tbody>
-              {rows.map(({ iso, c, row, w, lcu }) => (
+              {rows.map(({ iso, c, row, w, lcu, cur }) => (
                 <tr key={iso}>
                   <td className="nw">{countryName(c)}</td>
-                  <td className="l small ink2">{w.label}</td>
-                  <td>{money(lcu, c.currency)}</td>
-                  <td>{fmt(row.gold_lcu_g, row.gold_lcu_g > 1000 ? 0 : 1)}</td>
+                  <td className="l small ink2" title={w.caveat || undefined}>{wageLabel(w, view)}</td>
+                  <td>{money(lcu, cur)}</td>
+                  <td>{fmt(row.gold_lcu_g, (row.gold_lcu_g ?? 0) > 1000 ? 0 : 1)}</td>
                   <td>{sig(goldPer(w))}</td>
                   <td>{sig(row.cohd_days_per_g)}</td>
                   <td>{row.cohd.total ? sig(lcu / row.cohd.total) : "—"}</td>
@@ -95,7 +95,8 @@ export function ChainSection({ ds, year, view, picks }: Scope) {
         </div>
         <p className="note">
           {missing.length > 0 && <>{year} 年没有同口径{hourly ? "时薪" : "月薪"}数据：{missing.join("、")}。</>}
-          “健康饮食”指世界银行与联合国粮农组织测算的一人一天“最低成本健康饮食”（按各国膳食指南、用当地最便宜的可得食物组合），是目前覆盖国家最多、口径统一的官方食物篮子。
+          “健康饮食”指世界银行“Food Prices for Nutrition”数据库中一人一天的“最低成本健康饮食”：用当地最便宜的可得食物，凑够一份包含六类食物的健康饮食所需的花费。
+          “—”表示该项的输入未能证明与世界银行本币序列同一货币单位，或缺少数据（原因见“方法与来源”的剔除记录）。
           国际元＝按居民消费购买力平价换算、以美国价格为基准的购买力。中国的工资口径与工时说明见“中美细看”。
         </p>
       </div>

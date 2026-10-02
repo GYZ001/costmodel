@@ -1,7 +1,8 @@
 """World Bank Commodity Price Data (the "Pink Sheet"): monthly gold price.
 
-Gold here is the World Bank's series "Gold (UK), 99.5% fine, London afternoon
-fixing, average of daily rates", in US$ per troy ounce.  The download URL of the
+Gold is the World Bank's monthly series in US$ per troy ounce.  Per the workbook's
+"Description" sheet it is the spot average of daily rates from June 2025, and before
+that the London afternoon fixing (99.5% fine), average of daily rates.  The download URL of the
 workbook changes with every release, so it is read from the World Bank's
 commodity-markets landing page each run.
 """
@@ -39,8 +40,8 @@ def parse(xlsx: bytes, snapshot: str) -> list[Obs]:
     hdr_idx = next(i for i, r in enumerate(rows) if r and any(_is_gold(c) for c in r))
     col = next(j for j, c in enumerate(rows[hdr_idx]) if _is_gold(c))
     unit = str(rows[hdr_idx + 1][col] or "")
-    if "$/troy oz" not in unit.replace(" ", "").replace("($/troyoz)", "$/troy oz") and "troy" not in unit:
-        raise ValueError(f"unexpected gold unit {unit!r}")
+    if unit.replace(" ", "") != "($/troyoz)":
+        raise ValueError(f"unexpected gold unit {unit!r} (expected '($/troy oz)')")
     out = []
     for r in rows[hdr_idx + 1 :]:
         m = MONTH_RE.match(str(r[0] or "").strip())

@@ -38,7 +38,9 @@ export function GoldRuler({ ds, picks, slotOf }: Scope) {
       .map((iso) => ({
         iso,
         name: countryName(ds.countries[iso]),
-        points: ds.wage_gold_history[iso].points.map(([y, , g]) => [`${y}`, g] as [string, number]),
+        // A null point before a series break stops the line from bridging two different concepts.
+        points: ds.wage_gold_history[iso].points.flatMap(([y, , g, , brk]) =>
+          brk ? [[`${Number(y) - 1}-07`, null], [`${y}`, g]] : [[`${y}`, g]]) as [string, number | null][],
         colorIndex: slotOf[iso],
       }));
   }, [ds, picks, slotOf]);
@@ -59,7 +61,7 @@ export function GoldRuler({ ds, picks, slotOf }: Scope) {
       <div className="callout">
         {first && peak && last && (
           <>
-            美国这一口径的时薪：{first[0].slice(0, 4)} 年约合 <strong>{sig(first[2], 2)} 克</strong>黄金/小时，
+            美国这一口径的时薪：{first[0]} 约合 <strong>{sig(first[2], 2)} 克</strong>黄金/小时，
             {peak[0].slice(0, 7)} 最高 <strong>{sig(peak[2], 2)} 克</strong>，{last[0]} 只有 <strong>{sig(last[2], 2)} 克</strong>；
             同期美元时薪从 {fmt(first[1], 2)} 美元涨到 {fmt(last[1], 2)} 美元。克数的起落主要反映金价，而不是生活水平。
           </>
@@ -78,7 +80,7 @@ export function GoldRuler({ ds, picks, slotOf }: Scope) {
         <div className="card">
           <h3>同期金价（美元/盎司，对数刻度）</h3>
           <Chart option={goldOpt} height={320} ariaLabel="国际金价月均" />
-          <p className="note">世界银行 Pink Sheet 月均价。两张图分开画，避免双纵轴制造虚假的相关。</p>
+          <p className="note">世界银行 Pink Sheet 月均价（按工作簿说明，2025 年 6 月起为现货日价均值，此前为伦敦下午定盘价均值）。两张图分开画，避免双纵轴制造虚假的相关。</p>
         </div>
       </div>
       <div className="card">
@@ -91,6 +93,7 @@ export function GoldRuler({ ds, picks, slotOf }: Scope) {
         <Chart option={histOpt} height={360} ariaLabel="重点经济体月薪折合黄金克数" />
         <p className="note">
           每年的月薪用当年平均金价和平均汇率折算。口径：{hist.map((s) => `${s.name}＝${ds.wage_gold_history[s.iso].label}`).join("；")}。
+          发布方注明统计口径或覆盖范围变化（如 ILOSTAT 的“Break in series”、国家统计局的“可比口径”）的年份，折线在那里断开，不把两种口径连成一条线。
           {noHistory.length > 0 && <>没有可核对的历年月薪序列：{noHistory.join("、")}。</>}
         </p>
       </div>

@@ -32,13 +32,16 @@ const SAID = {
 type Release = Dataset["cn_cpi_yoy"][number];
 
 /** "X价格(同比)?上涨/下降N%" where X starts a clause, so "非食品价格" is not read as "食品价格".
- *  Releases are searched in the order given (the CPI release before the economy release). */
+ *  Only clauses the pipeline found to report this month's year-on-year change are searched;
+ *  releases are searched in the order given (the CPI release before the economy release). */
 function findChange(releases: Release[], item: string): { dir: string; value: number; sentence: string; release: Release } | null {
-  const rx = new RegExp(`(?:^|[，；、：。]|其中)${item}价格(?:同比)?(上涨|下降)([\\d.]+)%`);
+  const rx = new RegExp(`(?:^|其中)${item}价格(?:同比)?(上涨|下降)([\\d.]+)%`);
   for (const release of releases) {
-    for (const sentence of release.sentences) {
-      const m = sentence.match(rx);
-      if (m) return { dir: m[1], value: Number(m[2]), sentence, release };
+    for (const s of release.sentences) {
+      for (const clause of s.yoy) {
+        const m = clause.match(rx);
+        if (m) return { dir: m[1], value: Number(m[2]), sentence: s.text, release };
+      }
     }
   }
   return null;
@@ -54,10 +57,9 @@ export function Claims({ ds }: { ds: Dataset }) {
   const cny = ds.fx_recent_ecb.CHN ?? [];
   const cnyLast = cny[cny.length - 1];
   const cn = (L?.cn ?? []).filter((r) => r.wage_year === SAID.cnWageYear);
-  const cnOf = (series: string, basis: "statutory" | "actual") => cn.find((r) => r.series === series && r.basis === basis);
-  const np = { st: cnOf("cn_wage_nonprivate", "statutory"), ac: cnOf("cn_wage_nonprivate", "actual") };
-  const pv = { st: cnOf("cn_wage_private", "statutory"), ac: cnOf("cn_wage_private", "actual") };
-  const hoursMonths = ds.cn_hours_monthly.filter(([p]) => p.startsWith(SAID.cnWageYear));
+  const cnOf = (series: string, basis: "assumed" | "actual") => cn.find((r) => r.series === series && r.basis === basis);
+  const np = { st: cnOf("cn_wage_nonprivate", "assumed"), ac: cnOf("cn_wage_nonprivate", "actual") };
+  const pv = { st: cnOf("cn_wage_private", "assumed"), ac: cnOf("cn_wage_private", "actual") };
   const icp = ds.icp2021_pli_us.CHN;
 
   // Latest year in which both the US and China have an hourly wage and every price measure.
@@ -128,25 +130,30 @@ export function Claims({ ds }: { ds: Dataset }) {
     claims.push({
       said: "按 8 小时 × 250 天 = 2,000 小时折算：非私营约 64.7 元/小时，私营约 35.8 元/小时",
       verdict: "mid",
-      label: np.ac ? "算术对，工时偏少" : "算术对",
-      why: <>{fmt(np.st.annual, 0)} ÷ 2,000 = {fmt(np.st.hourly, 1)}，{fmt(pv.st.annual, 0)} ÷ 2,000 = {fmt(pv.st.hourly, 1)}。2,000 小时是法定标准工时。
-        {np.ac && pv.ac && weekly && <> 国家统计局月度劳动力调查的“企业就业人员周平均工作时间”，{SAID.cnWageYear} 年有发布的 {hoursMonths.length} 个月平均为 {fmt(weekly, 1)} 小时，
-          折合一年约 {fmt(np.ac.hours_year, 0)} 小时；按实际工时算，非私营约 {fmt(np.ac.hourly, 1)} 元/小时、私营约 {fmt(pv.ac.hourly, 1)} 元/小时，比按 2,000 小时算低 {fmt((1 - 2000 / np.ac.hours_year) * 100, 0)}%。
+      label: np.ac && np.ac.hours_year > 2000 ? "算术对，工时偏少" : "算术对",
+      why: <>{fmt(np.st.annual, 0)} ÷ 2,000 = {fmt(np.st.hourly, 1)}，{fmt(pv.st.annual, 0)} ÷ 2,000 = {fmt(pv.st.hourly, 1)}。2,000 小时是原文采用的折算假设，本项目没有存档关于法定年工作日的文件，不判断它是否为法定标准。
+        {np.ac && pv.ac && weekly && <> 国家统计局月度劳动力调查的“企业就业人员周平均工作时间”，{SAID.cnWageYear} 年有发布的 {np.ac.hours_months?.length ?? 0} 个月平均为 {fmt(weekly, 1)} 小时，
+          折合一年约 {fmt(np.ac.hours_year, 0)} 小时；按调查工时算，非私营约 {fmt(np.ac.hourly, 1)} 元/小时、私营约 {fmt(pv.ac.hourly, 1)} 元/小时，
+          比按 2,000 小时算{np.ac.hours_year > 2000 ? "低" : "高"} {fmt(Math.abs(1 - 2000 / np.ac.hours_year) * 100, 0)}%。
           （该工时是全部企业就业人员的平均，并非分别对应非私营、私营单位。）</>}</>,
     });
   }
 
   if (L && cnyLast && np.st && pv.st) {
     const atSpot = spotG * cnyLast[1];
+    // "约 950" is stated to the nearest 10 yuan, so it is consistent within ±5 yuan.
+    const consistent = Math.abs(SAID.cnyPerGram - atSpot) <= 5;
+    const nearerMonthly = Math.abs(SAID.cnyPerGram - L.gold_cny_g) < Math.abs(SAID.cnyPerGram - atSpot);
     const ratioSt = np.st.gold_g_per_hour / L.us_gold_g_per_hour;
     claims.push({
       said: `1 克黄金在中国约 ${SAID.cnyPerGram} 元，所以中国非私营约 0.068 克/小时、私营约 0.038 克/小时，以美国为 1 分别为 0.24 和 0.13`,
-      verdict: "mid",
-      label: "与文中美元金价不自洽",
-      why: <>按文中 {fmt(spotG, 2)} 美元/克和 {cnyLast[0]} 人民币月均汇率 {fmt(cnyLast[1], 3)}（欧洲央行参考汇率交叉折算），应约 <strong>{fmt(atSpot, 0)} 元/克</strong>；
-        {SAID.cnyPerGram} 元更接近 {L.period} 月均金价折算的 {fmt(L.gold_cny_g, 0)} 元/克。美国用一个金价、中国用另一个金价，比值就带进了约 {fmt(Math.abs(SAID.cnyPerGram / atSpot - 1) * 100, 0)}% 的偏差。
+      verdict: consistent ? "ok" : "mid",
+      label: consistent ? "与文中金价相符" : "与文中美元金价不自洽",
+      why: <>按文中 {fmt(spotG, 2)} 美元/克和 {cnyLast[0]} 人民币月均汇率 {fmt(cnyLast[1], 3)}（欧洲央行参考汇率交叉折算），应约 <strong>{fmt(atSpot, 0)} 元/克</strong>
+        {consistent ? "，与约 950 元相符。" : <>，与约 950 元相差 {fmt(Math.abs(SAID.cnyPerGram / atSpot - 1) * 100, 0)}%
+          {nearerMonthly ? `；950 元更接近 ${L.period} 月均金价折算的 ${fmt(L.gold_cny_g, 0)} 元/克` : ""}。美国用一个金价、中国用另一个金价，两国的比值就带进了这一偏差。</>}
         两边统一用 {L.period} 的金价和汇率：美国 {sig(L.us_gold_g_per_hour, 3)} 克/小时，中国非私营（2,000 小时）{sig(np.st.gold_g_per_hour, 2)} 克/小时，比值 {fmt(ratioSt, 2)}；
-        按实际工时为 {np.ac ? fmt(np.ac.gold_g_per_hour / L.us_gold_g_per_hour, 2) : "—"}。这个比值只取决于汇率，与金价无关；另外中国用的是 {SAID.cnWageYear} 年全年工资，美国是 {L.period} 当月工资。</>,
+        按调查工时为 {np.ac ? fmt(np.ac.gold_g_per_hour / L.us_gold_g_per_hour, 2) : "—"}。只要两边用同一金价，这个比值就只取决于汇率；另外中国用的是 {SAID.cnWageYear} 年全年工资，美国是 {L.period} 当月工资。</>,
     });
   }
 
@@ -169,27 +176,39 @@ export function Claims({ ds }: { ds: Dataset }) {
     const verdict: Verdict = lower.length === items.length ? "ok" : lower.length === 0 ? "bad" : "mid";
     const r21 = cohdRatio("2021");
     const rLast = cohdLastYear ? cohdRatio(cohdLastYear) : null;
+    const cy = (y: string) => ds.countries.CHN?.years[y];
+    const uy = (y: string) => ds.countries.USA?.years[y];
+    const chg = (a?: number | null, b?: number | null) => (a && b ? (b / a - 1) * 100 : null);
+    const cnChg = cohdLastYear ? chg(cy("2021")?.cohd.total, cy(cohdLastYear)?.cohd.total) : null;
+    const usChg = cohdLastYear ? chg(uy("2021")?.cohd.total, uy(cohdLastYear)?.cohd.total) : null;
+    const signed = (x: number | null) => (x == null ? "—" : `${x >= 0 ? "+" : ""}${fmt(x, 1)}%`);
     claims.push({
       said: "中国粮食、蔬菜、鸡蛋、猪肉等价格通常明显低于美国",
       verdict,
       label: verdict === "ok" ? "2021 年基准下成立" : verdict === "bad" ? "2021 年基准下不成立" : "2021 年基准下只部分成立",
       why: <>世界银行 ICP 2021 按统一规格比价、按市场汇率换算（美国 = 1）：{items.map((x) => `${x.icpName} ${fmt(icp[x.key], 2)}`).join("，")}；
         食品与非酒精饮料整体 {fmt(icp.food_nonalc, 2)}。{lower.length > 0 && lower.length < items.length && <>低于美国的只有{lower.map((x) => x.name).join("、")}。</>}
-        {r21 != null && rLast != null && cohdLastYear !== "2021" && <> 2021 年之后相对价格有变化：世界银行“一人一天最低成本健康饮食”（只挑最便宜的健康食物），中国 ÷ 美国（按当年汇率）从 2021 年的 {fmt(r21, 2)} 变为 {cohdLastYear} 年的 {fmt(rLast, 2)}。
-          这说明最便宜的那组食物在中国相对变便宜了；但 ICP 没有 2021 年之后的逐项比价，今天各类食品的确切价差本项目给不出。</>}</>,
+        {r21 != null && rLast != null && cohdLastYear !== "2021" && <> 2021 年之后的变化：世界银行公布的一人一天最低成本健康饮食（本币），2021 年到 {cohdLastYear} 年中国 {signed(cnChg)}、美国 {signed(usChg)}；
+          人民币年均汇率从 {fmt(cy("2021")?.fx, 3)} 变为 {fmt(cy(cohdLastYear)?.fx, 3)} 元/美元。两者合起来，按当年汇率折算的中国 ÷ 美国从 {fmt(r21, 2)} 变为 {fmt(rLast, 2)}。
+          存档数据里只有 2021 年有六类食物的分项，其他年份只有总额；ICP 也没有 2021 年之后的逐项比价，所以今天各类食品的确切价差本项目给不出。</>}</>,
     });
   }
 
   if (ratio && cmpYear && icp) {
     const compresses = ratio.diet < ratio.gold;
+    const servicesFurther = ratio.ppp < ratio.diet;
+    const food = icp.food_nonalc;
     claims.push({
       said: "美国房租、医疗、餐饮等服务很贵，而超市属于商品消费，所以“黄金购买力”会把两国差距压缩不少",
       verdict: "mid",
       label: compresses ? "压缩多少取决于买什么；理由不对" : "按健康饮食成本没有压缩",
       why: <>{cmpYear} 年（美国：{usW!.label}；中国：{cnW!.label}）美国时薪是中国的：按黄金克数 <strong>{fmt(ratio.gold, 1)} 倍</strong>，
         按“一人一天最低成本健康饮食”算 <strong>{fmt(ratio.diet, 1)} 倍</strong>，按全部居民消费的购买力平价算 <strong>{fmt(ratio.ppp, 1)} 倍</strong>。
-        只看食物时，压缩程度取决于买什么：只挑最便宜的健康食物，{compresses ? "差距明显缩小" : "差距没有缩小"}；按 ICP 2021 全部食品的平均价格，中国是美国的 {fmt(icp.food_nonalc, 2)} 倍，并不更便宜。
-        原文的理由也不对：“美国服务贵”（ICP 2021，美国 = 1：中国住房 {fmt(icp.housing, 2)}、医疗 {fmt(icp.health, 2)}、餐饮住宿 {fmt(icp.restaurants_hotels, 2)}）解释的是算上服务之后差距进一步缩小，而超市恰恰不含服务。</>,
+        只看食物时，结果取决于买什么：只挑最便宜的健康食物，差距{compresses ? `从 ${fmt(ratio.gold, 1)} 倍缩到 ${fmt(ratio.diet, 1)} 倍` : "没有缩小"}；
+        按 ICP 2021 全部食品的平均价格，中国是美国的 {fmt(food, 2)} 倍{food != null && food < 1 ? `（便宜 ${fmt((1 - food) * 100, 0)}%）` : "（并不更便宜）"}。
+        原文的理由是美国房租、医疗等服务贵（ICP 2021，美国 = 1：中国住房 {fmt(icp.housing, 2)}、医疗 {fmt(icp.health, 2)}、餐饮住宿 {fmt(icp.restaurants_hotels, 2)}），
+        但超市恰恰不含服务，这个理由与“超市比价压缩差距”不相干
+        {servicesFurther ? `；服务价差体现在把全部消费算进来之后，差距进一步缩到 ${fmt(ratio.ppp, 1)} 倍` : ""}。</>,
     });
   }
 
@@ -242,9 +261,9 @@ export function Claims({ ds }: { ds: Dataset }) {
     claims.push({
       said: "美国劳动者的“黄金收入优势”会被美国较高的物价部分抵消，但不会完全抵消",
       verdict: partly ? "ok" : "mid",
-      label: partly ? "属实" : "需看数据",
-      why: <>{cmpYear} 年：按黄金克数美国时薪是中国的 {fmt(ratio.gold, 1)} 倍，扣除两国居民消费物价差异后（购买力平价）是 {fmt(ratio.ppp, 1)} 倍
-        {partly ? "——抵消了一大半，但美国仍明显更高。" : "。"}</>,
+      label: partly ? "属实" : ratio.ppp <= 1 ? "被完全抵消" : "没有被抵消",
+      why: <>{cmpYear} 年：按黄金克数美国时薪是中国的 {fmt(ratio.gold, 1)} 倍，扣除两国居民消费物价差异后（购买力平价）是 {fmt(ratio.ppp, 1)} 倍。
+        {partly ? "差距缩小了，但没有消失。" : ""}</>,
     });
   }
 

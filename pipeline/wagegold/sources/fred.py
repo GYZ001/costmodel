@@ -1,9 +1,9 @@
 """FRED (Federal Reserve Bank of St. Louis) CSV downloads.
 
-Used for long history that the BLS API cannot return in one request
-(production & nonsupervisory average hourly earnings since 1964) and for
-Federal Reserve H.10 monthly exchange rates as an independent FX cross-check.
-FRED republishes these series unchanged from BLS and the Federal Reserve Board.
+Used only for cross-checks: FRED's republication of BLS average hourly earnings
+(checked against the BLS API) and the Federal Reserve H.10 monthly exchange rates
+(checked against the ECB reference rates).  Nothing from FRED enters a computed
+figure, so FRED series are stored under their own keys.
 """
 from __future__ import annotations
 
@@ -18,7 +18,7 @@ URL = "https://fred.stlouisfed.org/graph/fredgraph.csv?id={id}"
 
 # FRED id -> (series, area, invert).  H.10 quotes some currencies as US$ per unit.
 SERIES = {
-    "AHETPI": ("us_ahe_pns_sa", "USA", False),
+    "AHETPI": ("us_ahe_pns_sa_fred", "USA", False),
     "CES0500000003": ("us_ahe_all_sa_fred", "USA", False),
     "EXCHUS": ("fx_lcu_usd_h10", "CHN", False),
     "EXJPUS": ("fx_lcu_usd_h10", "JPN", False),

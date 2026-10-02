@@ -63,7 +63,9 @@ export default function App({ ds }: { ds: Dataset }) {
         .map(([, c]) => {
           const ys = wageYears(c, view);
           if (view === "hourly" && wageYears(c, "monthly").includes(year)) return `${countryName(c)}（该年无同口径时薪，可切换“按月薪”）`;
-          return `${countryName(c)}${ys.length ? `（最近 ${ys[0]} 年）` : "（无可核对数据）"}`;
+          if (ys.length) return `${countryName(c)}（最近 ${ys[0]} 年）`;
+          const ms = view === "hourly" ? wageYears(c, "monthly") : [];
+          return `${countryName(c)}${ms.length ? `（无同口径时薪；月薪最近 ${ms[0]} 年）` : "（无可核对工资数据）"}`;
         }),
     [ds, group, picks, view, year],
   );

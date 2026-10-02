@@ -105,22 +105,38 @@ def test_nbs_rejects_inconsistent_month():
     assert _raises(f"<p>2025/10/20 10:00</p><p>8 月份，全国城镇调查失业率为 5.2% 。{hours}</p>", "前三季度经济运行")
 
 
+def _yoy(text, topic=None):
+    return [c for x in nbs.yoy_sentences(text, topic) for c in x["yoy"]]
+
+
 def test_cpi_yoy_sentences_follow_stated_basis():
     # Wording and spacing as on the NBS page for August 2026.
     html = ('<div class="header">导航 价格 同比 1.0%。</div><div class="txt-content">'
             "<p>2026 年 8 月份，全国居民消费价格同比上涨 0.8% 。其中，城市上涨 0.8% ，农村上涨 0.7% ；食品价格下降 1.4% ，非食品价格上涨 1.2% 。"
-            " 1 — 8 月平均，全国居民消费价格比上年同期上涨 0.9% 。 8 月份，全国居民消费价格环比上涨 0.4% 。"
+            " 1\u00ad\u00ad — 8 月平均，全国居民消费价格比上年同期上涨 0.9% 。 8 月份，全国居民消费价格环比上涨 0.4% 。"
             "其中，城市上涨 0.4% ；食品价格上涨 0.4% ，非食品价格上涨 0.3% 。</p>"
             "<p>一、各类商品及服务价格同比变动情况 8 月份，食品烟酒及在外餐饮类价格同比下降 0.7% 。"
             "食品中，畜肉类价格下降 5.1% ，其中猪肉价格下降 11.8% ；粮食价格下降 0.6% 。</p>"
-            "<p>二、各类商品及服务价格环比变动情况 8 月份，食品价格上涨 0.4% 。</p></div>")
-    got = nbs.yoy_sentences(nbs.body_text(html))
-    assert got == [
-        "2026年8月份，全国居民消费价格同比上涨0.8%。",
-        "其中，城市上涨0.8%，农村上涨0.7%；食品价格下降1.4%，非食品价格上涨1.2%。",
-        "一、各类商品及服务价格同比变动情况8月份，食品烟酒及在外餐饮类价格同比下降0.7%。",
-        "食品中，畜肉类价格下降5.1%，其中猪肉价格下降11.8%；粮食价格下降0.6%。",
+            "<p>二、各类商品及服务价格环比变动情况 8 月份，食品价格上涨 0.4% 。</p></div>"
+            '<div class="mobile-content">2026 年 8 月份，全国居民消费价格同比上涨 0.8% 。</div>')
+    assert _yoy(nbs.body_text(html)) == [
+        "全国居民消费价格同比上涨0.8%", "城市上涨0.8%", "农村上涨0.7%",
+        "食品价格下降1.4%", "非食品价格上涨1.2%",
+        "食品烟酒及在外餐饮类价格同比下降0.7%",
+        "畜肉类价格下降5.1%", "其中猪肉价格下降11.8%", "粮食价格下降0.6%",
     ]
+
+
+def test_cumulative_period_is_inherited():
+    # 2026-07 economy release: the CPI paragraph opens with January-July figures.
+    text = ("七、市场价格温和上涨，7月份涨幅有所回落1—7月份，全国居民消费价格（CPI）同比上涨0.9%。"
+            "分类别看，食品烟酒及在外餐饮价格同比下降0.2%，衣着价格上涨1.6%。"
+            "在食品烟酒及在外餐饮价格中，猪肉价格下降13.4%，粮食价格下降0.3%。"
+            "7月份，全国居民消费价格同比上涨0.5%，环比下降0.1%。其中，7月份核心CPI同比上涨0.9%。")
+    assert _yoy(text, topic="居民消费价格") == ["全国居民消费价格同比上涨0.5%", "7月份核心CPI同比上涨0.9%"]
+    # Only the clause that names February is February's.
+    text = "1—2月份，全国居民消费价格同比持平。扣除食品和能源价格后的核心CPI同比上涨0.8%，其中2月份同比上涨1.2%。"
+    assert _yoy(text, topic="居民消费价格") == ["其中2月份同比上涨1.2%"]
 
 
 def test_economy_release_cpi_sentences_stay_in_cpi_paragraph():
@@ -131,7 +147,81 @@ def test_economy_release_cpi_sentences_stay_in_cpi_paragraph():
             "在食品烟酒及在外餐饮价格中，猪肉价格下降11.8%，鲜菜价格下降2.8%，粮食价格下降0.6%，鲜果价格下降0.5%。"
             "1—8月份，全国居民消费价格同比上涨0.9%。8月份，全国工业生产者出厂价格同比上涨3.8%。"
             "其中，生活资料价格上涨1.0%。八、房地产开发投资同比下降5.0%，新建商品房销售价格同比下降2.0%。")
-    assert nbs.yoy_sentences(text, topic="居民消费价格") == [
-        "分类别看，食品烟酒及在外餐饮价格同比下降0.7%，衣着价格上涨1.3%。",
-        "在食品烟酒及在外餐饮价格中，猪肉价格下降11.8%，鲜菜价格下降2.8%，粮食价格下降0.6%，鲜果价格下降0.5%。",
+    assert _yoy(text, topic="居民消费价格") == [
+        "全国居民消费价格（CPI）同比上涨0.8%",
+        "食品烟酒及在外餐饮价格同比下降0.7%", "衣着价格上涨1.3%",
+        "猪肉价格下降11.8%", "鲜菜价格下降2.8%", "粮食价格下降0.6%", "鲜果价格下降0.5%",
     ]
+
+
+# ---- currency units proven by identities (build.UnitGraph)
+
+DIC = {"note_indicator": {
+    "T8:127": "Central tendency measure: Mean", "T8:128": "Central tendency measure: Median",
+    "T9:133": "Value type: Nominal values", "T9:131": "Value type: Real values",
+    "T30:1": "Currency: XXX - Euro (EUR)", "T30:2": "Currency: XXX - Old unit (OLD)",
+    "S4:31": "Geographical coverage: Urban areas only",
+}, "note_source": {}, "source": {}}
+
+
+def _store(*obs):
+    s = Store()
+    s.extend(Obs(*o) if isinstance(o, tuple) else o for o in obs)
+    return s
+
+
+def _wdi(area, year, fx, ppp, lcu_unit_fx=None):
+    """WDI rows for one economy-year; lcu_unit_fx = the conversion factor in WDI's LCU unit."""
+    f = lcu_unit_fx if lcu_unit_fx is not None else fx
+    return [("fx_lcu_usd", area, year, fx, "s"), ("ppp_hfce", area, year, ppp, "s"),
+            ("gdp_lcu", area, year, f * 1000, "s"), ("gdp_usd", area, year, 1000.0, "s"),
+            ("hfce_lcu", area, year, ppp * 500, "s"), ("hfce_intl", area, year, 500.0, "s")]
+
+
+def test_units_official_rate_in_other_unit_is_not_used():
+    # Pre-euro year: the official rate is in the legacy unit (×200), WDI's LCU series in euro.
+    s = _store(*_wdi("AAA", "2005", 200.0, 0.6, lcu_unit_fx=1.0),
+               Obs("ilo_monthly_mean@X:1", "AAA", "2005", 1500.0, "s", "T8:127 T9:133 T30:1"),
+               Obs("ilo_monthly_mean_ppp@X:1", "AAA", "2005", 2500.0, "s"))
+    u = build.UnitGraph(s, DIC, ["2005"])
+    g = u.year("AAA", "2005")
+    assert not g.linked("F") and g.linked("P") and g.linked("ilo:ilo_monthly_mean@X:1")
+    assert u.currency("AAA") == "EUR"
+    u.explain("AAA", "2005", True)
+    assert any(e["scope"] == "fx" for e in u.log)
+
+
+def test_units_wage_in_old_currency_is_left_out():
+    s = _store(*_wdi("AAA", "2018", 8.0, 3.0),
+               Obs("ilo_monthly_mean@X:1", "AAA", "2018", 2_000_000.0, "s", "T30:2"),  # 1000× the unit of FX/PPP
+               Obs("ilo_monthly_mean_usd@X:1", "AAA", "2018", 250.0, "s"))  # ILOSTAT's own (correct) USD figure
+    u = build.UnitGraph(s, DIC, ["2018"])
+    assert not u.year("AAA", "2018").linked("ilo:ilo_monthly_mean@X:1")
+    assert build.ilo_variants(s, u, "AAA", "2018", DIC) == []
+    u.explain("AAA", "2018", True)
+    assert any(e["scope"] == "wage:ilo_monthly_mean" for e in u.log)
+
+
+def test_units_ilostat_notes_set_concept_and_exclude_real_values():
+    s = _store(*_wdi("AAA", "2019", 10.0, 5.0),
+               Obs("ilo_monthly_mean@X:1", "AAA", "2019", 3800.0, "s", "T8:128 T9:133 S4:31"),
+               Obs("ilo_monthly_mean_usd@X:1", "AAA", "2019", 380.0, "s"),
+               Obs("ilo_hourly_mean@X:2", "AAA", "2019", 20.0, "s", "T8:127 T9:131"),
+               Obs("ilo_hourly_mean_usd@X:2", "AAA", "2019", 2.0, "s"))
+    u = build.UnitGraph(s, DIC, ["2019"])
+    vs = build.ilo_variants(s, u, "AAA", "2019", DIC)
+    assert [(v.key, v.restricted) for v in vs] == [("ilo_median_monthly", True)]  # median per its note; real-value record dropped
+    assert "Urban areas only" in vs[0].caveat
+
+
+def test_units_oecd_wage_joined_by_its_ppp_identity():
+    s = _store(*_wdi("AAA", "2025", 0.9, 0.7),
+               Obs("oecd_avg_annual_wage", "AAA", "2025", 50000.0, "s", "EUR"),
+               Obs("oecd_avg_annual_wage_q", "AAA", "2025", 50000.0, "s", "EUR 2025"),
+               Obs("oecd_avg_annual_wage_q_usdppp", "AAA", "2025", 50000.0 / 0.7, "s", "USD_PPP 2025"),
+               # a second economy whose OECD series is in another unit than WDI's LCU series
+               *[Obs(*o) for o in _wdi("BBB", "2025", 1.8, 0.39, lcu_unit_fx=0.92)],
+               Obs("oecd_avg_annual_wage", "BBB", "2025", 28000.0, "s", "BGN"))
+    u = build.UnitGraph(s, DIC, ["2025"])
+    assert build.oecd_variant(s, u, "AAA", "2025") is not None
+    assert build.oecd_variant(s, u, "BBB", "2025") is None

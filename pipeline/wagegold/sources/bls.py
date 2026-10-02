@@ -103,16 +103,36 @@ def _parse(snap, mapping: dict[str, str]) -> list[Obs]:
 
 
 def unavailable(snaps) -> list[dict]:
-    """Months BLS lists without a value ("-"), with BLS's own footnote, grouped
-    across series: [{"period", "note", "series": [...]}]."""
-    groups: dict[tuple[str, str], list[str]] = {}
+    """Months without a value inside each series' span, grouped across series:
+    [{"period", "note", "series": [...]}].  A month BLS lists with "-" carries BLS's own
+    footnote; a month absent from the response altogether has no note."""
+    from datetime import date as _date
+
+    seen: dict[str, set[str]] = {}
+    notes: dict[tuple[str, str], str] = {}
     for snap in snaps:
         for s in json.loads(snap.read())["Results"]["series"]:
+            have = seen.setdefault(s["seriesID"], set())
             for d in s["data"]:
-                if d["period"].startswith("M") and d["period"] != "M13" and d["value"].strip() == "-":
-                    note = "; ".join(fn["text"] for fn in d.get("footnotes", []) if fn and fn.get("text"))
-                    groups.setdefault((f"{d['year']}-{d['period'][1:]}", note), []).append(s["seriesID"])
-    return [{"period": p, "note": n, "series": sorted(set(ids))} for (p, n), ids in sorted(groups.items())]
+                if not d["period"].startswith("M") or d["period"] == "M13":
+                    continue
+                p = f"{d['year']}-{d['period'][1:]}"
+                if d["value"].strip() == "-":
+                    notes[(s["seriesID"], p)] = "; ".join(fn["text"] for fn in d.get("footnotes", []) if fn and fn.get("text"))
+                else:
+                    have.add(p)
+    groups: dict[tuple[str, str], list[str]] = {}
+    for sid, have in seen.items():
+        if not have:
+            continue
+        y, m = map(int, min(have).split("-"))
+        last = max(have)
+        while f"{y}-{m:02d}" < last:
+            p = f"{y}-{m:02d}"
+            if p not in have:
+                groups.setdefault((p, notes.get((sid, p), "")), []).append(sid)
+            y, m = (y + 1, 1) if m == 12 else (y, m + 1)
+    return [{"period": p, "note": n, "series": sorted(ids)} for (p, n), ids in sorted(groups.items())]
 
 
 def collect(f: Fetcher, today: date | None = None) -> list[Obs]:

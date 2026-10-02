@@ -27,7 +27,7 @@ def _rel(a: float, b: float) -> float:
 def gold_cross_source(store: Store) -> Check:
     wb = store.series("gold_usd_oz", "WLD")
     imf = store.series("gold_usd_oz_imf", "WLD")
-    common = sorted(p for p in wb if p in imf and p >= "2000-01")
+    common = sorted(p for p in wb if p in imf)
     if len(common) < 120:
         return Check("gold_wb_vs_imf", "金价：世界银行 vs IMF 月均价", "fail", f"重叠月份不足（{len(common)}）")
     worst = max(common, key=lambda p: _rel(wb[p].value, imf[p].value))
@@ -55,7 +55,7 @@ def fx_cross_source(store: Store) -> Check:
         h10 = store.series("fx_lcu_usd_h10", area)
         ecb = store.series("fx_lcu_usd_ecb", area)
         for p in h10:
-            if p in ecb and p >= "2015-01":
+            if p in ecb:
                 n += 1
                 d = _rel(ecb[p].value, h10[p].value)
                 if d > worst[0]:
@@ -68,7 +68,7 @@ def fx_cross_source(store: Store) -> Check:
 
 
 def bls_vs_fred(store: Store) -> Check:
-    pairs = [("us_ahe_all_sa", "us_ahe_all_sa_fred")]
+    pairs = [("us_ahe_all_sa", "us_ahe_all_sa_fred"), ("us_ahe_pns_sa", "us_ahe_pns_sa_fred")]
     worst = (0.0, "")
     n = 0
     for a, b in pairs:

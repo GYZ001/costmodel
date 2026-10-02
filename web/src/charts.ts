@@ -8,6 +8,7 @@ export interface RankItem {
   highlight: boolean;
   secondary?: number | null;
   tip: string[]; // extra tooltip lines (plain text, escaped here)
+  table?: string[]; // fuller lines for the data-table twin (defaults to tip)
 }
 
 const AXIS_FONT = 12;

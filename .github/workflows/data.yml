@@ -40,6 +40,25 @@ jobs:
           set +e
           python -m wagegold
           echo "code=$?" >> "$GITHUB_OUTPUT"
+      # 可复现性：只用刚存档的快照离线重算一遍，结果必须与联网生成的数据集一致（生成时间除外）。
+      - name: Reproduce the dataset offline from the archived snapshots
+        id: repro
+        if: steps.build.outputs.code == '0'
+        run: |
+          cp web/public/data/dataset.json /tmp/online.json
+          python -m wagegold --offline
+          python - <<'PY'
+          import json, sys
+          a, b = (json.load(open(p)) for p in ("/tmp/online.json", "web/public/data/dataset.json"))
+          for d in (a, b):
+              d.pop("generated_at", None)
+          if a != b:
+              diff = sorted(k for k in set(a) | set(b) if a.get(k) != b.get(k))
+              print(f"::error::离线重算结果与联网生成的数据集不一致：{diff}")
+              sys.exit(1)
+          print("离线重算结果一致")
+          PY
+          cp /tmp/online.json web/public/data/dataset.json
       # 原始快照与校验报告总是提交（便于审计和排查）；网站数据集只有全部校验通过才会更新。
       - name: Commit snapshots, check report and (if valid) dataset
         if: always()
@@ -61,5 +80,8 @@ jobs:
       - name: Fail when a source or a check failed
         if: steps.build.outputs.code != '0'
         run: |
-          echo "::error::管道退出码 ${{ steps.build.outputs.code }}：必需来源失败(1) 或交叉校验失败(2)，网站数据集未更新。详见 data/checks.json"
+          echo "::error::管道退出码 ${{ steps.build.outputs.code }}：必需来源失败(1)、交叉校验失败(2)或构建异常(3)，网站数据集未更新。详见 data/checks.json"
           exit 1
+      - name: Fail when the offline rebuild differs
+        if: steps.repro.outcome == 'failure'
+        run: exit 1

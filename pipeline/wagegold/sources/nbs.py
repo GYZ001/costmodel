@@ -59,6 +59,7 @@ WAGE_RE = {
     "cn_wage_nonprivate": re.compile(r"全国城镇非私营单位就业人员年平均工资\s*为?\s*(\d+)\s*元\s*，\s*比上年增加\s*(\d+)\s*元\s*，\s*名义增长\s*(?:\[\d+\])?\s*([\d.]+)\s*%"),
     "cn_wage_private": re.compile(r"全国城镇私营单位就业人员年平均工资\s*为?\s*(\d+)\s*元\s*，\s*比上年增加\s*(\d+)\s*元\s*，\s*名义增长\s*(?:\[\d+\])?\s*([\d.]+)\s*%"),
 }
+COMPARABLE_RE = re.compile(r"\s*，\s*按可比口径\s*(?:\[\d+\])?\s*增长\s*([\d.]+)\s*%")
 POSITION_RE = re.compile(
     r"规模以上企业就业人员年平均工资为\s*(\d+)\s*元，其中，中层及以上管理人员\s*(\d+)\s*元，专业技术人员\s*(\d+)\s*元，"
     r"办事人员和有关人员\s*(\d+)\s*元，社会生产服务和生活服务人员\s*(\d+)\s*元，生产制造及有关人员\s*(\d+)\s*元"
@@ -100,10 +101,15 @@ class Release:
     released: str  # YYYYMMDD
 
 
+# Invisible formatting characters (soft hyphen, zero-width spaces/joiners, BOM) that
+# NBS pages sometimes carry inside numbers, e.g. "1\u00ad\u00ad—7月".
+INVISIBLE_RE = re.compile("[\u00ad\u200b-\u200d\u2060\ufeff]|&shy;")
+
+
 def page_text(html: str) -> str:
     text = re.sub(r"<script.*?</script>|<style.*?</style>", " ", html, flags=re.S)
     text = re.sub(r"<[^>]+>", " ", text)
-    text = text.replace("&nbsp;", " ").replace("&emsp;", " ")
+    text = INVISIBLE_RE.sub("", text.replace("&nbsp;", " ").replace("&emsp;", " "))
     return re.sub(r"\s+", " ", text)
 
 
@@ -117,7 +123,7 @@ def discover(f: Fetcher, pages: int = 64) -> tuple[list[Release], list[dict]]:
         html = f.get_transient(url).decode("utf-8", "replace")
         for ym, tid, day, title in LINK_RE.findall(html):
             title = title.strip()
-            if "价格" in title:
+            if re.search(r"价格|工资|收入", title):
                 price_titles[tid] = {"date": f"{day[:4]}-{day[4:6]}-{day[6:]}", "title": title, "url": f"{LIST_URL}{ym}/{tid}.html"}
             if tid not in seen and (WAGE_TITLE.match(title) or MIGRANT_TITLE.match(title) or CPI_TITLE.match(title)
                                     or is_economy_release(title)):
@@ -140,7 +146,45 @@ def collect(f: Fetcher) -> list[Obs]:
     for snap, title in snaps:
         out += parse_release(snap.read().decode("utf-8", "replace"), title, snap.key)
     write_cpi_quotes(snaps)
+    write_wage_definitions(snaps)
     return out
+
+
+DEFINITIONS = {
+    # key -> pattern capturing NBS's own wording in the wage release's notes
+    "scope": re.compile(r"统计范围((?:[^。]*法人单位[^。]*。)(?:调查对象不包括[^。]*。)?)"),
+    "cn_wage_nonprivate": re.compile(r"城镇地区非私营法人单位（[^）]*）具体包括：([^。]+)。"),
+    "cn_wage_private": re.compile(r"城镇地区私营法人单位（[^）]*）具体包括：([^。]+)。"),
+    "cn_wage_large_ent": re.compile(r"规模以上企业具体是指：([^。]+)。"),
+    "comparable": re.compile(r"可比口径是指([^。]+)。"),
+    "gross": re.compile(r"(工资总额是税前工资[^。]*。)"),
+}
+
+
+def write_wage_definitions(snaps: list[tuple[Snapshot, str]]) -> None:
+    """NBS's own definitions, quoted from each annual wage release (by wage year)."""
+    import json
+
+    from ..config import DATA_DIR
+
+    rows = {}
+    for snap, title in snaps:
+        if m := WAGE_TITLE.match(title):
+            text = re.sub(r"\s+", "", body_text(snap.read().decode("utf-8", "replace")))
+            found = {k: (rx.search(text).group(1) if rx.search(text) else None) for k, rx in DEFINITIONS.items()}
+            rows[m.group(1)] = {"title": title, "url": snap.url, "snapshot": snap.key, **found}
+    path = DATA_DIR / "derived" / "nbs_wage_definitions.json"
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(dict(sorted(rows.items())), ensure_ascii=False, indent=1) + "\n", encoding="utf-8")
+
+
+def wage_definitions() -> dict:
+    import json
+
+    from ..config import DATA_DIR
+
+    path = DATA_DIR / "derived" / "nbs_wage_definitions.json"
+    return json.loads(path.read_text(encoding="utf-8")) if path.exists() else {}
 
 
 def body_text(html: str) -> str:
@@ -154,50 +198,61 @@ def body_text(html: str) -> str:
     return page_text(html[html.index(">", i) + 1 : j if j >= 0 else len(html)])
 
 
-RANGE_RE = re.compile(r"\d{1,2}\s*[—–-]\s*\d{1,2}\s*月|季度|上半年|全年")
+# Period phrases that open a statement: a single month ("8月份", "2026年8月份") or a
+# cumulative period ("1—8月份", "1—8月平均", "上半年", "一季度", "前三季度", "全年").
+PERIOD_RE = re.compile(r"\d{1,2}\s*[—–-]\s*\d{1,2}\s*月|上半年|下半年|[一二三四]季度|前三季度|全年|\d{1,2}\s*月份")
 HEADING_RE = re.compile(r"^[一二三四五六七八九十]+、")
 
 
-def _basis(s: str) -> set[str]:
-    named = set()
-    if "环比" in s:
-        named.add("mom")
-    if "比上年同期" in s or ("同比" in s and RANGE_RE.search(s)):
-        named.add("ytd")  # cumulative: "1—8月平均…比上年同期", "1—8月份…同比"
-    elif "同比" in s:
-        named.add("yoy")
-    return named
+def _period(s: str) -> str | None:
+    kinds = {"month" if re.fullmatch(r"\d{1,2}\s*月份", m.group(0)) else "cumulative" for m in PERIOD_RE.finditer(s)}
+    if not kinds:
+        return None
+    return kinds.pop() if len(kinds) == 1 else "ambiguous"
 
 
-def yoy_sentences(text: str, topic: str | None = None) -> list[str]:
-    """Sentences that report this month's year-on-year price changes.
+def _comparison(s: str) -> str | None:
+    kinds = ({"mom"} if "环比" in s else set()) | ({"yoy"} if "同比" in s or "比上年同期" in s else set())
+    if not kinds:
+        return None
+    return kinds.pop() if len(kinds) == 1 else "ambiguous"
 
-    NBS names the comparison basis ("同比" year-on-year, "环比" month-on-month,
-    "比上年同期"/a month range for year-to-date) once and the following sentences
-    inherit it until the basis is named again, e.g. "8月份，全国居民消费价格环比上涨0.4%。
-    其中，…食品价格上涨0.4%".  So the basis is tracked sentence by sentence; a sentence
-    naming more than one basis is ambiguous and suspends tracking until a single basis
-    is named again.
 
-    With ``topic`` (e.g. "居民消费价格"), only sentences inside that topic are kept:
-    it starts at a sentence naming the topic and ends at the next numbered heading
-    ("八、…") or sentence about producer prices that does not name it.  Used for the
-    monthly economy releases, which cover CPI in one paragraph among many."""
-    out: list[str] = []
-    basis = None
+def yoy_sentences(text: str, topic: str | None = None) -> list[dict]:
+    """Sentences reporting THIS MONTH's year-on-year price changes, as
+    {"text": the sentence verbatim, "yoy": its clauses that do so}.
+
+    NBS names the period ("8月份" vs "1—8月份"/"1—8月平均"/"上半年"/"全年") and the
+    comparison ("同比" year-on-year vs "环比" month-on-month) once, and what follows
+    inherits both until they are named again: "1—7月份，全国居民消费价格同比上涨0.9%。
+    分类别看，食品烟酒…价格同比下降0.2%" is still January-July cumulative, and in
+    "核心CPI同比上涨0.8%，其中2月份同比上涨1.2%" only the second clause is February's.
+    Both are therefore tracked clause by clause (clauses end at "，", "；" and "。"); a
+    clause naming two periods or two comparisons is ambiguous, and so is what inherits
+    from it, until a single one is named again.
+
+    With ``topic`` (e.g. "居民消费价格"), only text inside that topic is kept: it starts
+    at a sentence naming the topic and ends at the next numbered heading ("八、…") or
+    sentence about producer prices that does not name it.  Used for the monthly economy
+    releases, which cover CPI in one paragraph among many."""
+    out: list[dict] = []
+    period = comparison = None
     inside = topic is None
     for raw in text.split("。"):
-        s = re.sub(r"\s+", "", raw)
+        sentence = re.sub(r"\s+", "", raw)
         if topic is not None:
-            if topic in s:
+            if topic in sentence:
                 inside = True
-            elif HEADING_RE.match(s) or "工业生产者" in s:
+            elif HEADING_RE.match(sentence) or "工业生产者" in sentence:
                 inside = False
-        named = _basis(s)
-        if named:
-            basis = named.pop() if len(named) == 1 else None
-        if inside and basis == "yoy" and "价格" in s and "%" in s:
-            out.append(s + "。")
+        hits = []
+        for clause in re.split(r"(?<=[，；])", sentence):
+            period = _period(clause) or period
+            comparison = _comparison(clause) or comparison
+            if inside and period == "month" and comparison == "yoy" and "%" in clause:
+                hits.append(clause.rstrip("，；"))
+        if hits:
+            out.append({"text": sentence + "。", "yoy": hits})
     return out
 
 
@@ -248,7 +303,8 @@ def write_price_index(rows: list[dict]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps({
         "listing": LIST_URL,
-        "note": "Every release on the NBS '最新发布' listing pages scanned in this run whose title contains 价格.",
+        "note": "Every release on the NBS '最新发布' listing pages scanned in this run whose title contains 价格, 工资 or 收入 "
+                "(the listing pages themselves are not archived).",
         "releases": rows,
     }, ensure_ascii=False, indent=1) + "\n", encoding="utf-8")
 
@@ -266,13 +322,15 @@ def price_release_summary() -> dict | None:
     idx = json.loads(path.read_text(encoding="utf-8"))
     groups: dict[str, dict] = {}
     for r in idx["releases"]:
+        if "价格" not in r["title"]:
+            continue
         name = _re.sub(r"^\d{4}年|^\d{1,2}月份?|^[上中下]旬|\s", "", _re.sub(r"^\d{4}年\d{1,2}月(份|[上中下]旬)", "", r["title"]))
         kind = name[: name.index("价格") + 2] if "价格" in name else name
         g = groups.setdefault(kind, {"kind": kind, "count": 0, "first": r["date"], "last": r["date"], "example": r["url"]})
         g["count"] += 1
         g["first"] = min(g["first"], r["date"])
         g["last"] = max(g["last"], r["date"])
-    dates = [r["date"] for r in idx["releases"]]
+    dates = [r["date"] for r in idx["releases"] if "价格" in r["title"]]
     return {"listing": idx["listing"], "from": min(dates) if dates else None,
             "to": max(dates) if dates else None, "groups": sorted(groups.values(), key=lambda g: -g["count"])}
 
@@ -303,6 +361,9 @@ def parse_release(html: str, title: str, snapshot: str) -> list[Obs]:
             out.append(Obs(series, "CHN", str(year), value, snapshot, note=f"growth_pct={growth}"))
             # Kept apart from the direct series: validate.py checks it against the previous year's own release.
             out.append(Obs(f"{series}__implied_prev", "CHN", str(year - 1), value - increase, snapshot))
+            # "名义增长2.8%，按可比口径增长2.6%": NBS flags a change in statistical coverage.
+            if comp := COMPARABLE_RE.match(text, hit.end()):
+                out.append(Obs(f"{series}__comparable_growth", "CHN", str(year), float(comp.group(1)), snapshot))
         if hit := POSITION_RE.search(text):
             for key, v in zip(POSITION_KEYS, hit.groups()):
                 out.append(Obs(key, "CHN", str(year), int(v), snapshot))

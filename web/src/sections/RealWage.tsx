@@ -2,7 +2,7 @@ import { useMemo } from "react";
 import type { Scope } from "../App";
 import { Chart } from "../Chart";
 import { dumbbellOption, rankingHeight, rankingOption, stackedOption, type RankItem } from "../charts";
-import { countryName, fmt, minutes, primaryWage, sig, useThemeVersion } from "../lib";
+import { countryName, fmt, minutes, primaryWage, sig, useThemeVersion, wageLabel, wageNotes } from "../lib";
 import type { CohdKey } from "../types";
 import { useRows } from "./GoldPerHour";
 
@@ -36,7 +36,7 @@ export function RealWage(scope: Scope) {
         a: (g / ug) * 100,
         b: (p / up) * 100,
         highlight: scope.picks.includes(iso),
-        tip: [`对比基准：美国 ${scope.year} 年 = 100（${usW!.label}）`, w.label],
+        tip: [`对比基准：美国 ${scope.year} 年 = 100（${wageLabel(usW!, scope.view)}）`, ...wageNotes(w, scope.view, c, 160)],
       }];
     });
   }, [rows, usW, hourly, scope.view, scope.picks, scope.year]);
@@ -51,7 +51,7 @@ export function RealWage(scope: Scope) {
           name: countryName(c),
           value: w.minutes_per_cohd_day,
           highlight: scope.picks.includes(iso),
-          tip: [w.label, `时薪 ${fmt(w.hourly_lcu, 2)}，一人一天最低成本健康饮食 ${fmt(row.cohd.total, 2)}（本币）`],
+          tip: [...wageNotes(w, "hourly", c, 160), `一人一天最低成本健康饮食 ${fmt(row.cohd.total, 2)}（本币）`],
         }];
       }),
     [rows, scope.picks],
@@ -72,7 +72,7 @@ export function RealWage(scope: Scope) {
           parts,
           total: parts.reduce((a, b) => a + b, 0),
           highlight: scope.picks.includes(iso),
-          tip: [w.label],
+          tip: wageNotes(w, "hourly", c, 160),
         }];
       });
   }, [scope.ds, scope.group, scope.picks]);
@@ -87,7 +87,7 @@ export function RealWage(scope: Scope) {
           name: countryName(c),
           value: w.cohd_days_per_month,
           highlight: scope.picks.includes(iso),
-          tip: [w.label, `一人一天最低成本健康饮食 ${fmt(row.cohd.total, 2)}（本币）`],
+          tip: [...wageNotes(w, "monthly", c, 160), `一人一天最低成本健康饮食 ${fmt(row.cohd.total, 2)}（本币）`],
         }];
       }),
     [rows, scope.picks],

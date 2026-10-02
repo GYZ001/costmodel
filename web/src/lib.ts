@@ -38,6 +38,28 @@ export function pct(x: number | null | undefined, digits = 0): string {
 
 // ---------------------------------------------------------------- dataset helpers
 
+/** The label to show for a wage in the given view. */
+export function wageLabel(w: Wage, view: View): string {
+  return view === "hourly" && w.label_hourly ? w.label_hourly : w.label;
+}
+
+/** Currency to print next to a wage: the one its publisher states, else the economy's. */
+export function wageCurrency(w: Wage, c: Country): string | null {
+  return w.currency ?? c.currency;
+}
+
+/** Tooltip / table lines describing where a wage figure comes from and what it measures. */
+export function wageNotes(w: Wage, view: View, c: Country, max = 0): string[] {
+  const value = view === "hourly" ? `${money(w.hourly_lcu, wageCurrency(w, c))}/小时` : `${money(w.monthly_lcu, wageCurrency(w, c))}/月`;
+  const caveat = max && w.caveat.length > max ? `${w.caveat.slice(0, max)}…` : w.caveat;
+  return [
+    `${wageLabel(w, view)}：${value}`,
+    ...(view === "hourly" && w.hours_week ? [`工时：每周 ${w.hours_week.toFixed(1)} 小时（${w.method}）`] : []),
+    w.source,
+    ...(caveat ? [`口径注释：${caveat}`] : []),
+  ];
+}
+
 export type View = "hourly" | "monthly";
 
 export function primaryWage(row: CountryYear | undefined, view: View = "hourly"): Wage | undefined {

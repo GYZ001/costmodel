@@ -1,10 +1,17 @@
 """World Bank open data: WDI indicators and ICP 2021 category results.
 
 WDI (source 2):
-  PA.NUS.FCRF   Official exchange rate (LCU per US$, period average)
-  PA.NUS.PRVT.PP PPP conversion factor, household final consumption (LCU per international $)
-  PA.NUS.PPP    PPP conversion factor, GDP (LCU per international $)
-  SP.POP.TOTL   Population, total
+  PA.NUS.FCRF        Official exchange rate (LCU per US$, period average)
+  PA.NUS.PRVT.PP     PPP conversion factor, household final consumption (LCU per international $)
+  PA.NUS.PPP         PPP conversion factor, GDP (LCU per international $)
+  SP.POP.TOTL        Population, total
+  NY.GDP.MKTP.CN/.CD GDP in current LCU / current US$: their ratio is the conversion
+                     factor the World Bank itself applies to that year's LCU figures
+  NE.CON.PRVT.CN     Household final consumption in current LCU, and
+  NE.CON.PRVT.PP.CD  in current international $: their ratio is the household PPP in
+                     the unit of WDI's LCU series
+  The last four only serve to check, year by year, that the exchange rate and the
+  PPP are in the same currency unit as WDI's LCU series (see build.UnitGraph).
 
 ICP 2021 (source 90): price level indices (World = 100) and PPPs (US$ = 1) for
 expenditure categories, from the 2021 benchmark comparison.  Products priced in
@@ -26,6 +33,10 @@ WDI_INDICATORS = {
     "PA.NUS.PRVT.PP": "ppp_hfce",
     "PA.NUS.PPP": "ppp_gdp",
     "SP.POP.TOTL": "population",
+    "NY.GDP.MKTP.CN": "gdp_lcu",
+    "NY.GDP.MKTP.CD": "gdp_usd",
+    "NE.CON.PRVT.CN": "hfce_lcu",
+    "NE.CON.PRVT.PP.CD": "hfce_intl",
 }
 
 # ICP 2021 series id -> short category key used throughout the project
@@ -134,8 +145,11 @@ def collect_icp2021(f: Fetcher) -> list[Obs]:
             if row["value"] is None:
                 continue
             var = {v["concept"]: v["id"] for v in row["variable"]}
+            name = next(v.get("value", "") for v in row["variable"] if v["concept"] == "Country")
             cat = ICP_CATEGORIES[var["Series"]]
-            out.append(Obs(f"{prefix}_{cat}", var["Country"], "2021", float(row["value"]), snap.key))
+            # ICP's own economy codes mostly equal ISO3 but not always; the name is kept so
+            # build.icp_levels can match them to WDI economies (and drop ICP's aggregates).
+            out.append(Obs(f"{prefix}_{cat}", var["Country"], "2021", float(row["value"]), snap.key, note=name))
     return out
 
 

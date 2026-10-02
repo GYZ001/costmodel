@@ -1,4 +1,5 @@
-# 代码检查：管道单元测试 + 用已提交的快照离线重算数据集（不联网）+ 网站类型检查与构建。
+# 代码检查：管道单元测试 + 网站类型检查与构建。
+# （用存档快照离线重算数据集的可复现性检查在 data-refresh 里、数据存档之后进行。）
 name: ci
 
 on:
@@ -21,9 +22,6 @@ jobs:
           python-version: "3.12"
       - run: pip install -e "pipeline[test]"
       - run: python -m pytest pipeline -q
-      - name: Rebuild dataset offline from committed snapshots
-        run: |
-          if [ -f data/manifest.json ]; then python -m wagegold --offline; else echo "尚无快照，跳过"; fi
   web:
     runs-on: ubuntu-latest
     steps:

@@ -5,10 +5,17 @@ export interface Wage {
   mrole: "primary" | "typical" | null; // monthly view
   key: string;
   label: string;
+  /** Label for the hourly view when the hourly figure is derived from a monthly one. */
+  label_hourly: string | null;
   concept: "mean" | "median";
   source: string;
   method: string;
+  /** Notes that qualify the figure, verbatim from the publisher (ILOSTAT notes are in English). */
   caveat: string;
+  /** Geographical or institutional coverage limited (e.g. urban areas or private sector only). */
+  restricted: boolean;
+  /** Currency the publisher states for the figure. */
+  currency: string | null;
   snapshots: string[];
   monthly_lcu: number | null;
   hourly_lcu: number | null;
@@ -24,12 +31,14 @@ export interface Wage {
 
 export type CohdKey = "total" | "staples" | "vegetables" | "fruits" | "animal" | "legumes" | "oils";
 
+// A field is null when its inputs could not be proven to be in the same currency unit
+// as the World Bank's local-currency series (see dataset.exclusions for the reason).
 export interface CountryYear {
-  fx: number;
+  fx: number | null;
   ppp_hfce: number | null;
   pli_hfce: number | null;
   population: number | null;
-  gold_lcu_g: number;
+  gold_lcu_g: number | null;
   gold_usd_g: number;
   gold_usdeq_g: number | null;
   cohd: Record<CohdKey, number | null>;
@@ -45,8 +54,8 @@ export interface Country {
   region: string;
   income: string;
   g20: boolean;
+  /** Currency of the World Bank's local-currency series, as proven by the records joined to it. */
   currency: string | null;
-  ppp_unit_verified: boolean | null;
   years: Record<string, CountryYear>;
 }
 
@@ -57,6 +66,8 @@ export interface UsItemRow {
   minutes: number | null;
   gold_mg: number | null;
   preliminary: boolean;
+  /** The same month's average hourly earnings is still marked preliminary by BLS. */
+  wage_preliminary: boolean;
 }
 
 export interface UsItem {
@@ -97,7 +108,7 @@ export interface SourceInfo {
 
 export interface Dataset {
   generated_at: string;
-  constants: { grams_per_troy_ounce: number; weeks_per_month: number; statutory_hours_cn: number };
+  constants: { grams_per_troy_ounce: number; weeks_per_month: number; assumed_hours_cn: number };
   gold: {
     monthly: [string, number][];
     annual: Record<string, { usd_oz: number; usd_g: number }>;
@@ -111,7 +122,8 @@ export interface Dataset {
   us_monthly: Record<"us_ahe_pns_sa" | "us_ahe_all_sa", [string, number, number, boolean][]>;
   us_items: Record<string, UsItem>;
   cn_hours_monthly: [string, number][];
-  wage_gold_history: Record<string, { label: string; points: [string, number, number, string][] }>;
+  /** [year, monthly wage in LCU, grams of gold, source line, series breaks before this point] */
+  wage_gold_history: Record<string, { label: string; points: [string, number, number, string, boolean][] }>;
   latest: {
     period: string;
     gold_usd_oz: number;
@@ -121,7 +133,7 @@ export interface Dataset {
     us_ahe: number;
     us_ahe_preliminary: boolean;
     us_gold_g_per_hour: number;
-    cn: { series: string; label: string; wage_year: string; annual: number; basis: "statutory" | "actual"; hours_year: number; hourly: number; gold_g_per_hour: number }[];
+    cn: { series: string; label: string; wage_year: string; annual: number; basis: "assumed" | "actual"; hours_year: number; hours_months: string[] | null; hourly: number; gold_g_per_hour: number }[];
   };
   fx_recent_ecb: Record<string, [string, number][]>;
   nbs_price_releases: {
@@ -133,7 +145,11 @@ export interface Dataset {
   } | null;
   /** This month's year-on-year CPI sentences, quoted verbatim from archived NBS releases
    *  (the monthly CPI release, and the CPI paragraph of the monthly economy release). */
-  cn_cpi_yoy: { period: string; kind: "cpi" | "economy"; title: string; url: string; snapshot: string; sha256: string; sentences: string[] }[];
+  cn_cpi_yoy: {
+    period: string; kind: "cpi" | "economy"; title: string; url: string; snapshot: string; sha256: string;
+    /** text = the sentence verbatim; yoy = its clauses that report this month's year-on-year change */
+    sentences: { text: string; yoy: string[] }[];
+  }[];
   /** Months BLS lists without a value, with BLS's own footnote. */
   bls_unavailable: { period: string; note: string; series: string[] }[];
   exclusions: { area: string; year: string; scope: string; detail: string }[];

@@ -100,17 +100,17 @@ def _build_and_write(store, f, meta, ilo_dic, today, save) -> int:
     gold = build.gold_tables(store)
     pink = f.used.get("worldbank/CMO-Historical-Data-Monthly")
     gold["source_updated"] = pinksheet.updated_on(pink.read()) if pink else None
-    gates = build.Gates(store)
+    units = build.UnitGraph(store, ilo_dic, years)
     dataset = {
         "generated_at": datetime.now(timezone.utc).replace(microsecond=0).isoformat(),
         "constants": {"grams_per_troy_ounce": GRAMS_PER_TROY_OUNCE, "weeks_per_month": build.WEEKS_PER_MONTH,
-                      "statutory_hours_cn": build.STATUTORY_HOURS_CN},
+                      "assumed_hours_cn": build.ASSUMED_HOURS_CN},
         "gold": gold,
-        "countries": build.country_years(store, gold, meta, ilo_dic, years, gates),
-        "icp2021_pli_us": build.icp_levels(store),
+        "countries": build.country_years(store, gold, meta, ilo_dic, years, units, nbs.wage_definitions()),
+        "icp2021_pli_us": build.icp_levels(store, meta),
         "us_monthly": build.us_monthly(store, gold),
         "us_items": build.us_items(store, gold),
-        "wage_gold_history": build.wage_gold_history(store, gold, meta, ilo_dic, gates),
+        "wage_gold_history": build.wage_gold_history(store, gold, meta, ilo_dic, units),
         "latest": build.latest_block(store, gold),
         "fx_recent_ecb": build.fx_recent(store),
         "nbs_price_releases": nbs.price_release_summary(),
@@ -118,7 +118,7 @@ def _build_and_write(store, f, meta, ilo_dic, today, save) -> int:
         "bls_unavailable": bls.unavailable(s for k, s in sorted(f.used.items()) if k.startswith("bls/")),
         "cn_hours_monthly": [[p, o.value] for p, o in sorted(store.series("cn_weekly_hours_enterprise", "CHN").items())],
     }
-    dataset["exclusions"] = _dedupe(gates.log)
+    dataset["exclusions"] = _dedupe(units.log)
     checks = validate.run_all(store, dataset, years, today.isoformat())
     for c in checks:
         print(f"[check:{c['status']}] {c['title']} — {c['detail']}", flush=True)

@@ -2,7 +2,7 @@ import { useMemo } from "react";
 import type { Scope } from "../App";
 import { Chart } from "../Chart";
 import { rankingHeight, rankingOption, type RankItem } from "../charts";
-import { countryName, money, primaryWage, rowFor, sig, typicalWage, useThemeVersion } from "../lib";
+import { countryName, money, primaryWage, rowFor, sig, typicalWage, useThemeVersion, wageLabel, wageNotes } from "../lib";
 
 export function useRows(scope: Scope) {
   const { ds, year, group } = scope;
@@ -35,15 +35,15 @@ export function GoldPerHour(scope: Scope) {
           secondary: (hourly ? t?.hourly_gold_g : t?.monthly_gold_g) ?? null,
           highlight: scope.picks.includes(iso),
           tip: [
-            hourly ? `${w.label}：${money(w.hourly_lcu, c.currency)}/小时` : `${w.label}：${money(w.monthly_lcu, c.currency)}/月`,
-            ...(hourly && w.hours_week ? [`工时：每周 ${w.hours_week.toFixed(1)} 小时`] : []),
+            ...wageNotes(w, scope.view, c, 160),
             `当地金价：${money(row.gold_lcu_g, c.currency)}/克（${year} 年均）`,
-            w.source,
           ],
+          table: wageNotes(w, scope.view, c),
         }];
       }),
     [rows, scope.picks, scope.view],
   );
+  const cnW = primaryWage(scope.ds.countries.CHN?.years[scope.year], scope.view);
   const option = useMemo(
     () => rankingOption({
       items,
@@ -68,9 +68,11 @@ export function GoldPerHour(scope: Scope) {
         </div>
         <Chart option={option} height={rankingHeight(items.length)} ariaLabel="各经济体每小时工资可换黄金克数排名" />
         <p className="note">
-          工资：OECD 成员用 OECD 全职当量平均工资（时薪按全职雇员通常周工时折算）；其他经济体用国际劳工组织 ILOSTAT 的雇员平均/中位工资（只有月薪的按每周实际工时折算）；
-          中国用国家统计局城镇非私营单位平均工资与企业周平均工时（私营单位与农民工见“中美细看”）。每条记录的口径见悬停提示。
-          金价：世界银行 Pink Sheet 月均价的年平均；汇率：世界银行 WDI 年均汇率。
+          工资：优先用 OECD 全职当量平均工资（时薪按 OECD 公布的全职雇员通常周工时折算）；OECD 没有该年工资或工时的，用国际劳工组织 ILOSTAT 的雇员平均/中位工资
+          （只有月薪的，用同一调查的每周实际工时折算）；再没有的，用国家统计机构自己的数据。
+          {cnW && <>中国 {scope.year} 年用的是：{wageLabel(cnW, scope.view)}（{cnW.source}）。</>}
+          每个经济体所用口径与发布方的注释见悬停提示和数据表。
+          金价：世界银行 Pink Sheet 月均价的年平均；汇率：世界银行 WDI 年均官方汇率，并逐年核对它就是世界银行自己换算该年美元数据所用的汇率。
         </p>
         <DataTable items={items} />
       </div>
@@ -94,7 +96,7 @@ function DataTable({ items }: { items: RankItem[] }) {
                 <td>{i.name}</td>
                 <td>{sig(i.value)}</td>
                 <td>{sig(i.secondary ?? null)}</td>
-                <td className="l small ink2">{i.tip.join("；")}</td>
+                <td className="l small ink2">{(i.table ?? i.tip).join("；")}</td>
               </tr>
             ))}
           </tbody>

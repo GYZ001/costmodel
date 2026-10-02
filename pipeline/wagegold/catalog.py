@@ -1,25 +1,8 @@
-"""Static reference facts used for labelling (not for selecting or excluding data)."""
+"""Static reference facts used for labelling only (never for selecting or excluding data)."""
 
 # G20 members (19 countries; the EU and the African Union are members as blocs).
 G20 = {"ARG", "AUS", "BRA", "CAN", "CHN", "FRA", "DEU", "IND", "IDN", "ITA", "JPN", "KOR", "MEX", "RUS",
        "SAU", "ZAF", "TUR", "GBR", "USA"}
-
-# ISO 4217 currency of each economy, for display of local-currency amounts.
-# Economies not listed are shown with the generic label "本币".
-CURRENCY = {
-    "USA": "USD", "CHN": "CNY", "JPN": "JPY", "GBR": "GBP", "IND": "INR", "BRA": "BRL", "MEX": "MXN",
-    "RUS": "RUB", "TUR": "TRY", "IDN": "IDR", "ZAF": "ZAR", "CAN": "CAD", "AUS": "AUD", "KOR": "KRW",
-    "SAU": "SAR", "ARG": "ARS", "CHE": "CHF", "SWE": "SEK", "NOR": "NOK", "DNK": "DKK", "POL": "PLN",
-    "CZE": "CZK", "HUN": "HUF", "ROU": "RON", "ISL": "ISK", "ISR": "ILS", "NZL": "NZD", "SGP": "SGD",
-    "HKG": "HKD", "THA": "THB", "MYS": "MYR", "PHL": "PHP", "VNM": "VND", "EGY": "EGP", "NGA": "NGN",
-    "PAK": "PKR", "BGD": "BDT", "CHL": "CLP", "COL": "COP", "PER": "PEN", "KAZ": "KZT", "UKR": "UAH",
-    "ARE": "AED", "LKA": "LKR", "KEN": "KES", "ETH": "ETB", "MAR": "MAD", "DZA": "DZD", "IRN": "IRR",
-    "TWN": "TWD", "MAC": "MOP",
-    # euro area
-    "AUT": "EUR", "BEL": "EUR", "CYP": "EUR", "EST": "EUR", "FIN": "EUR", "FRA": "EUR", "DEU": "EUR",
-    "GRC": "EUR", "IRL": "EUR", "ITA": "EUR", "LVA": "EUR", "LTU": "EUR", "LUX": "EUR", "MLT": "EUR",
-    "NLD": "EUR", "PRT": "EUR", "SVK": "EUR", "SVN": "EUR", "ESP": "EUR", "HRV": "EUR", "BGR": "EUR",
-}
 
 # U.S. CPI average-price items: label, BLS unit, and factor converting the BLS unit to the display unit.
 LB_TO_KG = 1 / 0.45359237

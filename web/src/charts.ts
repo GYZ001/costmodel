@@ -11,9 +11,34 @@ export interface RankItem {
 }
 
 const AXIS_FONT = 12;
+const FONT = 'system-ui, -apple-system, "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif';
 
 function baseText(p: ReturnType<typeof palette>) {
-  return { color: p.ink2, fontSize: AXIS_FONT, fontFamily: "inherit" };
+  return { color: p.ink2, fontSize: AXIS_FONT, fontFamily: FONT };
+}
+
+/** Left margin wide enough for the longest category label (CJK glyphs ≈ 1 em, others ≈ 0.6 em). */
+function labelWidth(names: string[]): number {
+  const w = (s: string) => [...s].reduce((acc, ch) => acc + (ch.charCodeAt(0) > 0x2e80 ? AXIS_FONT : AXIS_FONT * 0.62), 0);
+  return Math.ceil(Math.max(40, ...names.map(w))) + 14;
+}
+
+function categoryAxis(p: ReturnType<typeof palette>, names: string[], highlighted: (n: string) => boolean, inverse = false) {
+  return {
+    type: "category" as const,
+    data: names,
+    inverse,
+    axisLine: { lineStyle: { color: p.axis } },
+    axisTick: { show: false },
+    axisLabel: {
+      ...baseText(p),
+      formatter: (n: string) => (highlighted(n) ? `{b|${n}}` : `{n|${n}}`),
+      rich: {
+        b: { color: p.ink, fontWeight: 600, fontSize: AXIS_FONT, fontFamily: FONT },
+        n: { color: p.ink2, fontSize: AXIS_FONT, fontFamily: FONT },
+      },
+    },
+  };
 }
 
 function tooltipBox(p: ReturnType<typeof palette>) {
@@ -34,37 +59,24 @@ export function rankingOption(opts: {
   valueName: string;
   secondaryName?: string;
   format: (v: number) => string;
-  log?: boolean;
   refLine?: { value: number; label: string };
 }): EChartsCoreOption {
   const p = palette();
   const items = [...opts.items].sort((a, b) => a.value - b.value); // bottom→top in category axis
-  const vals = items.map((i) => i.value).filter((v) => v > 0);
-  const useLog = opts.log ?? (vals.length > 1 && Math.max(...vals) / Math.min(...vals) > 30);
   const names = items.map((i) => i.name);
   const byName = new Map(items.map((i) => [i.name, i]));
   return {
     animation: false,
-    grid: { left: 8, right: 64, top: 8, bottom: 28, containLabel: true },
+    grid: { left: labelWidth(names), right: 72, top: 8, bottom: 28, containLabel: false },
     xAxis: {
-      type: useLog ? "log" : "value",
-      logBase: 10,
+      type: "value",
+      min: 0,
       axisLine: { show: false },
       axisTick: { show: false },
       splitLine: { lineStyle: { color: p.grid, width: 1 } },
       axisLabel: { ...baseText(p), formatter: (v: number) => opts.format(v) },
     },
-    yAxis: {
-      type: "category",
-      data: names,
-      axisLine: { lineStyle: { color: p.axis } },
-      axisTick: { show: false },
-      axisLabel: {
-        ...baseText(p),
-        formatter: (n: string) => (byName.get(n)?.highlight ? `{b|${n}}` : n),
-        rich: { b: { color: p.ink, fontWeight: 600, fontSize: AXIS_FONT } },
-      },
-    },
+    yAxis: categoryAxis(p, names, (n) => !!byName.get(n)?.highlight),
     tooltip: {
       ...tooltipBox(p),
       trigger: "axis",
@@ -139,7 +151,7 @@ export function dumbbellOption(opts: {
   const fmtv = (v: number) => (v >= 10 ? v.toFixed(0) : v.toFixed(1));
   return {
     animation: false,
-    grid: { left: 8, right: 24, top: 8, bottom: 28, containLabel: true },
+    grid: { left: labelWidth(names), right: 24, top: 8, bottom: 28, containLabel: false },
     xAxis: {
       type: "log",
       logBase: 10,
@@ -148,17 +160,7 @@ export function dumbbellOption(opts: {
       splitLine: { lineStyle: { color: p.grid } },
       axisLabel: { ...baseText(p), formatter: (v: number) => fmtv(v) },
     },
-    yAxis: {
-      type: "category",
-      data: names,
-      axisLine: { lineStyle: { color: p.axis } },
-      axisTick: { show: false },
-      axisLabel: {
-        ...baseText(p),
-        formatter: (n: string) => (byName.get(n)?.highlight ? `{b|${n}}` : n),
-        rich: { b: { color: p.ink, fontWeight: 600, fontSize: AXIS_FONT } },
-      },
-    },
+    yAxis: categoryAxis(p, names, (n) => !!byName.get(n)?.highlight),
     tooltip: {
       ...tooltipBox(p),
       trigger: "axis",
@@ -219,7 +221,7 @@ export function stackedOption(opts: {
   const byName = new Map(rows.map((r) => [r.name, r]));
   return {
     animation: false,
-    grid: { left: 8, right: 64, top: 8, bottom: 28, containLabel: true },
+    grid: { left: labelWidth(names), right: 64, top: 8, bottom: 28, containLabel: false },
     xAxis: {
       type: "value",
       axisLine: { show: false },
@@ -227,18 +229,7 @@ export function stackedOption(opts: {
       splitLine: { lineStyle: { color: p.grid } },
       axisLabel: { ...baseText(p), formatter: (v: number) => opts.format(v) },
     },
-    yAxis: {
-      type: "category",
-      data: names,
-      inverse: true,
-      axisLine: { lineStyle: { color: p.axis } },
-      axisTick: { show: false },
-      axisLabel: {
-        ...baseText(p),
-        formatter: (n: string) => (byName.get(n)?.highlight ? `{b|${n}}` : n),
-        rich: { b: { color: p.ink, fontWeight: 600, fontSize: AXIS_FONT } },
-      },
-    },
+    yAxis: categoryAxis(p, names, (n) => !!byName.get(n)?.highlight, true),
     tooltip: {
       ...tooltipBox(p),
       trigger: "axis",
@@ -276,7 +267,7 @@ export function heatmapOption(opts: {
   const data = opts.values.filter((v) => v[2] !== null).map(([c, r, v]) => [c, r, Math.log2(v as number), v]);
   return {
     animation: false,
-    grid: { left: 8, right: 8, top: 8, bottom: 8, containLabel: true },
+    grid: { left: labelWidth(opts.rows), right: 8, top: 44, bottom: 8, containLabel: false },
     xAxis: {
       type: "category",
       data: opts.cols,
@@ -286,18 +277,7 @@ export function heatmapOption(opts: {
       axisLabel: { ...baseText(p), interval: 0, rotate: 0, width: 64, overflow: "break", lineHeight: 14 },
       splitArea: { show: false },
     },
-    yAxis: {
-      type: "category",
-      data: opts.rows,
-      inverse: true,
-      axisLine: { show: false },
-      axisTick: { show: false },
-      axisLabel: {
-        ...baseText(p),
-        formatter: (n: string) => (opts.highlightRows.has(n) ? `{b|${n}}` : n),
-        rich: { b: { color: p.ink, fontWeight: 600, fontSize: AXIS_FONT } },
-      },
-    },
+    yAxis: { ...categoryAxis(p, opts.rows, (n) => opts.highlightRows.has(n), true), axisLine: { show: false } },
     visualMap: {
       show: false,
       dimension: 2,
@@ -341,7 +321,7 @@ export function linesOption(opts: {
   const p = palette();
   return {
     animation: false,
-    grid: { left: 8, right: 96, top: 28, bottom: 28, containLabel: true },
+    grid: { left: 8, right: 16, top: 28, bottom: 28, containLabel: true },
     xAxis: {
       type: opts.xType ?? "time",
       axisLine: { lineStyle: { color: p.axis } },
@@ -374,7 +354,6 @@ export function linesOption(opts: {
       lineStyle: { width: 2, color: p.series[s.colorIndex] },
       itemStyle: { color: p.series[s.colorIndex] },
       data: s.points,
-      endLabel: { show: true, color: p.ink2, fontSize: 11.5, formatter: s.name },
       emphasis: { focus: "series" },
     })),
   };

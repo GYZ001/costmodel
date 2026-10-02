@@ -21,13 +21,13 @@ export function GoldBuys(scope: Scope) {
           : [`居民消费价格水平 = 美国的 ${fmt(row.pli_hfce, 2)} 倍（${year}）`, `1 克黄金值 ${fmt(row.gold_usd_g, 1)} 美元`];
         return [{
           id: iso,
-          name: `${countryName(c)}${scope.yearMode === "latest" ? `（${year}）` : ""}`,
+          name: countryName(c),
           value: v,
           highlight: scope.picks.includes(iso),
           tip,
         }];
       }),
-    [rows, m, scope.picks, scope.yearMode],
+    [rows, m, scope.picks],
   );
   const usRow = scope.ds.countries.USA && rows.find((r) => r.iso === "USA");
   const option = useMemo(
@@ -35,7 +35,6 @@ export function GoldBuys(scope: Scope) {
       items,
       valueName: m === "diet" ? "1 克黄金可买健康饮食" : "1 克黄金的购买力（美国物价下的等值美元）",
       format: (v) => (m === "diet" ? `${sig(v, 2)} 天` : `$${fmt(v, 0)}`),
-      log: false,
       refLine: m === "consumption" && usRow ? { value: usRow.row.gold_usd_g, label: "美国" } : undefined,
     }),
     [items, m, theme],
@@ -43,9 +42,9 @@ export function GoldBuys(scope: Scope) {
 
   return (
     <section className="block" id="buys">
-      <h2>② 黄金 → 商品：一克黄金在当地能买多少</h2>
+      <h2>② 黄金 → 商品：一克黄金在当地能买多少（{scope.year} 年）</h2>
       <p className="sub">
-        各地金价几乎一样（都≈美元金价×汇率），但同一克黄金换成本币后，在物价低的地方能买到更多东西。
+        本页各地金价按“美元金价 × 汇率”计算，换成美元都一样；但同一克黄金换成本币后，在物价低的地方能买到更多东西。
         这一步的差异，就是各国物价水平的差异。
       </p>
       <div className="card">

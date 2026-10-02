@@ -4,7 +4,7 @@ import { Chart } from "../Chart";
 import { linesOption } from "../charts";
 import { countryName, fmt, sig, useThemeVersion } from "../lib";
 
-export function GoldRuler({ ds, picks }: Scope) {
+export function GoldRuler({ ds, picks, slotOf }: Scope) {
   const theme = useThemeVersion();
   const us = ds.us_monthly;
   const pns = us.us_ahe_pns_sa;
@@ -33,16 +33,16 @@ export function GoldRuler({ ds, picks }: Scope) {
   );
 
   const hist = useMemo(() => {
-    const ser = picks
+    return picks
       .filter((iso) => ds.wage_gold_history[iso])
-      .slice(0, 6)
-      .map((iso, i) => ({
+      .map((iso) => ({
+        iso,
         name: countryName(ds.countries[iso]),
         points: ds.wage_gold_history[iso].points.map(([y, , g]) => [`${y}`, g] as [string, number]),
-        colorIndex: i,
+        colorIndex: slotOf[iso],
       }));
-    return ser;
-  }, [ds, picks]);
+  }, [ds, picks, slotOf]);
+  const noHistory = picks.filter((iso) => !ds.wage_gold_history[iso]).map((iso) => countryName(ds.countries[iso]));
   const histOpt = useMemo(() => linesOption({ series: hist, yName: "月薪可换黄金（克）", format: (v) => sig(v, 2), log: true }), [hist, theme]);
 
   const first = pns[0];
@@ -84,14 +84,14 @@ export function GoldRuler({ ds, picks }: Scope) {
       <div className="card">
         <h3>重点经济体：平均月薪折合黄金（克，年度，对数刻度）</h3>
         <div className="legend">
-          {hist.map((s, i) => (
-            <span key={s.name}><span className="ln" style={{ background: `var(--s${i + 1})` }} />{s.name}</span>
+          {hist.map((s) => (
+            <span key={s.iso}><span className="ln" style={{ background: `var(--s${s.colorIndex + 1})` }} />{s.name}</span>
           ))}
         </div>
         <Chart option={histOpt} height={360} ariaLabel="重点经济体月薪折合黄金克数" />
         <p className="note">
-          每年的月薪用当年平均金价和平均汇率折算。口径：{picks.filter((iso) => ds.wage_gold_history[iso]).slice(0, 6).map((iso) => `${countryName(ds.countries[iso])}＝${ds.wage_gold_history[iso].label}`).join("；")}。
-          在重点对比中最多显示前 6 个有历史数据的经济体。
+          每年的月薪用当年平均金价和平均汇率折算。口径：{hist.map((s) => `${s.name}＝${ds.wage_gold_history[s.iso].label}`).join("；")}。
+          {noHistory.length > 0 && <>没有可核对的历年月薪序列：{noHistory.join("、")}。</>}
         </p>
       </div>
     </section>

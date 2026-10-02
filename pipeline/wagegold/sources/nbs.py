@@ -11,6 +11,9 @@ parsed with patterns anchored on the sentences NBS uses every year:
 * 「YYYY年农民工监测调查报告」 - average monthly income of migrant workers.
 * Monthly 「…国民经济…」 releases - 全国企业就业人员周平均工作时间 (average weekly
   hours actually worked by enterprise employees, from the monthly labour force survey).
+* Monthly 「YYYY年M月份居民消费价格…」 releases - the sentences that report
+  year-on-year CPI changes, kept verbatim so statements about them can be checked
+  against the archived original text.
 """
 from __future__ import annotations
 
@@ -25,6 +28,7 @@ LINK_RE = re.compile(r"href=\"\./(\d{6})/(t(\d{8})_\d+)\.html\"[^>]*title='([^']
 
 WAGE_TITLE = re.compile(r"^(\d{4})年城镇单位就业人员年平均工资情况$")
 MIGRANT_TITLE = re.compile(r"^(\d{4})年农民工监测调查报告$")
+CPI_TITLE = re.compile(r"^(\d{4})年(\d{1,2})月份居民消费价格")
 # Monthly "national economy" releases; the title fixes the reference month.
 ECONOMY_TITLES = [
     (re.compile(r"^(\d{1,2})月份国民经济"), lambda m: int(m.group(1))),
@@ -34,6 +38,14 @@ ECONOMY_TITLES = [
     (re.compile(r"^前三季度国民经济"), lambda m: 9),
     (re.compile(r"^\d{4}年国民经济(?!和社会发展统计公报)"), lambda m: 12),
 ]
+
+
+def is_economy_release(title: str) -> bool:
+    """Monthly/quarterly/annual economic-performance releases.  Their titles vary
+    ("8月份国民经济…", "前三季度经济…"), so any title about the economy is taken,
+    except statistical communiqués and census bulletins, which never carry the
+    monthly hours figure.  The reference month itself comes from the text."""
+    return "经济" in title and not re.search(r"公报|普查", title)
 
 
 def economy_month(title: str) -> int | None:
@@ -97,7 +109,8 @@ def discover(f: Fetcher, pages: int = 64) -> tuple[list[Release], list[dict]]:
             title = title.strip()
             if "价格" in title:
                 price_titles[tid] = {"date": f"{day[:4]}-{day[4:6]}-{day[6:]}", "title": title, "url": f"{LIST_URL}{ym}/{tid}.html"}
-            if tid not in seen and (WAGE_TITLE.match(title) or MIGRANT_TITLE.match(title) or economy_month(title)):
+            if tid not in seen and (WAGE_TITLE.match(title) or MIGRANT_TITLE.match(title) or CPI_TITLE.match(title)
+                                    or is_economy_release(title)):
                 seen[tid] = Release(f"{LIST_URL}{ym}/{tid}.html", f"nbs/release/{ym}/{tid}", title, day)
     return list(seen.values()), sorted(price_titles.values(), key=lambda r: r["date"])
 
@@ -116,7 +129,64 @@ def collect(f: Fetcher) -> list[Obs]:
     out: list[Obs] = []
     for snap, title in snaps:
         out += parse_release(snap.read().decode("utf-8", "replace"), title, snap.key)
+    write_cpi_quotes(snaps)
     return out
+
+
+def body_text(html: str) -> str:
+    """Text of the release body without page chrome.  Release pages carry the
+    article twice - a desktop copy ('txt-content') followed by a mobile copy
+    ('mobile-content') - so the desktop copy is taken, up to where the mobile one starts."""
+    i = html.find('class="txt-content"')
+    if i < 0:
+        return page_text(html)
+    j = html.find('class="mobile-content', i)
+    return page_text(html[html.index(">", i) + 1 : j if j >= 0 else len(html)])
+
+
+def yoy_sentences(text: str) -> list[str]:
+    """Sentences of a CPI release that report year-on-year changes.
+
+    NBS names the comparison basis ("同比" year-on-year, "环比" month-on-month,
+    "比上年同期" year-to-date) once and the following sentences inherit it until the
+    basis is named again, e.g. "8月份，全国居民消费价格环比上涨0.4%。其中，…食品价格上涨0.4%".
+    So the basis is tracked sentence by sentence; a sentence naming more than one
+    basis is ambiguous and suspends tracking until a single basis is named again."""
+    out: list[str] = []
+    basis = None
+    for raw in text.split("。"):
+        s = re.sub(r"\s+", "", raw)
+        named = {b for b, word in (("mom", "环比"), ("ytd", "比上年同期"), ("yoy", "同比")) if word in s}
+        if named:
+            basis = named.pop() if len(named) == 1 else None
+        if basis == "yoy" and "价格" in s and "%" in s:
+            out.append(s + "。")
+    return out
+
+
+def write_cpi_quotes(snaps: list[tuple[Snapshot, str]]) -> None:
+    import json
+
+    from ..config import DATA_DIR
+
+    rows = []
+    for snap, title in snaps:
+        if m := CPI_TITLE.match(title):
+            html = snap.read().decode("utf-8", "replace")
+            rows.append({"period": f"{m.group(1)}-{int(m.group(2)):02d}", "title": title, "url": snap.url,
+                         "snapshot": snap.key, "sha256": snap.sha256, "sentences": yoy_sentences(body_text(html))})
+    path = DATA_DIR / "derived" / "nbs_cpi_yoy_sentences.json"
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(sorted(rows, key=lambda r: r["period"]), ensure_ascii=False, indent=1) + "\n", encoding="utf-8")
+
+
+def cpi_quotes() -> list[dict]:
+    import json
+
+    from ..config import DATA_DIR
+
+    path = DATA_DIR / "derived" / "nbs_cpi_yoy_sentences.json"
+    return json.loads(path.read_text(encoding="utf-8")) if path.exists() else []
 
 
 def write_price_index(rows: list[dict]) -> None:
@@ -146,7 +216,8 @@ def price_release_summary() -> dict | None:
     idx = json.loads(path.read_text(encoding="utf-8"))
     groups: dict[str, dict] = {}
     for r in idx["releases"]:
-        kind = _re.sub(r"\d{4}年|\d{1,2}月份?|[上中下]旬|[一二三四]季度|同比|环比|上涨|下降|持平|[\d.]+%|\s", "", r["title"])
+        name = _re.sub(r"^\d{4}年|^\d{1,2}月份?|^[上中下]旬|\s", "", _re.sub(r"^\d{4}年\d{1,2}月(份|[上中下]旬)", "", r["title"]))
+        kind = name[: name.index("价格") + 2] if "价格" in name else name
         g = groups.setdefault(kind, {"kind": kind, "count": 0, "first": r["date"], "last": r["date"], "example": r["url"]})
         g["count"] += 1
         g["first"] = min(g["first"], r["date"])
@@ -193,13 +264,16 @@ def parse_release(html: str, title: str, snapshot: str) -> list[Obs]:
         value, increase, growth = int(hit.group(1)), int(hit.group(2)), float(hit.group(3))
         out.append(Obs("cn_migrant_monthly", "CHN", str(year), value, snapshot, note=f"growth_pct={growth}"))
         out.append(Obs("cn_migrant_monthly__implied_prev", "CHN", str(year - 1), value - increase, snapshot))
-    elif (month := economy_month(title)) is not None:
+    elif is_economy_release(title):
         hit = HOURS_RE.search(text)
         if hit:
             near = list(HOURS_MONTH_RE.finditer(text[: hit.start()]))
-            if not near or int(near[-1].group(1)) != month:
-                raise ValueError(f"{snapshot}: title says month {month}, text near the hours sentence says "
-                                 f"{near[-1].group(1) if near else 'nothing'}")
+            if not near:
+                raise ValueError(f"{snapshot}: weekly hours found but no reference month in the text")
+            month = int(near[-1].group(1))
+            stated = economy_month(title)
+            if stated is not None and stated != month:
+                raise ValueError(f"{snapshot}: title says month {stated}, text near the hours sentence says {month}")
             ry, rm = published(html, text)
             year = ry if month <= rm else ry - 1
             out.append(Obs("cn_weekly_hours_enterprise", "CHN", f"{year}-{month:02d}", float(hit.group(1)), snapshot))

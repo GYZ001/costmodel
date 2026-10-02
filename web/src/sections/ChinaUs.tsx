@@ -115,6 +115,12 @@ function UsBasket({ ds }: { ds: Scope["ds"] }) {
     });
   }, [ds, mode]);
   const unitName: Record<string, string> = { kg: "千克", L: "升", dozen: "打", kWh: "千瓦时" };
+  const gaps = useMemo(() => {
+    const ids = new Set(Object.values(ds.us_items).map((it) => it.series_id));
+    const months = ds.us_monthly.us_ahe_all_sa.map(([p]) => p);
+    const since = months[Math.max(0, months.length - 24)] ?? "";
+    return ds.bls_unavailable.filter((g) => g.period >= since && g.series.some((id) => ids.has(id)));
+  }, [ds]);
 
   return (
     <div className="card">
@@ -143,7 +149,8 @@ function UsBasket({ ds }: { ds: Scope["ds"] }) {
         </table>
       </div>
       <p className="note">
-        BLS CPI 平均价格（美国城市平均，未季调）。磅、加仑已换算为千克、升。2025 年 10 月因美国联邦政府停摆 BLS 未采集价格，该月缺失。
+        BLS CPI 平均价格（美国城市平均，未季调）。磅、加仑已换算为千克、升。
+        {gaps.length > 0 && <>最近 24 个月中 BLS 未公布数值的月份：{gaps.map((g) => `${g.period}（BLS 注：${g.note || "无说明"}）`).join("；")}。</>}
         时薪为同月 BLS 私营非农平均时薪；黄金为同月世界银行月均金价。{countryName(ds.countries.USA)}的数字仅供感受量级，商品规格与中国市场常见规格不同，不做逐项跨国对比。
       </p>
     </div>
@@ -156,7 +163,7 @@ function NoChinaItems({ ds }: { ds: Scope["ds"] }) {
     <div className="card">
       <h3>为什么没有“中国超市单品价格”的逐项对比？</h3>
       <p style={{ margin: 0 }}>
-        美国劳工统计局每月公布鸡蛋、牛奶、面包等商品的全国平均零售价（上表），加拿大统计局也有类似数据。
+        美国劳工统计局每月公布鸡蛋、牛奶、面包等商品的全国城市平均零售价（上表）。
         中国方面，本项目每次运行都会扫描国家统计局“最新发布”栏目，记录标题含“价格”的全部发布
         {idx ? `（本次覆盖 ${idx.from} 至 ${idx.to}）` : ""}，结果如下——其中没有城市食品零售单品均价：
       </p>

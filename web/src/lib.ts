@@ -38,43 +38,42 @@ export function pct(x: number | null | undefined, digits = 0): string {
 
 // ---------------------------------------------------------------- dataset helpers
 
-export function primaryWage(row: CountryYear | undefined): Wage | undefined {
-  return row?.wages.find((w) => w.role === "primary");
+export type View = "hourly" | "monthly";
+
+export function primaryWage(row: CountryYear | undefined, view: View = "hourly"): Wage | undefined {
+  return row?.wages.find((w) => (view === "hourly" ? w.role : w.mrole) === "primary");
 }
 
-export function typicalWage(row: CountryYear | undefined): Wage | undefined {
-  return row?.wages.find((w) => w.role === "typical");
+export function typicalWage(row: CountryYear | undefined, view: View = "hourly"): Wage | undefined {
+  return row?.wages.find((w) => (view === "hourly" ? w.role : w.mrole) === "typical");
 }
 
-/** Years (descending) where the economy has a primary hourly wage. */
-export function wageYears(c: Country): string[] {
+/** Years (descending) where the economy has a primary wage for the view. */
+export function wageYears(c: Country, view: View = "hourly"): string[] {
   return Object.keys(c.years)
-    .filter((y) => primaryWage(c.years[y]))
+    .filter((y) => primaryWage(c.years[y], view))
     .sort()
     .reverse();
 }
 
-export type YearMode = "latest" | string;
-
-/** Row used for an economy: an exact year, or its most recent year with a wage (not older than `floor`). */
-export function rowFor(c: Country, mode: YearMode, floor = "2021"): { year: string; row: CountryYear } | null {
-  if (mode !== "latest") {
-    const row = c.years[mode];
-    return row ? { year: mode, row } : null;
-  }
-  const y = wageYears(c).find((yy) => yy >= floor);
-  return y ? { year: y, row: c.years[y] } : null;
+export function rowFor(c: Country, year: string): { year: string; row: CountryYear } | null {
+  const row = c.years[year];
+  return row ? { year, row } : null;
 }
 
 export function countryName(c: Country): string {
   return c.name_zh || c.name_en;
 }
 
-export function latestCommonYear(ds: Dataset): string {
-  // The most recent year for which at least 40 economies have a primary hourly wage.
+/** Default reference year: the most recent year in which at least two thirds of the
+ *  G20 member countries have a wage figure for the view. */
+export function bestYear(ds: Dataset, view: View): string {
   const counts: Record<string, number> = {};
-  for (const c of Object.values(ds.countries)) for (const y of wageYears(c)) counts[y] = (counts[y] ?? 0) + 1;
-  return Object.keys(counts).filter((y) => counts[y] >= 40).sort().reverse()[0] ?? Object.keys(counts).sort().reverse()[0];
+  const members = Object.values(ds.countries).filter((c) => c.g20);
+  for (const c of members) for (const y of wageYears(c, view)) counts[y] = (counts[y] ?? 0) + 1;
+  const need = Math.ceil((members.length * 2) / 3);
+  const years = Object.keys(counts).sort().reverse();
+  return years.find((y) => counts[y] >= need) ?? years[0];
 }
 
 // ---------------------------------------------------------------- theme

@@ -5,16 +5,16 @@ import { rankingHeight, rankingOption, type RankItem } from "../charts";
 import { countryName, money, primaryWage, rowFor, sig, typicalWage, useThemeVersion } from "../lib";
 
 export function useRows(scope: Scope) {
-  const { ds, yearMode, group } = scope;
+  const { ds, year, group } = scope;
   return useMemo(() => {
     return Object.entries(ds.countries)
       .filter(([iso, c]) => group === "all" || c.g20 || scope.picks.includes(iso))
       .map(([iso, c]) => {
-        const r = rowFor(c, yearMode);
+        const r = rowFor(c, year);
         return r ? { iso, c, year: r.year, row: r.row } : null;
       })
       .filter((x): x is NonNullable<typeof x> => x !== null);
-  }, [ds, yearMode, group, scope.picks]);
+  }, [ds, year, group, scope.picks]);
 }
 
 export function GoldPerHour(scope: Scope) {
@@ -23,51 +23,54 @@ export function GoldPerHour(scope: Scope) {
   const items: RankItem[] = useMemo(
     () =>
       rows.flatMap(({ iso, c, year, row }) => {
-        const w = primaryWage(row);
-        if (!w?.hourly_gold_g) return [];
-        const t = typicalWage(row);
+        const hourly = scope.view === "hourly";
+        const w = primaryWage(row, scope.view);
+        const v = hourly ? w?.hourly_gold_g : w?.monthly_gold_g;
+        if (!w || !v) return [];
+        const t = typicalWage(row, scope.view);
         return [{
           id: iso,
-          name: `${countryName(c)}${scope.yearMode === "latest" ? `（${year}）` : ""}`,
-          value: w.hourly_gold_g,
-          secondary: t?.hourly_gold_g ?? null,
+          name: countryName(c),
+          value: v,
+          secondary: (hourly ? t?.hourly_gold_g : t?.monthly_gold_g) ?? null,
           highlight: scope.picks.includes(iso),
           tip: [
-            `${w.label}：${money(w.hourly_lcu, c.currency)}/小时`,
+            hourly ? `${w.label}：${money(w.hourly_lcu, c.currency)}/小时` : `${w.label}：${money(w.monthly_lcu, c.currency)}/月`,
+            ...(hourly && w.hours_week ? [`工时：每周 ${w.hours_week.toFixed(1)} 小时`] : []),
             `当地金价：${money(row.gold_lcu_g, c.currency)}/克（${year} 年均）`,
             w.source,
           ],
         }];
       }),
-    [rows, scope.picks, scope.yearMode],
+    [rows, scope.picks, scope.view],
   );
   const option = useMemo(
     () => rankingOption({
       items,
-      valueName: "平均时薪可换黄金",
-      secondaryName: "中位时薪可换黄金",
+      valueName: scope.view === "hourly" ? "平均时薪可换黄金" : "平均月薪可换黄金",
+      secondaryName: scope.view === "hourly" ? "中位时薪可换黄金" : "中位月薪可换黄金",
       format: (v) => `${sig(v, 2)} 克`,
     }),
-    [items, theme],
+    [items, theme, scope.view],
   );
 
   return (
     <section className="block" id="gold">
-      <h2>① 劳动 → 黄金：每小时工资能换多少克黄金</h2>
+      <h2>① 劳动 → 黄金：{scope.view === "hourly" ? "每小时" : "每月"}工资能换多少克黄金（{scope.year} 年）</h2>
       <p className="sub">
-        时薪 ÷（该年国际金价 × 该年平均汇率）。这一步等价于把时薪按市场汇率换成美元，再除以美元金价。
-        横轴为对数刻度，差距跨度很大。
+        工资 ÷（{scope.year} 年国际金价年均 × 该年平均汇率）。这一步等价于把工资按市场汇率换成美元，再除以美元金价。
       </p>
       <div className="card">
         <div className="legend">
-          <span><span className="sw" style={{ background: "var(--accent)" }} />重点对比的经济体（平均时薪）</span>
-          <span><span className="sw" style={{ background: "var(--deemph)" }} />其他经济体（平均时薪）</span>
-          <span><span className="sw" style={{ background: "var(--s2)", borderRadius: "50%" }} />中位时薪（有数据时）</span>
+          <span><span className="sw" style={{ background: "var(--accent)" }} />重点对比的经济体（平均{scope.view === "hourly" ? "时薪" : "月薪"}）</span>
+          <span><span className="sw" style={{ background: "var(--deemph)" }} />其他经济体</span>
+          <span><span className="sw" style={{ background: "var(--s2)", borderRadius: "50%" }} />中位{scope.view === "hourly" ? "时薪" : "月薪"}（有数据时）</span>
         </div>
         <Chart option={option} height={rankingHeight(items.length)} ariaLabel="各经济体每小时工资可换黄金克数排名" />
         <p className="note">
-          工资：国际劳工组织 ILOSTAT 的雇员平均/中位时薪；只有月薪的经济体用“月薪 ÷ 每周实际工时 × 12/52”折算；中国用国家统计局城镇非私营单位平均工资与企业周平均工时折算（私营单位与农民工见“中美细看”）。
-          金价：世界银行 Pink Sheet 月均价的年平均；汇率：世界银行 WDI 年均官方汇率。
+          工资：OECD 成员用 OECD 全职当量平均工资（时薪按全职雇员通常周工时折算）；其他经济体用国际劳工组织 ILOSTAT 的雇员平均/中位工资（只有月薪的按每周实际工时折算）；
+          中国用国家统计局城镇非私营单位平均工资与企业周平均工时（私营单位与农民工见“中美细看”）。每条记录的口径见悬停提示。
+          金价：世界银行 Pink Sheet 月均价的年平均；汇率：世界银行 WDI 年均汇率。
         </p>
         <DataTable items={items} />
       </div>
@@ -83,7 +86,7 @@ function DataTable({ items }: { items: RankItem[] }) {
       <div className="table-scroll">
         <table className="data">
           <thead>
-            <tr><th>经济体</th><th>平均时薪 → 克金</th><th>中位时薪 → 克金</th><th className="l">说明</th></tr>
+            <tr><th>经济体</th><th>平均工资 → 克金</th><th>中位工资 → 克金</th><th className="l">说明</th></tr>
           </thead>
           <tbody>
             {sorted.map((i) => (

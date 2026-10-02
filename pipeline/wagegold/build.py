@@ -441,7 +441,7 @@ def us_monthly(store: Store, gold: dict) -> dict:
         rows = []
         for p, o in sorted(store.series(key, "USA").items()):
             if p in gm:
-                rows.append([p, o.value, o.value / (gm[p] / GRAMS_PER_TROY_OUNCE)])
+                rows.append([p, o.value, o.value / (gm[p] / GRAMS_PER_TROY_OUNCE), "preliminary" in o.note])
         series[key] = rows
     return series
 

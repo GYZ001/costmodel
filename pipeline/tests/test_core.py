@@ -73,3 +73,36 @@ def test_nbs_wage_release_older_wording():
     assert obs[("cn_wage_nonprivate", "2023")] == 120698
     assert obs[("cn_wage_nonprivate__implied_prev", "2022")] == 114029
     assert obs[("cn_wage_private", "2023")] == 68340
+
+
+def test_nbs_q3_release_month_from_text():
+    html = "<p>2025/10/20 10:00</p><p>9 月份，全国城镇调查失业率为 5.2% 。全国企业就业人员周平均工作时间为 48.5 小时。</p>"
+    obs = nbs.parse_release(html, "前三季度经济运行稳中有进", "nbs/release/202510/t20251020_1")
+    assert [(o.period, o.value) for o in obs] == [("2025-09", 48.5)]
+
+
+def test_nbs_rejects_title_text_month_mismatch():
+    html = "<p>2025/10/20 10:00</p><p>8 月份，全国城镇调查失业率为 5.2% 。全国企业就业人员周平均工作时间为 48.5 小时。</p>"
+    try:
+        nbs.parse_release(html, "9月份国民经济运行", "nbs/release/202510/t20251020_1")
+    except ValueError:
+        return
+    raise AssertionError("mismatch not detected")
+
+
+def test_cpi_yoy_sentences_follow_stated_basis():
+    # Wording and spacing as on the NBS page for August 2026.
+    html = ('<div class="header">导航 价格 同比 1.0%。</div><div class="txt-content">'
+            "<p>2026 年 8 月份，全国居民消费价格同比上涨 0.8% 。其中，城市上涨 0.8% ，农村上涨 0.7% ；食品价格下降 1.4% ，非食品价格上涨 1.2% 。"
+            " 1 — 8 月平均，全国居民消费价格比上年同期上涨 0.9% 。 8 月份，全国居民消费价格环比上涨 0.4% 。"
+            "其中，城市上涨 0.4% ；食品价格上涨 0.4% ，非食品价格上涨 0.3% 。</p>"
+            "<p>一、各类商品及服务价格同比变动情况 8 月份，食品烟酒及在外餐饮类价格同比下降 0.7% 。"
+            "食品中，畜肉类价格下降 5.1% ，其中猪肉价格下降 11.8% ；粮食价格下降 0.6% 。</p>"
+            "<p>二、各类商品及服务价格环比变动情况 8 月份，食品价格上涨 0.4% 。</p></div>")
+    got = nbs.yoy_sentences(nbs.body_text(html))
+    assert got == [
+        "2026年8月份，全国居民消费价格同比上涨0.8%。",
+        "其中，城市上涨0.8%，农村上涨0.7%；食品价格下降1.4%，非食品价格上涨1.2%。",
+        "一、各类商品及服务价格同比变动情况8月份，食品烟酒及在外餐饮类价格同比下降0.7%。",
+        "食品中，畜肉类价格下降5.1%，其中猪肉价格下降11.8%；粮食价格下降0.6%。",
+    ]

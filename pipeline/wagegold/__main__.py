@@ -98,6 +98,8 @@ def main(argv=None) -> int:
 def _build_and_write(store, f, meta, ilo_dic, today, save) -> int:
     years = [str(y) for y in range(2000, today.year + 1)]
     gold = build.gold_tables(store)
+    pink = f.used.get("worldbank/CMO-Historical-Data-Monthly")
+    gold["source_updated"] = pinksheet.updated_on(pink.read()) if pink else None
     gates = build.Gates(store)
     dataset = {
         "generated_at": datetime.now(timezone.utc).replace(microsecond=0).isoformat(),
@@ -112,6 +114,8 @@ def _build_and_write(store, f, meta, ilo_dic, today, save) -> int:
         "latest": build.latest_block(store, gold),
         "fx_recent_ecb": build.fx_recent(store),
         "nbs_price_releases": nbs.price_release_summary(),
+        "cn_cpi_yoy": nbs.cpi_quotes(),
+        "bls_unavailable": bls.unavailable(s for k, s in sorted(f.used.items()) if k.startswith("bls/")),
         "cn_hours_monthly": [[p, o.value] for p, o in sorted(store.series("cn_weekly_hours_enterprise", "CHN").items())],
     }
     dataset["exclusions"] = _dedupe(gates.log)

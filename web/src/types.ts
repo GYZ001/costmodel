@@ -1,7 +1,8 @@
 // Shape of public/data/dataset.json, produced by pipeline/wagegold/__main__.py.
 
 export interface Wage {
-  role: "primary" | "typical" | null;
+  role: "primary" | "typical" | null; // hourly view
+  mrole: "primary" | "typical" | null; // monthly view
   key: string;
   label: string;
   concept: "mean" | "median";
@@ -17,6 +18,8 @@ export interface Wage {
   hourly_usd_mkt: number | null;
   hourly_ppp: number | null;
   minutes_per_cohd_day: number | null;
+  monthly_ppp: number | null;
+  cohd_days_per_month: number | null;
 }
 
 export type CohdKey = "total" | "staples" | "vegetables" | "fruits" | "animal" | "legumes" | "oils";
@@ -43,6 +46,7 @@ export interface Country {
   income: string;
   g20: boolean;
   currency: string | null;
+  ppp_unit_verified: boolean | null;
   years: Record<string, CountryYear>;
 }
 
@@ -98,10 +102,13 @@ export interface Dataset {
     monthly: [string, number][];
     annual: Record<string, { usd_oz: number; usd_g: number }>;
     latest: { period: string; usd_oz: number; usd_g: number };
+    /** The workbook's own "Updated on …" line. */
+    source_updated: string | null;
   };
   countries: Record<string, Country>;
   icp2021_pli_us: Record<string, Record<string, number>>;
-  us_monthly: Record<"us_ahe_pns_sa" | "us_ahe_all_sa", [string, number, number][]>;
+  /** [month, US$ per hour, grams of gold per hour, BLS marks the value preliminary] */
+  us_monthly: Record<"us_ahe_pns_sa" | "us_ahe_all_sa", [string, number, number, boolean][]>;
   us_items: Record<string, UsItem>;
   cn_hours_monthly: [string, number][];
   wage_gold_history: Record<string, { label: string; points: [string, number, number, string][] }>;
@@ -124,6 +131,11 @@ export interface Dataset {
     to: string | null;
     groups: { kind: string; count: number; first: string; last: string; example: string }[];
   } | null;
+  /** Year-on-year sentences quoted verbatim from each archived NBS monthly CPI release. */
+  cn_cpi_yoy: { period: string; title: string; url: string; snapshot: string; sha256: string; sentences: string[] }[];
+  /** Months BLS lists without a value, with BLS's own footnote. */
+  bls_unavailable: { period: string; note: string; series: string[] }[];
+  exclusions: { area: string; year: string; scope: string; detail: string }[];
   checks: Check[];
   sources: SourceInfo[];
   stale: string[];

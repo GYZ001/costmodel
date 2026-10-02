@@ -102,6 +102,19 @@ def _parse(snap, mapping: dict[str, str]) -> list[Obs]:
     return out
 
 
+def unavailable(snaps) -> list[dict]:
+    """Months BLS lists without a value ("-"), with BLS's own footnote, grouped
+    across series: [{"period", "note", "series": [...]}]."""
+    groups: dict[tuple[str, str], list[str]] = {}
+    for snap in snaps:
+        for s in json.loads(snap.read())["Results"]["series"]:
+            for d in s["data"]:
+                if d["period"].startswith("M") and d["period"] != "M13" and d["value"].strip() == "-":
+                    note = "; ".join(fn["text"] for fn in d.get("footnotes", []) if fn and fn.get("text"))
+                    groups.setdefault((f"{d['year']}-{d['period'][1:]}", note), []).append(s["seriesID"])
+    return [{"period": p, "note": n, "series": sorted(set(ids))} for (p, n), ids in sorted(groups.items())]
+
+
 def collect(f: Fetcher, today: date | None = None) -> list[Obs]:
     year = (today or date.today()).year
     out: list[Obs] = []

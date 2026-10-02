@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import type { Dataset } from "./types";
-import { countryName, fmt, latestCommonYear, type YearMode } from "./lib";
+import { bestYear, countryName, fmt, wageYears, type View } from "./lib";
 import { ChainSection } from "./sections/Chain";
 import { GoldPerHour } from "./sections/GoldPerHour";
 import { GoldBuys } from "./sections/GoldBuys";
@@ -15,29 +15,58 @@ export type Group = "g20" | "all";
 
 export interface Scope {
   ds: Dataset;
-  yearMode: YearMode;
+  year: string;
+  view: View;
   group: Group;
   picks: string[];
+  /** Each picked economy keeps the categorical colour slot it was given when picked (0–7). */
+  slotOf: Record<string, number>;
   togglePick: (iso3: string) => void;
 }
 
 const DEFAULT_PICKS = ["CHN", "USA", "JPN", "DEU", "IND", "BRA"];
+const MAX_PICKS = 8; // one per categorical series colour
+
+interface Pick { iso: string; slot: number }
+
+function toggle(cur: Pick[], iso: string): Pick[] {
+  if (cur.some((p) => p.iso === iso)) return cur.filter((p) => p.iso !== iso);
+  const kept = cur.length >= MAX_PICKS ? cur.slice(1) : cur;
+  const used = new Set(kept.map((p) => p.slot));
+  const slot = [...Array(MAX_PICKS).keys()].find((i) => !used.has(i))!;
+  return [...kept, { iso, slot }];
+}
 
 export default function App({ ds }: { ds: Dataset }) {
-  const common = useMemo(() => latestCommonYear(ds), [ds]);
-  const [yearMode, setYearMode] = useState<YearMode>("latest");
+  const [view, setView] = useState<View>("hourly");
+  const best = useMemo(() => bestYear(ds, view), [ds, view]);
+  const [yearPick, setYearPick] = useState<string | null>(null);
+  const year = yearPick ?? best;
   const [group, setGroup] = useState<Group>("g20");
-  const [picks, setPicks] = useState<string[]>(DEFAULT_PICKS.filter((c) => ds.countries[c]));
-  const togglePick = (iso3: string) =>
-    setPicks((p) => (p.includes(iso3) ? p.filter((x) => x !== iso3) : [...p, iso3].slice(-8)));
+  const [picked, setPicked] = useState<Pick[]>(() => DEFAULT_PICKS.filter((c) => ds.countries[c]).reduce(toggle, [] as Pick[]));
+  const togglePick = (iso3: string) => setPicked((cur) => toggle(cur, iso3));
+  const picks = useMemo(() => picked.map((p) => p.iso), [picked]);
+  const slotOf = useMemo(() => Object.fromEntries(picked.map((p) => [p.iso, p.slot])), [picked]);
 
   const years = useMemo(() => {
     const ys = new Set<string>();
-    for (const c of Object.values(ds.countries)) for (const y of Object.keys(c.years)) if (y >= "2017") ys.add(y);
+    for (const c of Object.values(ds.countries)) for (const y of wageYears(c, view)) if (y >= "2015") ys.add(y);
     return [...ys].sort().reverse();
-  }, [ds]);
+  }, [ds, view]);
 
-  const scope: Scope = { ds, yearMode, group, picks, togglePick };
+  const scope: Scope = { ds, year, view, group, picks, slotOf, togglePick };
+  const missing = useMemo(
+    () =>
+      Object.entries(ds.countries)
+        .filter(([iso, c]) => (group === "all" ? picks.includes(iso) : c.g20 || picks.includes(iso)))
+        .filter(([, c]) => !wageYears(c, view).includes(year))
+        .map(([, c]) => {
+          const ys = wageYears(c, view);
+          if (view === "hourly" && wageYears(c, "monthly").includes(year)) return `${countryName(c)}（该年无同口径时薪，可切换“按月薪”）`;
+          return `${countryName(c)}${ys.length ? `（最近 ${ys[0]} 年）` : "（无可核对数据）"}`;
+        }),
+    [ds, group, picks, view, year],
+  );
   const passed = ds.checks.filter((c) => c.status === "pass").length;
   const failed = ds.checks.filter((c) => c.status === "fail").length;
   const g = ds.gold.latest;
@@ -48,7 +77,7 @@ export default function App({ ds }: { ds: Dataset }) {
         <h1>一小时的劳动，能换多少黄金、买多少东西？</h1>
         <p className="lede">
           把各国的时薪先换成<strong>黄金克数</strong>，再看这些黄金在<strong>当地</strong>能买到多少东西。
-          全部数字来自世界银行、国际劳工组织、IMF、美国劳工统计局、国家统计局等官方发布，原始文件逐个存档、可追溯、可复算。
+          全部数字来自世界银行、国际劳工组织、OECD、美国劳工统计局、国家统计局等官方发布，原始文件逐个存档、可追溯、可复算。
         </p>
         <div className="toolbar">
           <span className="badge">
@@ -81,13 +110,16 @@ export default function App({ ds }: { ds: Dataset }) {
       <main className="wrap">
         <section className="block" aria-label="全局筛选">
           <div className="controls" style={{ marginBottom: 0 }}>
+            <span className="seg" role="group" aria-label="工资口径">
+              <button aria-pressed={view === "hourly"} onClick={() => setView("hourly")}>按时薪</button>
+              <button aria-pressed={view === "monthly"} onClick={() => setView("monthly")}>按月薪（不需工时假设）</button>
+            </span>
             <label>
-              年份{" "}
-              <select value={yearMode} onChange={(e) => setYearMode(e.target.value)}>
-                <option value="latest">各国最新可得年份（2021 年起）</option>
+              参考年份{" "}
+              <select value={year} onChange={(e) => setYearPick(e.target.value)} title="默认年份：至少三分之二的 G20 成员有数据的最近年份">
                 {years.map((y) => (
                   <option key={y} value={y}>
-                    {y} 年{y === common ? "（覆盖最多的最近年份）" : ""}
+                    {y} 年{y === best ? "（默认）" : ""}
                   </option>
                 ))}
               </select>
@@ -109,7 +141,9 @@ export default function App({ ds }: { ds: Dataset }) {
             </div>
           </div>
           <p className="small muted" style={{ margin: "8px 0 0" }}>
-            “各国最新可得年份”下，每个经济体都用自己最近一年的工资，并配同一年的汇率、金价和物价（年份标在图中）；选定具体年份则只显示该年有数据的经济体。
+            所有经济体都用同一参考年份的工资、该年平均汇率、该年平均金价和该年物价——金价几年内能翻倍，混用年份会让“克金工资”失真。
+            默认年份是至少三分之二的 G20 成员有数据的最近年份（{best} 年）。
+            {missing.length > 0 && <> 该年缺少可核对工资数据：{missing.join("、")}。</>}
           </p>
         </section>
 

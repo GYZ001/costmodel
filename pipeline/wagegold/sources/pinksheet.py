@@ -54,3 +54,14 @@ def parse(xlsx: bytes, snapshot: str) -> list[Obs]:
 
 def _is_gold(cell) -> bool:
     return isinstance(cell, str) and cell.strip().lower() == "gold"
+
+
+def updated_on(xlsx: bytes) -> str | None:
+    """The workbook's own 'Updated on <date>' line (row 4 of 'Monthly Prices')."""
+    import openpyxl
+
+    wb = openpyxl.load_workbook(io.BytesIO(xlsx), read_only=True, data_only=True)
+    for (cell,) in wb["Monthly Prices"].iter_rows(min_row=1, max_row=6, max_col=1, values_only=True):
+        if isinstance(cell, str) and cell.startswith("Updated on"):
+            return cell.removeprefix("Updated on").strip()
+    return None

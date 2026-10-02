@@ -179,14 +179,134 @@ def sge():
             print(url, "FAILED", e)
 
 
+
+def ilo_earn_cov(ind):
+    def run():
+        section(f"ILO earnings coverage {ind}")
+        raw = get(f"https://rplumber.ilo.org/data/indicator/?id={ind}&timefrom=2015&format=.csv").decode("utf-8-sig")
+        rows = list(csv.DictReader(io.StringIO(raw)))
+        print("rows", len(rows), "cols", list(rows[0].keys()) if rows else None)
+        keys = [k for k in rows[0].keys() if k.startswith("classif")] if rows else []
+        combos = defaultdict(int)
+        for r in rows:
+            combos[tuple(r[k] for k in keys)] += 1
+        print("classif combos:", sorted(combos.items(), key=lambda x: -x[1])[:12])
+        latest = {}
+        for r in rows:
+            if r.get("sex") != "SEX_T":
+                continue
+            if keys and not all(("TOTAL" in r[k]) or r[k].endswith("_LCU") or r[k] == "" for k in keys):
+                continue
+            a = r["ref_area"]
+            if a not in latest or r["time"] > latest[a][0]:
+                latest[a] = (r["time"], r["obs_value"], r["source"], [r[k] for k in keys], r.get("note_source", "")[:60])
+        focus = "USA CHN JPN DEU GBR FRA ITA ESP KOR IND BRA MEX RUS TUR IDN ZAF AUS CAN SAU ARG VNM THA PHL EGY NGA POL NLD CHE SWE MYS PAK BGD SGP HKG TWN ISR NOR NZL IRN".split()
+        for a in focus:
+            print(" ", a, latest.get(a))
+        yc = defaultdict(int)
+        for v in latest.values():
+            yc[v[0]] += 1
+        print("n areas:", len(latest), "latest-year histogram:", sorted(yc.items()))
+    safe(run)
+
+
+def ilo_meta():
+    section("ILO source/note dictionaries")
+    for url in ["https://rplumber.ilo.org/metadata/dic/?var=source&lang=en&format=.csv",
+                "https://rplumber.ilo.org/metadata/dic/?var=note_source&lang=en&format=.csv"]:
+        try:
+            raw = get(url).decode("utf-8-sig")
+            print(url, "bytes", len(raw))
+            print(raw[:800])
+        except Exception as e:  # noqa: BLE001
+            print(url, "FAILED", e)
+
+
+def wb_sources_food():
+    section("WB sources: nutrition / food prices")
+    d = json.loads(get("https://api.worldbank.org/v2/sources?format=json&per_page=200"))
+    for s in d[1]:
+        if re.search(r"Food|Nutrition|ICP|Price", s["name"], re.I):
+            print(s["id"], s["name"], s["lastupdated"])
+
+
+def wb_cohd():
+    section("WB Food Prices for Nutrition series")
+    for q in ["https://api.worldbank.org/v2/indicator?format=json&per_page=20000&source=88"]:
+        try:
+            d = json.loads(get(q))
+            print("total", d[0].get("total"))
+            for ind in d[1][:80]:
+                print(ind["id"], "|", ind["name"])
+        except Exception as e:  # noqa: BLE001
+            print(q, "FAILED", e)
+
+
+def faostat():
+    section("FAOSTAT CP (consumer prices) API")
+    for q in ["https://faostatservices.fao.org/api/v1/en/definitions/domain/CP/item?output_type=objects",
+              "https://faostatservices.fao.org/api/v1/en/data/CP?area=351,231&item=23013,23014&year=2024,2025&output_type=objects"]:
+        try:
+            raw = get(q).decode()
+            print(q, "\n", raw[:1500])
+        except Exception as e:  # noqa: BLE001
+            print(q, "FAILED", e)
+
+
+def imf_cpi():
+    section("IMF CPI dataflow (COICOP food)")
+    try:
+        x = get("https://api.imf.org/external/sdmx/2.1/dataflow").decode()
+        for m in re.finditer(r'id="(CPI[^"]*)" version="([^"]+)"', x):
+            print(m.group(1), m.group(2))
+        raw = get("https://api.imf.org/external/sdmx/2.1/data/IMF.STA,CPI/CHN+USA.CPI.CP01.IX.A?startPeriod=2019").decode()
+        print(raw[:3000])
+    except Exception as e:  # noqa: BLE001
+        print("FAILED", e)
+
+
+def bls_ap():
+    section("BLS AP candidate ids via API")
+    ids = ["APU0000701111", "APU0000701312", "APU0000702111", "APU0000702212", "APU0000703112", "APU0000703613",
+           "APU0000704111", "APU0000704211", "APU0000704312", "APU0000706111", "APU0000FF1101", "APU0000708111",
+           "APU0000709112", "APU0000710211", "APU0000710212", "APU0000FS1101", "APU0000711111", "APU0000711211",
+           "APU0000711311", "APU0000712112", "APU0000712311", "APU0000712211", "APU0000715211", "APU0000717311"]
+    body = json.dumps({"seriesid": ids, "startyear": "2025", "endyear": "2026"}).encode()
+    req = urllib.request.Request("https://api.bls.gov/publicAPI/v2/timeseries/data/", data=body,
+                                 headers={"User-Agent": UA, "Content-Type": "application/json"})
+    d = json.loads(urllib.request.urlopen(req, timeout=60).read())
+    print(d["status"], d.get("message"))
+    for s in d["Results"]["series"]:
+        data = s["data"]
+        print(s["seriesID"], len(data), data[0]["year"] + data[0]["period"] if data else None, data[0]["value"] if data else None)
+    body = json.dumps({"seriesid": ["APU000074714", "APU000072610", "APU000072620", "APU0000720311", "APU0000FD3101", "APU0000FJ1101", "APU0000FN1101", "APU0000714233", "APU0000702421", "APU0000FC1101"], "startyear": "2025", "endyear": "2026"}).encode()
+    req = urllib.request.Request("https://api.bls.gov/publicAPI/v2/timeseries/data/", data=body,
+                                 headers={"User-Agent": UA, "Content-Type": "application/json"})
+    d = json.loads(urllib.request.urlopen(req, timeout=60).read())
+    print(d["status"], d.get("message"))
+    for s in d["Results"]["series"]:
+        data = s["data"]
+        print(s["seriesID"], len(data), data[0]["year"] + data[0]["period"] if data else None, data[0]["value"] if data else None)
+
+
+def ecb_all():
+    section("ECB EXR monthly all currencies (last obs)")
+    raw = get("https://data-api.ecb.europa.eu/service/data/EXR/M..EUR.SP00.A?format=csvdata&lastNObservations=1").decode()
+    rows = list(csv.DictReader(io.StringIO(raw)))
+    print(len(rows), sorted((r["CURRENCY"], r["TIME_PERIOD"], r["OBS_VALUE"]) for r in rows))
+
+
 if __name__ == "__main__":
-    safe(ilo_toc)
-    safe(nbs_lists)
-    nbs_page("https://www.stats.gov.cn/sj/zxfb/202609/t20260909_1965263.html", ["食品", "粮食", "猪肉", "鲜菜"])
-    safe(pinksheet)
-    safe(icp)
-    safe(oecd_wage_units)
-    safe(statcan)
-    safe(sge)
-    for ind in ["HOW_XEES_SEX_NB_A", "HOW_TEMP_SEX_ECO_NB_A"]:
-        ilo_cov(ind)
+    for ind in ["EAR_EHRA_SEX_NB_A", "EAR_EHRM_SEX_NB_A", "EAR_EMTA_SEX_ECO_NB_A", "EAR_EMTM_SEX_NB_A"]:
+        ilo_earn_cov(ind)
+    safe(ilo_meta)
+    safe(wb_sources_food)
+    safe(wb_cohd)
+    safe(faostat)
+    safe(imf_cpi)
+    safe(bls_ap)
+    safe(ecb_all)
+    nbs_page("https://www.stats.gov.cn/sj/zxfb/202605/t20260515_1963707.html", ["平均工资", "岗位"])
+    nbs_page("https://www.stats.gov.cn/sj/zxfb/202604/t20260430_1963472.html", ["月均收入", "工作时间", "小时"])
+    nbs_page("https://www.stats.gov.cn/sj/zxfb/202609/t20260915_1965307.html", ["周平均工作时间"])
+    nbs_page("https://www.stats.gov.cn/sj/zxfb/202609/t20260909_1965263.html", ["粮食", "鲜果"])

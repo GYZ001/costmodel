@@ -32,9 +32,11 @@ def main(argv=None) -> int:
     store = Store()
     problems: list[str] = []
 
-    def run(name, fn, required=True):
+    def run(name, fn, required=True, into_store=True):
         try:
             res = fn()
+            if into_store and res:
+                store.extend(res)
             print(f"[ok] {name}", flush=True)
             return res
         except Exception as exc:  # noqa: BLE001 - report every failure, then decide by `required`
@@ -46,7 +48,7 @@ def main(argv=None) -> int:
                 problems.append(msg)
             return None
 
-    meta = run("worldbank countries", lambda: worldbank.collect_countries(f)) or {}
+    meta = run("worldbank countries", lambda: worldbank.collect_countries(f), into_store=False) or {}
     for name, fn, required in (
         ("worldbank pink sheet gold", lambda: pinksheet.collect(f), True),
         ("imf pcps gold", lambda: imf.collect(f), False),
@@ -59,19 +61,23 @@ def main(argv=None) -> int:
         ("bls", lambda: bls.collect(f, today), True),
         ("nbs", lambda: nbs.collect(f), True),
     ):
-        obs = run(name, fn, required)
-        if obs:
-            store.extend(obs)
-    ilo = run("ilostat", lambda: ilostat.collect(f))
+        run(name, fn, required)
+    ilo = run("ilostat", lambda: ilostat.collect(f), into_store=False)
     ilo_dic = {}
     if ilo:
-        store.extend(ilo[0])
+        run("ilostat (store)", lambda: ilo[0])
         ilo_dic = ilo[1]
+
+    def save():
+        f.save_manifest()
+        if not f.offline:
+            for path in f.prune_orphans():
+                print(f"[prune] {path}")
 
     if problems:
         # Keep what was fetched (each snapshot passed its own content check) so the
         # failure can be investigated offline; the website dataset is not touched.
-        f.save_manifest()
+        save()
         from .config import DATA_DIR
         report = [{"id": "sources", "title": "必需数据源", "status": "fail", "detail": "；".join(problems)}]
         (DATA_DIR / "checks.json").write_text(json.dumps(report, ensure_ascii=False, indent=1) + "\n", encoding="utf-8")
@@ -98,7 +104,7 @@ def main(argv=None) -> int:
     checks = validate.run_all(store, dataset, years, today.isoformat())
     for c in checks:
         print(f"[check:{c['status']}] {c['title']} — {c['detail']}", flush=True)
-    f.save_manifest()
+    save()
     from .config import DATA_DIR
     (DATA_DIR / "checks.json").write_text(json.dumps(checks, ensure_ascii=False, indent=1) + "\n", encoding="utf-8")
     dataset["checks"] = checks

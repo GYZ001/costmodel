@@ -83,20 +83,24 @@ class Fetcher:
         check: Check | None = None,
         timeout: int | None = None,
         retries: int | None = None,
+        immutable: bool = False,
     ) -> Snapshot:
-        """Fetch ``url`` (POSTing ``json_body`` if given) unless offline.
+        """Fetch ``url`` (POSTing ``json_body`` if given) and snapshot the response.
 
         ``record_body`` is what the manifest stores as the request body; pass it
         when ``json_body`` carries a credential that must not be committed.
         """
         if key in self.used:
             return self.used[key]
-        if self.offline:
+        if self.offline or immutable:
+            # Offline: only committed snapshots.  Immutable (e.g. a published press
+            # release): reuse the committed snapshot and keep its original timestamp.
             snap = self._previous(key)
-            if snap is None:
+            if snap is not None:
+                self.used[key] = snap
+                return snap
+            if self.offline:
                 raise FetchError(f"{key}: offline and no committed snapshot")
-            self.used[key] = snap
-            return snap
 
         attempted_at = _now()
         try:
@@ -134,6 +138,18 @@ class Fetcher:
         self._record(snap)
         return snap
 
+    def prune_orphans(self) -> list[str]:
+        """Delete files under data/raw that no manifest entry points to, so the raw
+        directory always mirrors the manifest."""
+        keep = {(REPO_ROOT / m["path"]).resolve() for m in self.manifest.values()}
+        keep |= {(REPO_ROOT / s.path).resolve() for s in self.used.values()}
+        removed = []
+        for p in RAW_DIR.rglob("*"):
+            if p.is_file() and p.resolve() not in keep:
+                p.unlink()
+                removed.append(p.relative_to(REPO_ROOT).as_posix())
+        return removed
+
     def committed(self, prefix: str) -> list[Snapshot]:
         """Previously committed snapshots whose key starts with ``prefix``."""
         out = []
@@ -157,6 +173,7 @@ class Fetcher:
         merged = dict(self.manifest)
         for key, snap in self.used.items():
             merged[key] = asdict(snap)
+        self.manifest = merged
         MANIFEST_PATH.parent.mkdir(parents=True, exist_ok=True)
         MANIFEST_PATH.write_text(json.dumps(merged, ensure_ascii=False, indent=1, sort_keys=True) + "\n", encoding="utf-8")
 

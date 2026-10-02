@@ -25,7 +25,22 @@ LINK_RE = re.compile(r"href=\"\./(\d{6})/(t(\d{8})_\d+)\.html\"[^>]*title='([^']
 
 WAGE_TITLE = re.compile(r"^(\d{4})年城镇单位就业人员年平均工资情况$")
 MIGRANT_TITLE = re.compile(r"^(\d{4})年农民工监测调查报告$")
-ECONOMY_TITLE = re.compile(r"国民经济")
+# Monthly "national economy" releases; the title fixes the reference month.
+ECONOMY_TITLES = [
+    (re.compile(r"^(\d{1,2})月份国民经济"), lambda m: int(m.group(1))),
+    (re.compile(r"^1[—–-](\d{1,2})月份国民经济"), lambda m: int(m.group(1))),
+    (re.compile(r"^一季度国民经济"), lambda m: 3),
+    (re.compile(r"^上半年国民经济"), lambda m: 6),
+    (re.compile(r"^前三季度国民经济"), lambda m: 9),
+    (re.compile(r"^\d{4}年国民经济(?!和社会发展统计公报)"), lambda m: 12),
+]
+
+
+def economy_month(title: str) -> int | None:
+    for rx, month in ECONOMY_TITLES:
+        if m := rx.match(title):
+            return month(m)
+    return None
 
 WAGE_RE = {
     # Wording varies slightly by year ("年平均工资为 120698 元" vs "年平均工资 129441 元"; optional footnote markers).
@@ -70,7 +85,7 @@ def discover(f: Fetcher, pages: int = 64) -> tuple[list[Release], list[dict]]:
             title = title.strip()
             if "价格" in title:
                 price_titles[tid] = {"date": f"{day[:4]}-{day[4:6]}-{day[6:]}", "title": title, "url": f"{LIST_URL}{ym}/{tid}.html"}
-            if tid not in seen and (WAGE_TITLE.match(title) or MIGRANT_TITLE.match(title) or ECONOMY_TITLE.search(title)):
+            if tid not in seen and (WAGE_TITLE.match(title) or MIGRANT_TITLE.match(title) or economy_month(title)):
                 seen[tid] = Release(f"{LIST_URL}{ym}/{tid}.html", f"nbs/release/{ym}/{tid}", title, day)
     return list(seen.values()), sorted(price_titles.values(), key=lambda r: r["date"])
 
@@ -83,7 +98,8 @@ def collect(f: Fetcher) -> list[Obs]:
         releases, price_titles = discover(f)
         write_price_index(price_titles)
         for rel in releases:
-            snap = f.get(rel.key, rel.url, ext="html", check=_check_release(rel.title))
+            # A published release does not change, so an existing snapshot is reused as is.
+            snap = f.get(rel.key, rel.url, ext="html", check=_check_release(rel.title), immutable=True)
             snaps.append((snap, rel.title))
     out: list[Obs] = []
     for snap, title in snaps:
@@ -93,14 +109,12 @@ def collect(f: Fetcher) -> list[Obs]:
 
 def write_price_index(rows: list[dict]) -> None:
     import json
-    from datetime import datetime, timezone
 
     from ..config import DATA_DIR
 
     path = DATA_DIR / "derived" / "nbs_price_release_index.json"
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps({
-        "built_at": datetime.now(timezone.utc).replace(microsecond=0).isoformat(),
         "listing": LIST_URL,
         "note": "Every release on the NBS '最新发布' listing pages scanned in this run whose title contains 价格.",
         "releases": rows,
@@ -126,7 +140,7 @@ def price_release_summary() -> dict | None:
         g["first"] = min(g["first"], r["date"])
         g["last"] = max(g["last"], r["date"])
     dates = [r["date"] for r in idx["releases"]]
-    return {"built_at": idx["built_at"], "listing": idx["listing"], "from": min(dates) if dates else None,
+    return {"listing": idx["listing"], "from": min(dates) if dates else None,
             "to": max(dates) if dates else None, "groups": sorted(groups.values(), key=lambda g: -g["count"])}
 
 
@@ -167,14 +181,14 @@ def parse_release(html: str, title: str, snapshot: str) -> list[Obs]:
         value, increase, growth = int(hit.group(1)), int(hit.group(2)), float(hit.group(3))
         out.append(Obs("cn_migrant_monthly", "CHN", str(year), value, snapshot, note=f"growth_pct={growth}"))
         out.append(Obs("cn_migrant_monthly__implied_prev", "CHN", str(year - 1), value - increase, snapshot))
-    elif ECONOMY_TITLE.search(title):
+    elif (month := economy_month(title)) is not None:
         hit = HOURS_RE.search(text)
         if hit:
-            months = list(HOURS_MONTH_RE.finditer(text[: hit.start()]))
-            if not months:
-                raise ValueError(f"{snapshot}: weekly hours found but no reference month")
-            month = int(months[-1].group(1))
-            released = re.search(r"/t(\d{4})(\d{2})\d{2}_", snapshot) or re.search(r"t(\d{4})(\d{2})\d{2}_", snapshot)
+            near = list(HOURS_MONTH_RE.finditer(text[: hit.start()]))
+            if not near or int(near[-1].group(1)) != month:
+                raise ValueError(f"{snapshot}: title says month {month}, text near the hours sentence says "
+                                 f"{near[-1].group(1) if near else 'nothing'}")
+            released = re.search(r"/t(\d{4})(\d{2})\d{2}_", snapshot)
             ry, rm = int(released.group(1)), int(released.group(2))
             year = ry if month <= rm else ry - 1
             out.append(Obs("cn_weekly_hours_enterprise", "CHN", f"{year}-{month:02d}", float(hit.group(1)), snapshot))

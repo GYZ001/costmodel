@@ -13,8 +13,10 @@ const TOKEN = /\{(\w+)(?::(\w+))?\}/g;
 const tokens = (s) => [...new Set([...s.matchAll(TOKEN)].map((m) => m[0]))].sort().join(" ");
 const problems = [];
 
+// --only <code>: check one language's catalog (and nothing else), e.g. while translating.
+const only = process.argv.includes("--only") ? process.argv[process.argv.indexOf("--only") + 1] : null;
 const en = JSON.parse(readFileSync(join(dir, "en.json"), "utf8"));
-for (const file of readdirSync(dir).filter((f) => f.endsWith(".json"))) {
+for (const file of readdirSync(dir).filter((f) => f.endsWith(".json") && (!only || f === `${only}.json`))) {
   const cat = JSON.parse(readFileSync(join(dir, file), "utf8"));
   for (const k of Object.keys(en)) {
     if (!(k in cat)) problems.push(`${file}: missing ${k}`);
@@ -22,6 +24,15 @@ for (const file of readdirSync(dir).filter((f) => f.endsWith(".json"))) {
     else if (tokens(cat[k]) !== tokens(en[k])) problems.push(`${file}: ${k} placeholders ${tokens(cat[k])} ≠ ${tokens(en[k])}`);
   }
   for (const k of Object.keys(cat)) if (!(k in en)) problems.push(`${file}: extra key ${k}`);
+}
+
+if (only) {
+  if (problems.length) {
+    console.error(problems.join("\n"));
+    process.exit(1);
+  }
+  console.log(`${only}: OK`);
+  process.exit(0);
 }
 
 // Keys used by the code.

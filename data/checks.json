@@ -1,8 +1,56 @@
 [
  {
-  "id": "sources",
-  "title": "必需数据源",
-  "status": "fail",
-  "detail": "nbs: ValueError: nbs/release/202305/t20230509_1939287: no large-enterprise wage sentence"
+  "id": "gold_wb_vs_imf",
+  "title": "金价：世界银行 Pink Sheet vs IMF PCPS 月均价",
+  "status": "pass",
+  "detail": "416 个重叠月份，最大偏差 0.74%（2011-12：世行 1,640.0，IMF 1,652.3）"
+ },
+ {
+  "id": "gold_fresh",
+  "title": "金价数据新鲜度",
+  "status": "pass",
+  "detail": "最新月份 2026-08，距今 2 个月"
+ },
+ {
+  "id": "fx_ecb_vs_h10",
+  "title": "汇率：ECB 参考汇率（交叉）vs 美联储 H.10 月均",
+  "status": "pass",
+  "detail": "3960 个国家-月份对比，最大偏差 1.73%（BRA 2000-01：ECB 交叉汇率 1.7744，美联储 H.10 1.8057）；阈值 3%（两者是同一市场汇率在不同时点的定价）"
+ },
+ {
+  "id": "bls_vs_fred",
+  "title": "美国时薪：BLS API vs FRED 转载",
+  "status": "pass",
+  "detail": "998 个月份对比，最大偏差 0.00%（BLS 修订后 FRED 可能晚一天同步）"
+ },
+ {
+  "id": "nbs_internal",
+  "title": "国家统计局工资：前后年份与增速自洽",
+  "status": "pass",
+  "detail": "cn_wage_nonprivate 2021：本年发布 106837，次年发布反推 106837；cn_wage_nonprivate 2022：本年发布 114029，次年发布反推 114029；cn_wage_nonprivate 2023：本年发布 120698，次年发布反推 120698；cn_wage_nonprivate 2024：本年发布 124110，次年发布反推 124110；cn_wage_nonprivate 2021 增速：公布 9.7%，计算 9.71%；cn_wage_nonprivate 2022 增速：公布 6.7%，计算 6.73%；cn_wage_nonprivate 2023 增速：公布 5.8%，计算 5.85%；cn_wage_nonprivate 2024 增速：公布 2.8%，计算 2.83%；cn_wage_nonprivate 2025 增速：公布 4.3%，计算 4.30%；cn_wage_private 2021：本年发布 62884，次年发布反推 62884；cn_wage_private 2022：本年发布 65237，次年发布反推 65237；cn_wage_private 2023：本年发布 68340，次年发布反推 68340；cn_wage_private 2024：本年发布 69476，次年发布反推 69476；cn_wage_private 2021 增速：公布 8.9%，计算 8.93%；cn_wage_private 2022 增速：公布 3.7%，计算 3.74%；cn_wage_private 2023 增速：公布 4.8%，计算 4.76%；cn_wage_private 2024 增速：公布 1.7%，计算 1.66%；cn_wage_private 2025 增速：公布 3.0%，计算 3.04%；cn_migrant_monthly 2021：本年发布 4432，次年发布反推 4432；cn_migrant_monthly 2022：本年发布 4615，次年发布反推 4615；cn_migrant_monthly 2023：本年发布 4780，次年发布反推 4780；cn_migrant_monthly 2024：本年发布 4961，次年发布反推 4961；cn_migrant_monthly 2021 增速：公布 8.8%，计算 8.84%；cn_migrant_monthly 2022 增速：公布 4.1%，计算 4.13%；cn_migrant_monthly 2023 增速：公布 3.6%，计算 3.58%；cn_migrant_monthly 2024 增速：公布 3.8%，计算 3.79%；cn_migrant_monthly 2025 增速：公布 2.3%，计算 2.30%"
+ },
+ {
+  "id": "cn_ilo_nbs",
+  "title": "中国：ILOSTAT 月薪 = 国家统计局私营单位年薪 ÷ 12",
+  "status": "pass",
+  "detail": "重叠年份 2020, 2021, 2022；最大偏差 0.008%（2022：ILOSTAT×12 = 65,232，国家统计局 65,237）"
+ },
+ {
+  "id": "us_ppp_1",
+  "title": "美国 PPP 恒等于 1（国际元以美元为基准）",
+  "status": "pass",
+  "detail": "检查 26 个年份"
+ },
+ {
+  "id": "record_gates",
+  "title": "货币单位逐年核对（恒等关系）",
+  "status": "pass",
+  "detail": "未能证明与世界银行本币序列同一货币单位的输入不参与计算，原因见剔除记录。健康饮食成本：4 个经济体（BGR, LBR, PSE, SLE）；货币代码：1 个经济体（SLV）；官方汇率：24 个经济体（AGO, BDI, BGR, CYP, EST, GIB, GRC, GUM, HRV, IRN, LBN, LBR…）；购买力平价：20 个经济体（ATG, CYM, DMA, GRD, GUY, JAM, KNA, LBR, LCA, MMR, NGA, SSD…）；工资：50 个经济体（AND, ARE, ARG, BGR, BHR, CUB, CUW, CYP, CZE, DNK, EST, GHA…）"
+ },
+ {
+  "id": "identity_chain",
+  "title": "恒等式：克金/小时 × 每克金购买力 = PPP 实际时薪",
+  "status": "pass",
+  "detail": "2765 条记录，最大相对误差 4.2e-16"
  }
 ]

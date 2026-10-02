@@ -12,9 +12,6 @@ SOURCES = [
     {"prefix": "worldbank/commodity_markets_landing", "id": "cmo_landing", "landing": "https://www.worldbank.org/en/research/commodity-markets"},
     {"prefix": "ilostat/", "id": "ilostat", "landing": "https://ilostat.ilo.org/data/"},
     {"prefix": "oecd/", "id": "oecd", "landing": "https://data-explorer.oecd.org/"},
-    {"prefix": "bls/", "id": "bls", "landing": "https://www.bls.gov/developers/"},
-    {"prefix": "fred/", "id": "fred", "landing": "https://fred.stlouisfed.org/"},
-    {"prefix": "nbs/", "id": "nbs", "landing": "https://www.stats.gov.cn/sj/zxfb/"},
 ]
 
 

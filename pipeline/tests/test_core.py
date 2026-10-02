@@ -1,7 +1,6 @@
 from wagegold import build
 from wagegold.config import GRAMS_PER_TROY_OUNCE
 from wagegold.model import Obs, Store, annual_mean
-from wagegold.sources import nbs
 
 
 def test_annual_mean_requires_twelve_months():
@@ -24,38 +23,6 @@ def test_store_rejects_conflicting_values():
     raise AssertionError("conflict not detected")
 
 
-WAGE_HTML = """<html><title>2025年城镇单位就业人员年平均工资情况 - 国家统计局</title><body>
-<p>2025 年，全国城镇非私营单位就业人员年平均工资 129441 元，比上年增加 5331 元，名义增长 <sup>[1]</sup> 4.3% ，扣除价格因素实际增长 4.2% 。</p>
-<p>2025 年，全国城镇私营单位就业人员年平均工资 71590 元，比上年增加 2114 元，名义增长 3.0% ，扣除价格因素实际增长 2.9% 。</p>
-<p>规模以上企业就业人员年平均工资为 106080 元，其中，中层及以上管理人员 210016 元，专业技术人员 155491 元，办事人员和有关人员 94936 元，社会生产服务和生活服务人员 79857 元，生产制造及有关人员 80739 元。</p>
-</body></html>"""
-
-
-def test_nbs_wage_release():
-    obs = {(o.series, o.period): o for o in nbs.parse_release(WAGE_HTML, "2025年城镇单位就业人员年平均工资情况", "nbs/release/202605/t20260515_1")}
-    assert obs[("cn_wage_nonprivate", "2025")].value == 129441
-    assert obs[("cn_wage_nonprivate__implied_prev", "2024")].value == 124110
-    assert obs[("cn_wage_private", "2025")].value == 71590
-    assert obs[("cn_wage_large_ent_production", "2025")].value == 80739
-    assert "growth_pct=4.3" in obs[("cn_wage_nonprivate", "2025")].note
-
-
-def test_nbs_hours_month_and_year():
-    html = '<meta name="PubDate" content="2026/01/19 10:00"><p>12 月份，全国城镇调查失业率为 5.1% 。全国企业就业人员周平均工作时间为 48.6 小时。</p>'
-    obs = nbs.parse_release(html, "2025年国民经济稳中有进", "nbs/release/202601/t20260119_1")
-    assert [(o.period, o.value) for o in obs] == [("2025-12", 48.6)]
-    html = "<p>2026/09/15 10:00 来源：国家统计局</p><p>8 月份，全国城镇调查失业率为 5.3% ，比上月上升 0.1 个百分点。全国企业就业人员周平均工作时间为 48.2 小时。</p>"
-    obs = nbs.parse_release(html, "8月份国民经济运行平稳", "nbs/release/202609/t20260915_1")
-    assert [(o.period, o.value) for o in obs] == [("2026-08", 48.2)]
-
-
-def test_nbs_reposted_release_uses_page_date():
-    # Re-posted in Feb 2023 during the site migration; the page keeps its original date.
-    html = "<p>2022/03/15 10:00</p><p>2 月份，全国城镇调查失业率为 5.5% 。全国企业就业人员周平均工作时间为 46.7 小时。</p>"
-    obs = nbs.parse_release(html, "1-2月份国民经济恢复好于预期", "nbs/release/202302/t20230203_1901402")
-    assert [(o.period, o.value) for o in obs] == [("2022-02", 46.7)]
-
-
 def test_chain_identity():
     gold_usd_g = 3441.5 / GRAMS_PER_TROY_OUNCE
     fx, ppp = 7.19, 3.46
@@ -65,75 +32,6 @@ def test_chain_identity():
     assert abs(w["hourly_gold_g"] * (gold_usd_g / pli) - w["hourly_ppp"]) < 1e-12
     assert abs(w["minutes_per_cohd_day"] - 12.6 / 60 * 60) < 1e-12
 
-
-def test_nbs_wage_release_older_wording():
-    html = ("<p>2023年，全国城镇非私营单位就业人员年平均工资为120698元，比上年增加6669元，名义增长5.8%，扣除价格因素实际增长5.5%。</p>"
-            "<p>2023年，全国城镇私营单位就业人员年平均工资为68340元，比上年增加3103元，名义增长4.8%，扣除价格因素实际增长4.5%。</p>")
-    obs = {(o.series, o.period): o.value for o in nbs.parse_release(html, "2023年城镇单位就业人员年平均工资情况", "nbs/release/202405/t20240520_1")}
-    assert obs[("cn_wage_nonprivate", "2023")] == 120698
-    assert obs[("cn_wage_nonprivate__implied_prev", "2022")] == 114029
-    assert obs[("cn_wage_private", "2023")] == 68340
-
-
-def test_nbs_q3_release_month_from_publication_date():
-    html = "<p>2025/10/20 10:00</p><p>9 月份，全国城镇调查失业率为 5.2% 。全国企业就业人员周平均工作时间为 48.5 小时。</p>"
-    obs = nbs.parse_release(html, "前三季度经济运行稳中有进", "nbs/release/202510/t20251020_1")
-    assert [(o.period, o.value) for o in obs] == [("2025-09", 48.5)]
-
-
-def test_nbs_half_year_recap_does_not_move_the_month():
-    # 2022 H1 release (re-posted in Feb 2023): April is recapped right before the hours sentence, which is June's.
-    html = ("<p>2022/07/15 10:00</p><p>上半年，全国城镇调查失业率平均为 5.7% 。4 月份，全国城镇调查失业率为 6.1% ； 5 、 6 月份连续回落，"
-            "分别为 5.9% 、 5.5% 。 6 月份，本地户籍人口调查失业率为 5.3% 。全国企业就业人员周平均工作时间为 47.7 小时。</p>")
-    obs = nbs.parse_release(html, "有力应对超预期因素影响 国民经济企稳回升", "nbs/release/202302/t20230203_1901513")
-    assert [(o.period, o.value) for o in obs] == [("2022-06", 47.7)]
-
-
-def _raises(html: str, title: str) -> bool:
-    try:
-        nbs.parse_release(html, title, "nbs/release/x")
-    except ValueError:
-        return True
-    return False
-
-
-def test_nbs_rejects_inconsistent_month():
-    hours = "全国企业就业人员周平均工作时间为 48.5 小时。"
-    # Title names a month the publication date does not imply.
-    assert _raises(f"<p>2025/10/20 10:00</p><p>8 月份，全国城镇调查失业率为 5.2% 。{hours}</p>", "8月份国民经济运行")
-    # Text never mentions the month the publication date implies.
-    assert _raises(f"<p>2025/10/20 10:00</p><p>8 月份，全国城镇调查失业率为 5.2% 。{hours}</p>", "前三季度经济运行")
-
-
-def test_nbs_decline_wording():
-    html = "<p>2027年，全国城镇私营单位就业人员年平均工资为71000元，比上年减少590元，名义下降0.8%。</p>"
-    title = "2027年城镇私营单位就业人员年平均工资71000元"
-    obs = {(o.series, o.period): (o.value, o.note) for o in nbs.parse_release(html, title, "nbs/x")}
-    assert obs[("cn_wage_private", "2027")] == (71000, "growth_pct=-0.8")
-    assert obs[("cn_wage_private__implied_prev", "2026")] == (71590, "")
-    # The comparable basis and the large-enterprise growth can be declines too.
-    html = ("<p>2027年，全国城镇私营单位就业人员年平均工资为71000元，比上年减少590元，名义下降0.8%，按可比口径下降0.3%。</p>"
-            "<p>规模以上企业就业人员年平均工资为100000元，比上年减少900元，名义下降0.9%，按可比口径下降0.2%。</p>")
-    obs = {(o.series, o.period): (o.value, o.note) for o in nbs.parse_release(html, title, "nbs/x")}
-    assert obs[("cn_wage_private__comparable_growth", "2027")] == (-0.3, "")
-    assert obs[("cn_wage_large_ent", "2027")] == (100000, "growth_pct=-0.9")
-    assert obs[("cn_wage_large_ent__comparable_growth", "2027")] == (-0.2, "")
-    try:  # a comparable-basis statement this parser cannot read is an error, not dropped
-        nbs.parse_release(html.replace("按可比口径下降0.3%", "按可比口径计算有所下降"), title, "nbs/x")
-    except ValueError:
-        return
-    raise AssertionError("unread comparable basis not detected")
-
-
-def test_nbs_quote_is_labelled_excerpts_in_document_order():
-    t = "注：[2]可比口径是指甲。附注1.指标解释（2）工资总额：乙。需要明确的是，工资总额是税前工资，丙。2.统计范围丁。戊。己。3.其他"
-    x = lambda sec, piece: {"section": sec, "text": piece, "pos": t.index(piece), "end": t.index(piece) + len(piece)}  # noqa: E731
-    q = build.excerpts_quote([x("统计范围", "己。"), x("统计范围", "丁。"), x("指标解释", "需要明确的是，工资总额是税前工资，丙。"),
-                              x("注[2]", "可比口径是指甲。"), None])
-    assert q == "注[2]：“可比口径是指甲。”；指标解释：“需要明确的是，工资总额是税前工资，丙。”；统计范围：“丁。……己。”"
-
-
-# ---- currency units proven by identities (build.UnitGraph)
 
 def _walk(part):
     """Every message (dict) and raw string inside a message part."""
@@ -341,13 +239,13 @@ def test_history_breaks_at_level_shift_and_primary_switch_is_marked():
     assert [p[4] for p in pts] == [False, False, False, True] and pts[3][5]["k"] == "d.hist.shift"
     assert [round(x["bound"], 2) for x in _params(pts[3][5], "d.shift.vs_bound")] == [1.10, 1.10]
     caveat = build.ilo_variants(s, u, "AAA", "2024", DIC)[0].caveat
-    assert caveat[0]["k"] == "d.cav.shift" and [(x["years"], round(x["bound"], 2)) for x in _params(caveat[0], "d.shift.vs_bound")] == [(1, 1.10)] * 2
+    assert caveat[0]["k"] == "d.cav.shift" and [(x["n"], round(x["bound"], 2)) for x in _params(caveat[0], "d.shift.vs_bound")] == [(1, 1.10)] * 2
     w = lambda sid, key, notes, label: {"role": None, "mrole": "primary", "series_id": sid, "series_key": key,  # noqa: E731
-                                        "notes_sig": notes, "label": label, "source": "x"}
+                                        "notes_sig": notes, "label": label, "restricted": False, "source": "x"}
     recs = {"2022": {"wages": [w("A", "A", [], "a")]}, "2023": {"wages": [w("A n1", "A", ["n1"], "a")]},
             "2024": {"wages": [w("B", "B", [], "b")]}}
     build.mark_switches(recs)
-    assert recs["2023"]["wages"][0]["mrole_switch"] == {"year": "2022", "label": "a", "source": "x", "kind": "notes",
+    assert recs["2023"]["wages"][0]["mrole_switch"] == {"year": "2022", "label": "a", "restricted": False, "source": "x", "kind": "notes",
                                                         "only_before": [], "only_now": ["n1"]}
     assert recs["2024"]["wages"][0]["mrole_switch"]["kind"] == "source"
 
@@ -413,21 +311,6 @@ def test_prove_identity_failure_next_to_a_proven_year_is_unknown():
     _f, p = u._factors("AAA")
     assert p["2006"][0] is True and p["2005"][0] is None and p["2005"][2] == "identity"
     assert "d.prove.chain" in _keys(p["2005"][1]) and "d.ppp.failed" not in _keys(p["2005"][1])
-
-
-def test_nbs_split_wage_releases():
-    # 2021 and 2022 were published as one release per measure.
-    html = "<p>2022年，全国城镇非私营单位就业人员年平均工资为114029元，比上年增加7192元，名义增长6.7%，扣除价格因素实际增长4.6%。</p>"
-    obs = {(o.series, o.period): o.value for o in nbs.parse_release(html, "2022年城镇非私营单位就业人员年平均工资114029元", "nbs/x")}
-    assert obs == {("cn_wage_nonprivate", "2022"): 114029, ("cn_wage_nonprivate__implied_prev", "2021"): 106837}
-    html = "<p>2022年全国规模以上企业就业人员年平均工资为92492元，比上年名义增长5.0%。</p>"
-    obs = {(o.series, o.period): o.value for o in nbs.parse_release(html, "2022年规模以上企业就业人员年平均工资情况", "nbs/z")}
-    assert obs == {("cn_wage_large_ent", "2022"): 92492}
-    try:  # a large-enterprise release without its sentence is an error, not silently empty
-        nbs.parse_release("<p>无关内容</p>", "2022年规模以上企业就业人员年平均工资情况", "nbs/y")
-    except ValueError:
-        return
-    raise AssertionError("missing large-enterprise sentence not detected")
 
 
 def test_cross_source_gap_between_time_factor_and_week_month_is_kept_unconfirmed():

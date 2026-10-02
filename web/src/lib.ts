@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import type { I18n } from "./i18n";
+import type { Msg } from "./i18n/render";
 import type { Country, CountryYear, Dataset, Wage } from "./types";
 
 export type View = "hourly" | "monthly";
@@ -29,7 +30,7 @@ export function grams(i: I18n, x: number | null | undefined, n = 3): string {
 const regionNames = new Map<string, Intl.DisplayNames | null>();
 
 /** The economy's name in the reader's language (the browser's own list of region names),
- *  else the World Bank's name. */
+ *  else the World Bank's (English) name - the same rule in every language. */
 export function countryName(i: I18n, c: Country): string {
   const loc = i.lang.locale;
   if (!regionNames.has(loc)) {
@@ -47,17 +48,7 @@ export function countryName(i: I18n, c: Country): string {
   } catch {
     name = undefined;
   }
-  if (name && name !== c.iso2) return name;
-  return i.lang.code === "zh-CN" && c.name_zh ? c.name_zh : c.name_en;
-}
-
-/** A language's name in the reader's language, e.g. "zh" → "Chinese". */
-export function languageName(i: I18n, code: string): string {
-  try {
-    return new Intl.DisplayNames([i.lang.locale], { type: "language" }).of(code) ?? code;
-  } catch {
-    return code;
-  }
+  return name && name !== c.iso2 ? name : c.name_en;
 }
 
 export function byName(i: I18n): (a: string, b: string) => number {
@@ -67,9 +58,15 @@ export function byName(i: I18n): (a: string, b: string) => number {
 
 // ---------------------------------------------------------------- dataset helpers
 
+/** A wage's label, marked where its publisher's notes limit its coverage - for every
+ *  source alike. */
+export function markedLabel(i: I18n, label: Msg, restricted: boolean): string {
+  return restricted ? i.t("w.restricted", { label }) : i.r(label);
+}
+
 /** The label to show for a wage in the given view. */
 export function wageLabel(i: I18n, w: Wage, view: View): string {
-  return i.r(view === "hourly" && w.label_hourly ? w.label_hourly : w.label);
+  return markedLabel(i, view === "hourly" && w.label_hourly ? w.label_hourly : w.label, w.restricted);
 }
 
 /** Currency to print next to a wage: the one its publisher states, else the economy's. */
@@ -86,11 +83,10 @@ export function wageNotes(i: I18n, w: Wage, view: View, c: Country, max = 0): st
   const cur = wageCurrency(w, c);
   const value = view === "hourly" ? i.t("u.per_hour", { v: money(i, w.hourly_lcu, cur) }) : i.t("u.per_month", { v: money(i, w.monthly_lcu, cur) });
   const sw = view === "hourly" ? w.role_switch : w.mrole_switch;
+  const notesKey = (b: boolean, n: boolean) => (b && n ? "wn.switch_notes_both" : b ? "wn.switch_notes_before" : n ? "wn.switch_notes_now" : "wn.switch_notes");
   const switchNote = !sw ? [] : sw.kind === "source"
-    ? [i.t("wn.switch_source", { year: sw.year, label: i.r(sw.label), source: i.r(sw.source) })]
-    : [i.t("wn.switch_notes", { year: sw.year })
-      + (sw.only_before.length ? i.t("wn.only_before", { year: sw.year, notes: i.r(sw.only_before) }) : "")
-      + (sw.only_now.length ? i.t("wn.only_now", { notes: i.r(sw.only_now) }) : "")];
+    ? [i.t("wn.switch_source", { year: sw.year, label: markedLabel(i, sw.label, sw.restricted), source: i.r(sw.source) })]
+    : [i.t(notesKey(sw.only_before.length > 0, sw.only_now.length > 0), { year: sw.year, before: sw.only_before, now: sw.only_now })];
   const caveat = i.r(w.caveat);
   return [
     i.t("wn.value", { label: wageLabel(i, w, view), value }),
@@ -98,7 +94,6 @@ export function wageNotes(i: I18n, w: Wage, view: View, c: Country, max = 0): st
     i.r(w.source),
     ...switchNote.map((t) => cut(t, max)),
     ...(caveat ? [i.t("wn.caveat", { text: cut(caveat, max) })] : []),
-    ...(w.quote ? [i.t("wn.quote", { text: cut(w.quote, max) })] : []),
   ];
 }
 
@@ -109,8 +104,8 @@ export function levelBoundsText(i: I18n, ds: Dataset, yardstick: "hfce" | "gdp")
   if (!spans.length) return i.t("lb.none");
   const shown = spans.filter((k) => [1, 2, 3, 5, 10].includes(k));
   const longest = spans[spans.length - 1];
-  const items = shown.map((k) => i.t("lb.span", { years: i.n(k, "int"), b: i.n(b[String(k)], "d2") }));
-  if (!shown.includes(longest)) items.push(i.t("lb.longest", { years: i.n(longest, "int"), b: i.n(b[String(longest)], "d2") }));
+  const items = shown.map((k) => i.t("lb.span", { n: k, b: b[String(k)] }));
+  if (!shown.includes(longest)) items.push(i.t("lb.longest", { n: longest, b: b[String(longest)] }));
   return i.j(items, "enum");
 }
 
@@ -120,24 +115,13 @@ export function fxNote(i: I18n, row: CountryYear, c: Country): string[] {
   if (row.fx == null) return [];
   const d = row.fx_vs_gdp_factor;
   const cur = c.currency ?? i.t("u.lcu");
-  return [i.t("fx.rate", { fx: i.n(row.fx, "d4"), cur })
-    + (row.fx_gdp_factor != null && d != null && Math.abs(d - 1) >= 0.005
-      ? i.t("fx.gdp_factor", { f: i.n(row.fx_gdp_factor, "d4"), ratio: i.n(d, "d3") })
-      : "")];
+  return [row.fx_gdp_factor != null && d != null && Math.abs(d - 1) >= FX_NOTE_GAP
+    ? i.t("fx.rate_gdp", { fx: row.fx, cur, f: row.fx_gdp_factor, ratio: d })
+    : i.t("fx.rate", { fx: row.fx, cur })];
 }
 
-/** Other figures published for the same economy and year (another concept or survey), as they are. */
-export function otherWages(i: I18n, row: CountryYear, w: Wage, view: View, c: Country): string[] {
-  const others = row.wages.filter((o) => o !== w && (view === "hourly" ? o.hourly_gold_g : o.monthly_gold_g));
-  if (!others.length) return [];
-  return [i.t("wn.others", {
-    list: i.j(others.map((o) => i.t("wn.other", {
-      label: wageLabel(i, o, view), source: i.r(o.source),
-      value: money(i, view === "hourly" ? o.hourly_lcu : o.monthly_lcu, wageCurrency(o, c)),
-      g: grams(i, view === "hourly" ? o.hourly_gold_g : o.monthly_gold_g, 2),
-    }))),
-  })];
-}
+/** Gap between the official rate and the World Bank's GDP conversion factor from which it is mentioned. */
+export const FX_NOTE_GAP = 0.005;
 
 /** Years in which the archived World Bank data have all six food-group costs for some economy. */
 export function foodGroupYears(ds: Dataset): string[] {
@@ -198,7 +182,7 @@ export function cssVar(name: string): string {
   return getComputedStyle(document.documentElement).getPropertyValue(name).trim();
 }
 
-/** Re-render charts when the OS theme or the page's theme toggle changes. */
+/** Re-render charts when the OS theme, the page's theme toggle or the page's language changes. */
 export function useThemeVersion(): number {
   const [v, setV] = useState(0);
   useEffect(() => {
@@ -206,7 +190,8 @@ export function useThemeVersion(): number {
     const bump = () => setV((x) => x + 1);
     mq.addEventListener("change", bump);
     const obs = new MutationObserver(bump);
-    obs.observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
+    // lang too: the font stack depends on the page's language (styles.css)
+    obs.observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme", "lang"] });
     return () => {
       mq.removeEventListener("change", bump);
       obs.disconnect();

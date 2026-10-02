@@ -1,5 +1,5 @@
 import type { EChartsCoreOption } from "echarts/core";
-import { escapeHtml, palette } from "./lib";
+import { cssVar, escapeHtml, palette } from "./lib";
 
 /** "label: value" in the reader's language (the separator differs, e.g. "：" in Chinese). */
 export type KV = (label: string, value: string) => string;
@@ -15,10 +15,11 @@ export interface RankItem {
 }
 
 const AXIS_FONT = 12;
-const FONT = 'system-ui, -apple-system, "Segoe UI", Roboto, "Noto Sans", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Hiragino Kaku Gothic ProN", "Yu Gothic", "Apple SD Gothic Neo", "Malgun Gothic", "Noto Sans Arabic", "Noto Sans Devanagari", sans-serif';
+// The page's font stack for the current language (styles.css --font).
+const font = () => cssVar("--font") || "sans-serif";
 
 function baseText(p: ReturnType<typeof palette>) {
-  return { color: p.ink2, fontSize: AXIS_FONT, fontFamily: FONT };
+  return { color: p.ink2, fontSize: AXIS_FONT, fontFamily: font() };
 }
 
 /** Left margin wide enough for the longest category label (CJK glyphs ≈ 1 em, others ≈ 0.6 em). */
@@ -39,8 +40,8 @@ function categoryAxis(p: ReturnType<typeof palette>, names: string[], highlighte
       ...baseText(p),
       formatter: (n: string) => (highlighted(n) ? `{b|${n}}` : `{n|${n}}`),
       rich: {
-        b: { color: p.ink, fontWeight: 600, fontSize: AXIS_FONT, fontFamily: FONT },
-        n: { color: p.ink2, fontSize: AXIS_FONT, fontFamily: FONT },
+        b: { color: p.ink, fontWeight: 600, fontSize: AXIS_FONT, fontFamily: font() },
+        n: { color: p.ink2, fontSize: AXIS_FONT, fontFamily: font() },
       },
     },
   };

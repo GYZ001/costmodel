@@ -62,13 +62,15 @@ export function PriceStructure(scope: Scope) {
     <section className="block" id="structure">
       <h2>{i.t("ps.title")}</h2>
       <p className="sub">
-        {i.t("ps.sub")}{" "}
-        {i.t("ps.spread", {
-          n: i.n(spread.food.n, "int"),
-          food: i.n(spread.food.ratio, "d2"),
-          services: i.j(spread.services.map((s) => i.t("ps.spread_item", { name: s.name, r: i.n(s.ratio, "d2") })), "enum"),
-        })}
-        {spread.food.ratio != null && spread.services.every((s) => s.ratio != null && s.ratio > spread.food.ratio!) && <> {i.t("ps.spread_conclusion")}</>}
+        {i.j([
+          i.t("ps.sub"),
+          i.t("ps.spread", {
+            n: spread.food.n,
+            food: spread.food.ratio,
+            services: i.j(spread.services.map((s) => i.t("ps.spread_item", { name: s.name, r: s.ratio })), "enum"),
+          }),
+          spread.food.ratio != null && spread.services.every((s) => s.ratio != null && s.ratio > spread.food.ratio!) ? i.t("ps.spread_conclusion") : "",
+        ], "sentence")}
       </p>
       <div className="card">
         <div className="controls">
@@ -90,7 +92,7 @@ export function PriceStructure(scope: Scope) {
             <Chart option={option} height={Math.max(220, isos.length * 26 + 60)} ariaLabel={i.t("ps.aria", { base: baseName })} />
           </div>
         </div>
-        <p className="note">{i.t("ps.note_index", { base: baseName })} {i.t("ps.note_cols")} {i.t("ps.note_year")}</p>
+        <p className="note">{i.j([i.t("ps.note_index", { base: baseName }), i.t("ps.note_cols"), i.t("ps.note_year")], "sentence")}</p>
       </div>
     </section>
   );

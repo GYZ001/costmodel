@@ -19,11 +19,7 @@ export interface Wage {
   /** Notes that qualify the figure: this project's notes (messages) and ILOSTAT's own note
    *  labels (English, verbatim). */
   caveat: Part[];
-  /** The publisher's own definitions, quoted verbatim in its language (NBS releases: Chinese); empty otherwise. */
-  quote: string;
-  /** Language of the quote (BCP 47), e.g. "zh". */
-  quote_lang: string | null;
-  /** Publisher and survey, e.g. "ILOSTAT BA:463", "OECD", "NBS", "BLS". */
+  /** Publisher and survey, e.g. "ILOSTAT BA:463", "OECD". */
   source_id: string;
   /** Coverage limited, as the publisher states (e.g. urban units, private sector, full-time workers only). */
   restricted: boolean;
@@ -48,6 +44,7 @@ export interface Wage {
 export interface Switch {
   year: string;
   label: Msg;
+  restricted: boolean;
   source: Msg | string;
   /** source: another publisher series; notes: the same series with different notes on what it measures */
   kind: "source" | "notes";
@@ -77,12 +74,10 @@ export interface CountryYear {
 }
 
 export interface Country {
+  /** The World Bank's name (used when the browser has no name for iso2 in the reader's language). */
   name_en: string;
-  /** The World Bank's Chinese name (fallback for zh when the browser has no name for iso2). */
-  name_zh: string;
   iso2: string;
-  region: string;
-  income: string;
+  /** Member country of the G20 (the EU and the African Union, also members, are not economies here). */
   g20: boolean;
   /** Currency of the World Bank's local-currency series, as proven by the records joined to it. */
   currency: string | null;
@@ -122,6 +117,10 @@ export interface Dataset {
     grams_per_troy_ounce: number; weeks_per_month: number;
     /** bound for currency units; for one figure in two time units; for figures of different concepts */
     max_factor: number; time_factor: number; unit_gap: number;
+    /** hours in a month (31 × 24): the most a monthly ÷ hourly figure can be */
+    hours_in_month: number;
+    /** years a series needs to be drawn in the gold history */
+    history_min_years: number;
     /** By yardstick (hfce = household consumption per head, gdp = GDP per head) and years
      *  apart: the widest move OECD's same-concept average wage made against it over that
      *  many years or fewer (the continuity check's bound). */

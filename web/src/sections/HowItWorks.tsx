@@ -44,7 +44,7 @@ export function HowItWorks(scope: Scope) {
   const th = (key: SortKey, label: string, cls = "") => (
     <th className={cls} aria-sort={sort.key === key ? (sort.desc ? "descending" : "ascending") : "none"}>
       <button className="sort" onClick={() => setSort((s) => ({ key, desc: s.key === key ? !s.desc : key !== "name" && key !== "minutes" }))}>
-        {label}{sort.key === key ? (sort.desc ? " ↓" : " ↑") : ""}
+        {label}<span aria-hidden="true">{sort.key === key ? (sort.desc ? " ↓" : " ↑") : " ↕"}</span>
       </button>
     </th>
   );
@@ -74,7 +74,7 @@ export function HowItWorks(scope: Scope) {
         </div>
       </div>
       <div className="callout">
-        <strong>{i.t("how.ruler_title")}</strong> {i.t("how.ruler_body")}
+        <strong>{i.t("how.ruler_title")}</strong>{i.t("_sep.sentence")}{i.t("how.ruler_body")}
       </div>
       <div className="card">
         <h3>{i.t(`how.table_title_${per}`, { year })}</h3>
@@ -114,8 +114,7 @@ export function HowItWorks(scope: Scope) {
           </table>
         </div>
         <p className="note">
-          {missing.length > 0 && <>{i.t(`how.missing_${per}`, { year, list: i.j(missing, "enum") })} </>}
-          {i.t("how.note")}
+          {i.j([missing.length > 0 ? i.t(`how.missing_${per}`, { year, list: i.j(missing, "enum") }) : "", i.t("how.note")], "sentence")}
         </p>
       </div>
     </section>

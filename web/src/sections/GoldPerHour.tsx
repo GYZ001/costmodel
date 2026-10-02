@@ -3,7 +3,7 @@ import type { Scope } from "../App";
 import { Chart } from "../Chart";
 import { rankingHeight, rankingOption, type RankItem } from "../charts";
 import { useI18n } from "../i18n";
-import { fxNote, grams, money, otherWages, primaryWage, typicalWage, useThemeVersion, wageNotes } from "../lib";
+import { FX_NOTE_GAP, fxNote, grams, money, primaryWage, typicalWage, useThemeVersion, wageNotes } from "../lib";
 import { Legend, useKV, usePickByName, useRows } from "./common";
 
 export function GoldPerHour(scope: Scope) {
@@ -34,11 +34,12 @@ export function GoldPerHour(scope: Scope) {
             i.t("gold.local_price", { price: money(i, row.gold_lcu_g, c.currency), year }),
             ...fxNote(i, row, c),
           ],
+          // Only what every economy can have: its main figure, the same survey's median, the
+          // exchange rate.  Everything else published for an economy is in its profile.
           table: [
             ...wageNotes(i, w, scope.view, c),
             ...(t ? wageNotes(i, t, scope.view, c).map(median) : []),
             ...fxNote(i, row, c),
-            ...otherWages(i, row, w, scope.view, c),
           ],
         }];
       }),
@@ -70,13 +71,15 @@ export function GoldPerHour(scope: Scope) {
           extra={<span><span className="sw" style={{ background: "var(--s2)", borderRadius: "50%" }} />{i.t(`gold.legend_median_${per}`)}</span>} />
         <Chart option={option} height={rankingHeight(items.length)} ariaLabel={i.t(`gold.aria_${per}`)} onPick={pick} />
         <p className="note">
-          {i.t("gold.note_order")}{" "}
-          {ovs && <>{i.t("gold.note_concepts", { min: i.n(ovs.min, "d2"), max: i.n(ovs.max, "d2"), n: i.n(ovs.n, "int") })} </>}
-          {i.t("gold.note_median")}{" "}
-          {i.t("gold.note_sources")}{" "}
-          {fxGap != null
-            ? i.t("gold.note_fx_gap", { year: scope.year, pct: i.n(fxGap * 100, "sig2"), mf: i.n(scope.ds.constants.max_factor, "d1") })
-            : i.t("gold.note_fx", { mf: i.n(scope.ds.constants.max_factor, "d1") })}
+          {i.j([
+            i.t("gold.note_order"),
+            ovs ? i.t("gold.note_concepts", { min: ovs.min, max: ovs.max, n: ovs.n }) : "",
+            i.t("gold.note_median"),
+            i.t("gold.note_sources"),
+            fxGap != null
+              ? i.t("gold.note_fx_gap", { year: scope.year, gap: fxGap, mf: scope.ds.constants.max_factor, threshold: FX_NOTE_GAP })
+              : i.t("gold.note_fx", { mf: scope.ds.constants.max_factor, threshold: FX_NOTE_GAP }),
+          ], "sentence")}
         </p>
         <DataTable items={items} per={per} />
       </div>
@@ -89,7 +92,7 @@ function DataTable({ items, per }: { items: RankItem[]; per: string }) {
   const sorted = [...items].sort((a, b) => b.value - a.value);
   return (
     <details>
-      <summary>{i.t("table.show", { n: i.n(items.length, "int") })}</summary>
+      <summary>{i.t("table.show", { n: items.length })}</summary>
       <div className="table-scroll">
         <table className="data">
           <thead>

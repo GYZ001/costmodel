@@ -5,8 +5,13 @@
 //   numbers: num (≤6 significant digits), num4, sig2, sig3 (≤n significant digits), int,
 //            d0…d6 (fixed decimals), p1 (≥1 decimal), pct0…pct3 (ratio as percent), sci1,
 //            factor (×r or ÷1/r, 3 significant digits)
-//   lists:   list (sentence separator, default), enum (enumeration), comma
+//   lists:   list (between statements, default), enum (enumeration), comma, sentence
+//            (between full sentences: a space in most languages, nothing in Chinese or Japanese)
 //   strings are inserted as they are; nested messages are rendered in the same language.
+//
+// Plurals: a key whose wording depends on a count has one entry per plural category of
+// the language, "key#one", "key#few", …, "key#other" (Intl.PluralRules), chosen by the
+// number in the parameter n.
 
 export interface Msg {
   k: string;
@@ -66,18 +71,9 @@ function sig(x: number, n: number, locale: string): string {
   return numberFormat(locale, `sig${n}`, { maximumSignificantDigits: n }).format(x);
 }
 
-// A part ending with a full-width full stop (e.g. a quoted Chinese sentence) takes no
-// sentence separator after it.
-const SENTENCE_END = /。$/;
-
 export function join(items: string[], kind: string, ctx: Ctx): string {
   const sep = ctx.cat[`_sep.${kind}`] ?? ctx.fallback[`_sep.${kind}`] ?? "; ";
-  let out = "";
-  for (const x of items) {
-    if (!x) continue;
-    out += !out || (kind === "list" && SENTENCE_END.test(out)) ? x : sep + x;
-  }
-  return out;
+  return items.filter((x) => x).join(sep);
 }
 
 export function render(part: Param, ctx: Ctx, fmt?: string): string {
@@ -89,8 +85,42 @@ export function render(part: Param, ctx: Ctx, fmt?: string): string {
   return template(part.k, part.p ?? {}, ctx);
 }
 
+const pr = new Map<string, Intl.PluralRules>();
+
+/** Plural rules matching a number format, so that the form agrees with the digits shown
+ *  ("1 day", "1.0 days"). */
+function pluralFormat(fmt: string): Intl.PluralRulesOptions {
+  let m: RegExpMatchArray | null;
+  if (fmt === "int") return { maximumFractionDigits: 0 };
+  if ((m = fmt.match(/^d(\d)$/))) return { minimumFractionDigits: Number(m[1]), maximumFractionDigits: Number(m[1]) };
+  if ((m = fmt.match(/^sig(\d)$/))) return { maximumSignificantDigits: Number(m[1]) };
+  if (fmt === "num4") return { maximumSignificantDigits: 4 };
+  return { maximumSignificantDigits: 6 };
+}
+
+/** The plural category of n in the locale ("one", "few", "other", …), as n is shown in fmt. */
+export function pluralCategory(n: number, locale: string, fmt = "num"): string {
+  const k = `${locale}|${fmt}`;
+  let r = pr.get(k);
+  if (!r) {
+    r = new Intl.PluralRules(locale, pluralFormat(fmt));
+    pr.set(k, r);
+  }
+  return r.select(n);
+}
+
+function lookup(cat: Catalog, key: string, params: Record<string, Param>, locale: string): string | undefined {
+  if (key in cat) return cat[key];
+  const other = cat[`${key}#other`];
+  if (other === undefined) return undefined;
+  const n = params.n;
+  if (typeof n !== "number") return other;
+  const fmt = other.match(/\{n:(\w+)\}/)?.[1] ?? "num";
+  return cat[`${key}#${pluralCategory(n, locale, fmt)}`] ?? other;
+}
+
 export function template(key: string, params: Record<string, Param>, ctx: Ctx): string {
-  const tpl = ctx.cat[key] ?? ctx.fallback[key];
+  const tpl = lookup(ctx.cat, key, params, ctx.locale) ?? lookup(ctx.fallback, key, params, "en");
   if (tpl === undefined) return key;
   return tpl.replace(TOKEN, (whole, name: string, fmt?: string) => (name in params ? render(params[name], ctx, fmt) : whole));
 }

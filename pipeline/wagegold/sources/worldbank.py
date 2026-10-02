@@ -89,21 +89,11 @@ def collect_countries(f: Fetcher) -> dict[str, dict]:
         check=check_json(_wdi_ok, "WDI country list empty"),
     )
     rows = json.loads(snap.read())[1]
-    zh = f.get(
-        "worldbank/countries_zh",
-        f"{API}/zh/country?format=json&per_page=400",
-        ext="json",
-        check=check_json(_wdi_ok, "WDI Chinese country list empty"),
-    )
-    names_zh = {r["id"]: r["name"] for r in json.loads(zh.read())[1]}
     return {
         r["id"]: {
             "iso2": r["iso2Code"],
             "name_en": r["name"],
-            "name_zh": names_zh.get(r["id"]),
-            "region": r["region"]["value"],
-            "income": r["incomeLevel"]["value"],
-            "is_economy": r["region"]["id"] != "NA",
+            "is_economy": r["region"]["id"] != "NA",  # aggregates have no region
         }
         for r in rows
     }

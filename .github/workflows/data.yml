@@ -34,8 +34,6 @@ jobs:
         run: python -m pytest pipeline -q
       - name: Fetch, validate and build
         id: build
-        env:
-          BLS_API_KEY: ${{ secrets.BLS_API_KEY }}
         run: |
           set +e
           python -m wagegold

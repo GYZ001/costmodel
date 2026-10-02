@@ -9,7 +9,7 @@ language, e.g. "ILOSTAT 注明该值为“{label}”…" with "{label}" filled i
 Parameter values:
 - number: formatted by the template ("{v:num}", "{r:factor}", "{p:pct2}", …)
 - str: inserted as is - codes, years, and text quoted verbatim from a publisher
-  (ILOSTAT's English note labels, NBS's Chinese release titles)
+  (ILOSTAT's English note labels and survey names)
 - message: rendered in the same language
 - list: each item rendered, joined with the language's list separator
 """

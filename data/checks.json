@@ -20,288 +20,7 @@
    "k": "c.gold_fresh",
    "p": {
     "month": "2026-08",
-    "lag": 2
-   }
-  }
- },
- {
-  "id": "bls_vs_fred",
-  "status": "pass",
-  "detail": {
-   "k": "c.bls_fred",
-   "p": {
-    "n": 246,
-    "d": 0.0,
-    "worst": ""
-   }
-  }
- },
- {
-  "id": "nbs_internal",
-  "status": "pass",
-  "detail": {
-   "k": "c.list",
-   "p": {
-    "items": [
-     {
-      "k": "c.nbs.level",
-      "p": {
-       "series": "cn_wage_nonprivate",
-       "year": "2021",
-       "direct": 106837,
-       "implied": 106837
-      }
-     },
-     {
-      "k": "c.nbs.level",
-      "p": {
-       "series": "cn_wage_nonprivate",
-       "year": "2022",
-       "direct": 114029,
-       "implied": 114029
-      }
-     },
-     {
-      "k": "c.nbs.level",
-      "p": {
-       "series": "cn_wage_nonprivate",
-       "year": "2023",
-       "direct": 120698,
-       "implied": 120698
-      }
-     },
-     {
-      "k": "c.nbs.level",
-      "p": {
-       "series": "cn_wage_nonprivate",
-       "year": "2024",
-       "direct": 124110,
-       "implied": 124110
-      }
-     },
-     {
-      "k": "c.nbs.growth",
-      "p": {
-       "series": "cn_wage_nonprivate",
-       "year": "2021",
-       "published": 9.7,
-       "calc": 9.712566364411224
-      }
-     },
-     {
-      "k": "c.nbs.growth",
-      "p": {
-       "series": "cn_wage_nonprivate",
-       "year": "2022",
-       "published": 6.7,
-       "calc": 6.731750236341338
-      }
-     },
-     {
-      "k": "c.nbs.growth",
-      "p": {
-       "series": "cn_wage_nonprivate",
-       "year": "2023",
-       "published": 5.8,
-       "calc": 5.848512220575475
-      }
-     },
-     {
-      "k": "c.nbs.growth",
-      "p": {
-       "series": "cn_wage_nonprivate",
-       "year": "2024",
-       "published": 2.8,
-       "calc": 2.8268902550166564
-      }
-     },
-     {
-      "k": "c.nbs.growth",
-      "p": {
-       "series": "cn_wage_nonprivate",
-       "year": "2025",
-       "published": 4.3,
-       "calc": 4.2953831278704335
-      }
-     },
-     {
-      "k": "c.nbs.level",
-      "p": {
-       "series": "cn_wage_private",
-       "year": "2021",
-       "direct": 62884,
-       "implied": 62884
-      }
-     },
-     {
-      "k": "c.nbs.level",
-      "p": {
-       "series": "cn_wage_private",
-       "year": "2022",
-       "direct": 65237,
-       "implied": 65237
-      }
-     },
-     {
-      "k": "c.nbs.level",
-      "p": {
-       "series": "cn_wage_private",
-       "year": "2023",
-       "direct": 68340,
-       "implied": 68340
-      }
-     },
-     {
-      "k": "c.nbs.level",
-      "p": {
-       "series": "cn_wage_private",
-       "year": "2024",
-       "direct": 69476,
-       "implied": 69476
-      }
-     },
-     {
-      "k": "c.nbs.growth",
-      "p": {
-       "series": "cn_wage_private",
-       "year": "2021",
-       "published": 8.9,
-       "calc": 8.933428031943457
-      }
-     },
-     {
-      "k": "c.nbs.growth",
-      "p": {
-       "series": "cn_wage_private",
-       "year": "2022",
-       "published": 3.7,
-       "calc": 3.7418103174098327
-      }
-     },
-     {
-      "k": "c.nbs.growth",
-      "p": {
-       "series": "cn_wage_private",
-       "year": "2023",
-       "published": 4.8,
-       "calc": 4.75650321136778
-      }
-     },
-     {
-      "k": "c.nbs.growth",
-      "p": {
-       "series": "cn_wage_private",
-       "year": "2024",
-       "published": 1.7,
-       "calc": 1.662276851038924
-      }
-     },
-     {
-      "k": "c.nbs.growth",
-      "p": {
-       "series": "cn_wage_private",
-       "year": "2025",
-       "published": 3.0,
-       "calc": 3.0427773619667198
-      }
-     },
-     {
-      "k": "c.nbs.level",
-      "p": {
-       "series": "cn_migrant_monthly",
-       "year": "2021",
-       "direct": 4432,
-       "implied": 4432
-      }
-     },
-     {
-      "k": "c.nbs.level",
-      "p": {
-       "series": "cn_migrant_monthly",
-       "year": "2022",
-       "direct": 4615,
-       "implied": 4615
-      }
-     },
-     {
-      "k": "c.nbs.level",
-      "p": {
-       "series": "cn_migrant_monthly",
-       "year": "2023",
-       "direct": 4780,
-       "implied": 4780
-      }
-     },
-     {
-      "k": "c.nbs.level",
-      "p": {
-       "series": "cn_migrant_monthly",
-       "year": "2024",
-       "direct": 4961,
-       "implied": 4961
-      }
-     },
-     {
-      "k": "c.nbs.growth",
-      "p": {
-       "series": "cn_migrant_monthly",
-       "year": "2021",
-       "published": 8.8,
-       "calc": 8.840864440078589
-      }
-     },
-     {
-      "k": "c.nbs.growth",
-      "p": {
-       "series": "cn_migrant_monthly",
-       "year": "2022",
-       "published": 4.1,
-       "calc": 4.129061371841147
-      }
-     },
-     {
-      "k": "c.nbs.growth",
-      "p": {
-       "series": "cn_migrant_monthly",
-       "year": "2023",
-       "published": 3.6,
-       "calc": 3.5752979414951147
-      }
-     },
-     {
-      "k": "c.nbs.growth",
-      "p": {
-       "series": "cn_migrant_monthly",
-       "year": "2024",
-       "published": 3.8,
-       "calc": 3.7866108786610786
-      }
-     },
-     {
-      "k": "c.nbs.growth",
-      "p": {
-       "series": "cn_migrant_monthly",
-       "year": "2025",
-       "published": 2.3,
-       "calc": 2.297923805684343
-      }
-     }
-    ]
-   }
-  }
- },
- {
-  "id": "cn_ilo_nbs",
-  "status": "pass",
-  "detail": {
-   "k": "c.cn_ilo",
-   "p": {
-    "source": "ILOSTAT FX:216",
-    "years": "2020, 2021, 2022",
-    "d": 7.66436224841731e-05,
-    "year": "2022",
-    "ilo": 65232.0,
-    "nbs": 65237
+    "n": 2
    }
   }
  },
@@ -328,8 +47,7 @@
        "kind": {
         "k": "kind.unit"
        },
-       "n": 61,
-       "areas": "ABW, AND, ARG, BGR, BHS, BMU, BRB, COD, CUB, CUW, CYM, CYP…"
+       "n": 61
       }
      },
      {
@@ -338,8 +56,7 @@
        "kind": {
         "k": "kind.identity"
        },
-       "n": 8,
-       "areas": "AGO, BDI, GUY, IRN, LBN, SDN, SUR, UGA"
+       "n": 8
       }
      },
      {
@@ -348,8 +65,7 @@
        "kind": {
         "k": "kind.missing"
        },
-       "n": 57,
-       "areas": "ABW, ALB, AND, ARG, BHS, BIH, BMU, COD, CUB, CUW, CYM, ETH…"
+       "n": 57
       }
      },
      {
@@ -358,8 +74,7 @@
        "kind": {
         "k": "kind.notes"
        },
-       "n": 13,
-       "areas": "ARE, AZE, BHR, CUW, GRC, GUM, MLT, QAT, SAU, SYC, YEM, ZAF…"
+       "n": 13
       }
      },
      {
@@ -368,8 +83,7 @@
        "kind": {
         "k": "kind.check"
        },
-       "n": 8,
-       "areas": "EGY, FIN, ISL, NRU, PRY, SLB, SVK, ZAF"
+       "n": 8
       }
      },
      {
@@ -378,8 +92,7 @@
        "kind": {
         "k": "kind.area"
        },
-       "n": 10,
-       "areas": "COK, FLK, GGY, JEY, MSR, NIU, REU, SHN, TKL, WLF"
+       "n": 10
       }
      }
     ]
@@ -392,7 +105,7 @@
   "detail": {
    "k": "c.identity",
    "p": {
-    "n": 2744,
+    "n": 2709,
     "worst": 4.2449106795145886e-16
    }
   }

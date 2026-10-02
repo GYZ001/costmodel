@@ -90,7 +90,7 @@ export function RealWage(scope: Scope) {
     items: dietMinutes, valueName: i.t("real.minutes_value"), format: (v) => i.t("u.min", { n: i.n(v, "sig2") }), kv,
   }), [dietMinutes, theme, i]);
   const mOpt = useMemo(() => rankingOption({
-    items: monthDays, valueName: i.t("real.days_value"), format: (v) => i.t("u.days", { n: i.n(v, "sig3") }), kv,
+    items: monthDays, valueName: i.t("real.days_value"), format: (v) => i.t("u.days", { n: v }), kv,
   }), [monthDays, theme, i]);
 
   return (
@@ -104,11 +104,10 @@ export function RealWage(scope: Scope) {
         </div>
         <Chart option={dOpt} height={rankingHeight(dumb.length)} ariaLabel={i.t(`real.aria_${per}`)} onPick={pick} />
         <p className="note">
-          {i.t("real.note")}
-          {undrawn.length > 0 && <> {i.t(`real.undrawn_${per}`, { list: i.j(undrawn, "enum") })}</>}
+          {i.j([i.t("real.note"), undrawn.length > 0 ? i.t(`real.undrawn_${per}`, { list: i.j(undrawn, "enum") }) : ""], "sentence")}
         </p>
         <details>
-          <summary>{i.t("table.show", { n: i.n(dumb.length, "int") })}</summary>
+          <summary>{i.t("table.show", { n: dumb.length })}</summary>
           <div className="table-scroll">
             <table className="data">
               <thead><tr><th>{i.t("col.economy")}</th><th>{i.t(`real.a_${per}`)}</th><th>{i.t(`real.b_${per}`)}</th><th>{i.t("real.col_ratio")}</th></tr></thead>
@@ -146,7 +145,7 @@ export function RealWage(scope: Scope) {
               <p className="muted">{i.t("real.groups_none", { year: groupYear || "—" })}</p>
             )}
             <details>
-              <summary>{i.t("table.show", { n: i.n(diet.length, "int") })}</summary>
+              <summary>{i.t("table.show", { n: diet.length })}</summary>
               <div className="table-scroll">
                 <table className="data">
                   <thead><tr><th>{i.t("col.economy")}</th><th>{i.t("real.total")}</th>{groupNames.map((g) => <th key={g}>{i.t("real.col_group_min", { group: g })}</th>)}</tr></thead>

@@ -1,24 +1,27 @@
 import { useMemo } from "react";
 import type { Dataset } from "../types";
-import { useI18n } from "../i18n";
+import { useI18n, type I18n } from "../i18n";
+import type { Param } from "../i18n/render";
 import { byName, countryName, levelBoundsText } from "../lib";
 
 /** Catalog key naming each kind of excluded input (dataset.exclusions[].scope). */
-export const SCOPE_KEYS: Record<string, string> = {
+const SCOPE_KEYS: Record<string, string> = {
   fx: "scope.fx",
   ppp: "scope.ppp",
   cohd: "scope.cohd",
   currency: "scope.currency",
   hours: "scope.hours",
   area: "scope.area",
-  "wage:cn": "scope.wage_cn",
-  "wage:bls": "scope.wage_bls",
   "wage:oecd": "scope.wage_oecd",
   "wage:ilo_monthly_mean": "scope.ilo_monthly_mean",
   "wage:ilo_monthly_median": "scope.ilo_monthly_median",
   "wage:ilo_hourly_mean": "scope.ilo_hourly_mean",
   "wage:ilo_hourly_median": "scope.ilo_hourly_median",
 };
+
+export function scopeLabel(i: I18n, scope: string): string {
+  return SCOPE_KEYS[scope] ? i.t(SCOPE_KEYS[scope]) : scope;
+}
 
 // The branch the site and its dataset were built from (set by the Pages build, .github/workflows/pages.yml).
 const BRANCH: string = import.meta.env.VITE_DATA_BRANCH || "main";
@@ -43,9 +46,9 @@ export function Methods({ ds }: { ds: Dataset }) {
   const span = (ys: string[]) => {
     if (ys.includes("*")) return i.t("excl.all_years");
     const s = [...ys].sort();
-    return s.length === 1 ? s[0] : i.t("excl.span", { first: s[0], last: s[s.length - 1], n: i.n(s.length, "int") });
+    return s.length === 1 ? s[0] : i.t("excl.span", { first: s[0], last: s[s.length - 1], n: s.length });
   };
-  const li = (key: string, params?: Record<string, string>) => <li>{i.t(key, params)}</li>;
+  const li = (key: string, params?: Record<string, Param>) => <li>{i.t(key, params)}</li>;
 
   return (
     <section className="block" id="method">
@@ -63,7 +66,6 @@ export function Methods({ ds }: { ds: Dataset }) {
             {li("m.f_step3")}
             {li("m.f_oecd")}
             {li("m.f_ilo")}
-            {li("m.f_nso")}
           </ul>
         </div>
         <div className="card">
@@ -71,13 +73,12 @@ export function Methods({ ds }: { ds: Dataset }) {
           <ul className="small list">
             {li("m.c_median")}
             {li("m.c_ilostat")}
-            {li("m.c_nso")}
             {li("m.c_excluded_notes")}
-            {li("m.c_time_units", { tf: i.n(k.time_factor, "d2"), ug: i.n(k.unit_gap, "d2") })}
-            {li("m.c_continuity", { tf: i.n(k.time_factor, "d2"), hfce: levelBoundsText(i, ds, "hfce"), gdp: levelBoundsText(i, ds, "gdp") })}
+            {li("m.c_time_units", { tf: k.time_factor, ug: k.unit_gap, hours: k.hours_in_month })}
+            {li("m.c_continuity", { tf: k.time_factor, hfce: levelBoundsText(i, ds, "hfce"), gdp: levelBoundsText(i, ds, "gdp") })}
             {li("m.c_diet")}
             {li("m.c_intl_dollar")}
-            {li("m.c_same_year")}
+            {li("m.c_same_year", { g20: i.t("controls.g20"), all: i.t("controls.all") })}
             {li("m.c_monthly_view")}
             {li("m.c_translation")}
           </ul>
@@ -103,12 +104,14 @@ export function Methods({ ds }: { ds: Dataset }) {
       </div>
 
       <div className="card">
-        <h3>{i.t("m.excl_title", { n: i.n(ds.exclusions.length, "int") })}</h3>
+        <h3>{i.t("m.excl_title", { n: ds.exclusions.length })}</h3>
         <p className="small ink2" style={{ margin: "0 0 8px" }}>
-          {i.t("m.excl_units", { mf: i.n(k.max_factor, "d1") })}{" "}
-          {i.t("m.excl_rates", { mf: i.n(k.max_factor, "d1") })}{" "}
-          {i.t("m.excl_joins")}{" "}
-          {i.t("m.excl_rule")}
+          {i.j([
+            i.t("m.excl_units", { mf: k.max_factor }),
+            i.t("m.excl_rates", { mf: k.max_factor }),
+            i.t("m.excl_joins"),
+            i.t("m.excl_rule"),
+          ], "sentence")}
         </p>
         <details>
           <summary>{i.t("m.excl_by_economy")}</summary>
@@ -119,7 +122,7 @@ export function Methods({ ds }: { ds: Dataset }) {
                 {groups.map((g) => (
                   <tr key={`${g.area}|${g.scope}|${g.kind}`}>
                     <td className="l">{name(g.area)}</td>
-                    <td className="l small">{i.t(SCOPE_KEYS[g.scope] ?? "scope.other", { scope: g.scope })}</td>
+                    <td className="l small">{scopeLabel(i, g.scope)}</td>
                     <td className="l small">{i.t(`kind.${g.kind}`)}</td>
                     <td className="l small">{span(g.years)}</td>
                     <td className="l small ink2" style={{ minWidth: 320 }}>{g.detail}</td>
@@ -147,7 +150,7 @@ export function Methods({ ds }: { ds: Dataset }) {
                   <td className="l small">{i.t(`src.${s.id}.license`)}</td>
                   <td className="small">
                     <details>
-                      <summary>{i.t("m.src_files", { n: i.n(s.snapshots.length, "int"), date: latest(s.snapshots.map((x) => x.retrieved_at)) })}</summary>
+                      <summary>{i.t("m.src_files", { n: s.snapshots.length, date: latest(s.snapshots.map((x) => x.retrieved_at)) })}</summary>
                       <table className="data" style={{ marginTop: 6 }}>
                         <tbody>
                           {s.snapshots.map((x) => (

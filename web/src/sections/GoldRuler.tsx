@@ -68,7 +68,7 @@ export function GoldRuler(scope: Scope) {
       <p className="sub">{i.t("ruler.sub")}</p>
       {a0 && a1 && (
         <div className="callout">
-          {i.t(a1 >= a0 ? "ruler.callout_up" : "ruler.callout_down", { y0, y1, a0: i.n(a0, "int"), a1: i.n(a1, "int"), r: i.n(a1 / a0, "d1") })}
+          {i.t(a1 >= a0 ? "ruler.callout_up" : "ruler.callout_down", { y0, y1, a0, a1, r: a1 / a0 })}
         </div>
       )}
       <div className="card">
@@ -91,19 +91,21 @@ export function GoldRuler(scope: Scope) {
             <Legend series={hist} />
             <Chart option={histOpt} height={320} ariaLabel={i.t("ruler.hist_title")} />
             <p className="note">
-              {i.t("ruler.hist_note")}{" "}
-              {i.t("ruler.hist_labels", {
-                list: i.j(hist.map((s) => {
-                  const h = ds.wage_gold_history[s.iso];
-                  const notes = i.r(h.notes);
-                  return i.t(notes ? "ruler.hist_label_notes" : "ruler.hist_label", { name: s.name, label: i.r(h.label), notes });
-                })),
-              })}{" "}
-              {i.t("ruler.hist_rule")}{" "}
-              {i.t("ruler.hist_breaks", { bounds: levelBoundsText(i, ds, "hfce") })}{" "}
-              {i.t("ruler.isolated")}
-              {breaks.length > 0 && <> {i.t("ruler.breaks", { list: i.j(breaks) })}</>}
-              {noHistory.length > 0 && <> {i.t("ruler.no_history", { list: i.j(noHistory, "enum") })}</>}
+              {i.j([
+                i.t("ruler.hist_note"),
+                hist.length > 0 ? i.t("ruler.hist_labels", {
+                  list: i.j(hist.map((s) => {
+                    const h = ds.wage_gold_history[s.iso];
+                    const notes = i.r(h.notes);
+                    return i.t(notes ? "ruler.hist_label_notes" : "ruler.hist_label", { name: s.name, label: i.r(h.label), notes });
+                  })),
+                }) : "",
+                i.t("ruler.hist_rule", { n: ds.constants.history_min_years }),
+                i.t("ruler.hist_breaks", { bounds: levelBoundsText(i, ds, "hfce") }),
+                i.t("ruler.isolated"),
+                breaks.length > 0 ? i.t("ruler.breaks", { list: i.j(breaks) }) : "",
+                noHistory.length > 0 ? i.t("ruler.no_history", { n: ds.constants.history_min_years, list: i.j(noHistory, "enum") }) : "",
+              ], "sentence")}
             </p>
           </div>
         </div>

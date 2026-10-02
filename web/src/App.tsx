@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import type { Dataset } from "./types";
 import { useI18n } from "./i18n";
-import { LANGS } from "./i18n/langs";
 import { bestYear, byName, countryName, wageYears, type View } from "./lib";
 import { HowItWorks } from "./sections/HowItWorks";
 import { GoldPerHour } from "./sections/GoldPerHour";
@@ -106,7 +105,7 @@ export default function App({ ds }: { ds: Dataset }) {
           <label>
             <span className="sr-only">{i.t("app.language")}</span>
             <select value={i.lang.code} onChange={(e) => i.setLang(e.target.value)} aria-label={i.t("app.language")}>
-              {LANGS.map((l) => <option key={l.code} value={l.code} lang={l.code}>{l.name}</option>)}
+              {i.langs.map((l) => <option key={l.code} value={l.code} lang={l.code}>{l.name}</option>)}
             </select>
           </label>
         </div>
@@ -115,16 +114,16 @@ export default function App({ ds }: { ds: Dataset }) {
         <div className="toolbar">
           <span className="badge">
             <span className="dot" style={{ background: "var(--gold)" }} />
-            {i.t("app.gold_badge", { period: g.period, oz: i.n(g.usd_oz, "int"), g: i.n(g.usd_g, "d1") })}
+            {i.t("app.gold_badge", { period: g.period, oz: g.usd_oz, g: g.usd_g })}
           </span>
           <span className="badge">
             <span className="dot" style={{ background: failed ? "var(--critical)" : "var(--good)" }} />
-            {i.t("app.checks_badge", { passed: i.n(passed, "int"), total: i.n(checks.length, "int") })}
+            {i.t("app.checks_badge", { passed, total: checks.length })}
           </span>
           <span className="badge">
             {i.t("app.generated", { time: new Date(ds.generated_at).toLocaleString(i.lang.locale, { dateStyle: "medium", timeStyle: "short" }) })}
           </span>
-          {ds.stale.length > 0 && <span className="badge">⚠ {i.t("app.stale", { n: i.n(ds.stale.length, "int") })}</span>}
+          {ds.stale.length > 0 && <span className="badge">⚠ {i.t("app.stale", { n: ds.stale.length })}</span>}
         </div>
       </header>
 
@@ -174,9 +173,12 @@ export default function App({ ds }: { ds: Dataset }) {
             </div>
           </div>
           <p className="small muted" style={{ margin: "8px 0 0" }}>
-            {picks.length === 0 ? i.t("controls.focus_hint_empty") : i.t("controls.focus_hint", { max: i.n(MAX_PICKS, "int") })}
-            {" "}{i.t("controls.same_year", { year: best })}
-            {missing.length > 0 && <> {i.t("controls.missing", { list: i.j(missing, "enum") })}</>}
+            {i.j([
+              i.t(picks.length === 0 ? "controls.focus_hint_empty" : "controls.focus_hint", { n: MAX_PICKS }),
+              i.t(group === "g20" ? "controls.g20_shown" : "controls.all_shown", { g20: i.t("controls.g20"), all: i.t("controls.all") }),
+              i.t("controls.same_year", { year: best }),
+              missing.length > 0 ? i.t(view === "hourly" ? "controls.missing_hour" : "controls.missing_month", { year, list: i.j(missing, "enum") }) : "",
+            ], "sentence")}
           </p>
         </section>
 

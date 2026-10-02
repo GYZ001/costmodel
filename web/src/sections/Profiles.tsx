@@ -1,11 +1,11 @@
 import { useMemo } from "react";
 import type { Scope } from "../App";
 import { useI18n } from "../i18n";
-import { byName, countryName, grams, languageName, minutes, money, wageCurrency, wageLabel } from "../lib";
+import { byName, countryName, grams, minutes, money, wageCurrency, wageLabel } from "../lib";
 import type { Country, Wage } from "../types";
-import { SCOPE_KEYS } from "./Methods";
+import { scopeLabel } from "./Methods";
 
-/** For each focus economy: every wage figure published for it that year, its rates and prices,
+/** For each focus economy: the wage figures used for it that year, its rates and prices,
  *  and what was left out and why - the same layout for every economy. */
 export function Profiles(scope: Scope) {
   const i = useI18n();
@@ -23,7 +23,8 @@ export function Profiles(scope: Scope) {
   );
 }
 
-/** Shown where a section needs focus economies: a one-click list of G20 members. */
+/** Shown where a section needs focus economies: a one-click list of the G20 member
+ *  countries (any other economy can be added from the list at the top). */
 export function FocusPrompt({ scope, text }: { scope: Scope; text: string }) {
   const i = useI18n();
   const members = useMemo(() => {
@@ -33,7 +34,7 @@ export function FocusPrompt({ scope, text }: { scope: Scope; text: string }) {
   }, [scope.ds, i]);
   return (
     <div className="card prompt">
-      <p style={{ margin: "0 0 8px" }}>{text}</p>
+      <p style={{ margin: "0 0 8px" }}>{i.j([text, i.t("focus.chips_g20")], "sentence")}</p>
       <div className="chips">
         {members.map(([iso, name]) => (
           <button key={iso} className="chip" aria-pressed="false" onClick={() => scope.togglePick(iso)}>{name}</button>
@@ -77,7 +78,7 @@ function Profile({ scope, iso, c }: { scope: Scope; iso: string; c: Country }) {
         <div><dt>{i.t("prof.pli")}</dt><dd>{pli != null ? i.n(pli, "int") : "—"}</dd></div>
       </dl>
 
-      <div className="table-scroll">
+      {wages.length > 0 && <div className="table-scroll">
         <table className="data">
           <thead>
             <tr>
@@ -111,10 +112,10 @@ function Profile({ scope, iso, c }: { scope: Scope; iso: string; c: Country }) {
             })}
           </tbody>
         </table>
-      </div>
+      </div>}
       {wages.length === 0 && <p className="muted">{i.t("prof.no_wages", { year })}</p>}
 
-      <details>
+      {wages.length > 0 && <details>
         <summary>{i.t("prof.notes_summary")}</summary>
         <dl className="small ink2 notes">
           {wages.map((w) => (
@@ -122,18 +123,17 @@ function Profile({ scope, iso, c }: { scope: Scope; iso: string; c: Country }) {
               <dt>{wageLabel(i, w, "monthly")} — {i.r(w.source)}</dt>
               <dd>{i.t("prof.method", { text: i.r(w.method) })}</dd>
               {w.caveat.length > 0 && <dd>{i.t("prof.caveat", { text: i.r(w.caveat) })}</dd>}
-              {w.quote && <dd>{i.t("prof.quote", { lang: languageName(i, w.quote_lang ?? "und") })} <span lang={w.quote_lang ?? undefined}>{w.quote}</span></dd>}
             </div>
           ))}
         </dl>
-      </details>
+      </details>}
       {excl.length > 0 && (
         <details>
-          <summary>{i.t("prof.excl_summary", { n: i.n(excl.length, "int") })}</summary>
+          <summary>{i.t("prof.excl_summary", { n: excl.length })}</summary>
           <ul className="small ink2">
             {excl.map((e, k) => (
               <li key={k}>
-                <strong>{i.t(SCOPE_KEYS[e.scope] ?? "scope.other", { scope: e.scope })}</strong> · {i.t(`kind.${e.kind}`)}: {i.r(e.detail)}
+                {i.t("prof.excl_item", { item: scopeLabel(i, e.scope), kind: i.t(`kind.${e.kind}`), detail: e.detail })}
               </li>
             ))}
           </ul>

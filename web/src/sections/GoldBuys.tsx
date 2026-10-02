@@ -31,7 +31,7 @@ export function GoldBuys(scope: Scope) {
     () => rankingOption({
       items,
       valueName: i.t(m === "diet" ? "buys.value_diet" : "buys.value_consumption"),
-      format: (v) => (m === "diet" ? i.t("u.days", { n: i.n(v, "sig2") }) : i.t("u.intl_dollars", { n: i.n(v, "int") })),
+      format: (v) => (m === "diet" ? i.t("u.days", { n: v }) : i.t("u.intl_dollars", { n: i.n(v, "int") })),
       kv,
     }),
     [items, m, theme, i],
@@ -51,7 +51,7 @@ export function GoldBuys(scope: Scope) {
         <Chart option={option} height={rankingHeight(items.length)} ariaLabel={i.t("buys.aria")} onPick={pick} />
         <p className="note">{i.t(m === "diet" ? "buys.note_diet" : "buys.note_consumption")}</p>
         <details>
-          <summary>{i.t("table.show", { n: i.n(items.length, "int") })}</summary>
+          <summary>{i.t("table.show", { n: items.length })}</summary>
           <div className="table-scroll">
             <table className="data">
               <thead><tr><th>{i.t("col.economy")}</th><th>{i.t(m === "diet" ? "buys.col_diet" : "buys.col_consumption")}</th><th className="l">{i.t("col.basis")}</th></tr></thead>

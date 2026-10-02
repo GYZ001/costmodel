@@ -33,10 +33,16 @@ jobs:
       - name: Unit tests
         run: python -m pytest pipeline -q
       - name: Fetch, validate and build
+        id: build
         env:
           BLS_API_KEY: ${{ secrets.BLS_API_KEY }}
-        run: python -m wagegold
-      - name: Commit refreshed snapshots and dataset
+        run: |
+          set +e
+          python -m wagegold
+          echo "code=$?" >> "$GITHUB_OUTPUT"
+      # 原始快照与校验报告总是提交（便于审计和排查）；网站数据集只有全部校验通过才会更新。
+      - name: Commit snapshots, check report and (if valid) dataset
+        if: always()
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
@@ -45,9 +51,14 @@ jobs:
             echo "数据无变化"
             exit 0
           fi
-          git commit -m "data: 刷新官方数据快照 $(date -u +%Y-%m-%dT%H:%MZ)"
+          git commit -m "data: 刷新官方数据快照 $(date -u +%Y-%m-%dT%H:%MZ)（管道退出码 ${{ steps.build.outputs.code }}）"
           for i in 1 2 3; do
             git pull --rebase origin "${GITHUB_REF_NAME}" && git push origin "HEAD:${GITHUB_REF_NAME}" && exit 0
             sleep $((i * 5))
           done
+          exit 1
+      - name: Fail when a source or a check failed
+        if: steps.build.outputs.code != '0'
+        run: |
+          echo "::error::管道退出码 ${{ steps.build.outputs.code }}：必需来源失败(1) 或交叉校验失败(2)，网站数据集未更新。详见 data/checks.json"
           exit 1

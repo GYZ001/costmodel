@@ -344,6 +344,97 @@ def us_items(store: Store, gold: dict) -> dict:
     return out
 
 
+# --------------------------------------------------------------------------------------
+# Monthly wage in grams of gold, by year (for the "gold is a moving ruler" chart)
+# --------------------------------------------------------------------------------------
+
+def wage_gold_history(store: Store, gold: dict, meta: dict, ilo_dic: dict) -> dict:
+    """One consistent monthly-earnings series per economy, converted to grams of gold
+    with each year's average gold price and exchange rate.
+
+    ILOSTAT mean monthly earnings, single source per economy (see pick_source).  For
+    China, ILOSTAT's series is NBS's urban private-unit average wage / 12 (identical
+    values); later years come straight from NBS releases of the same series.
+    """
+    out = {}
+    for area, info in meta.items():
+        if not info.get("is_economy"):
+            continue
+        pts: dict[str, tuple[float, str]] = {}
+        s = pick_source(store, "ilo_monthly_mean", area)
+        if s:
+            code = s.split("@", 1)[1]
+            for p, o in store.series(s, area).items():
+                pts[p] = (o.value, f"ILOSTAT · {ilo_dic.get('source', {}).get(code, code)}")
+        if area == "CHN":
+            for p, o in store.series("cn_wage_private", "CHN").items():
+                pts[p] = (o.value / 12, "国家统计局 · 城镇私营单位平均工资 ÷ 12")
+        rows = []
+        for y in sorted(pts):
+            fx = store.get("fx_lcu_usd", area, y)
+            g = gold["annual"].get(y)
+            if fx and g:
+                lcu, src = pts[y]
+                rows.append([y, lcu, lcu / (g["usd_g"] * fx.value), src])
+        if len(rows) >= 3:
+            label = "城镇私营单位平均工资（国家统计局；ILOSTAT 转载同一序列）" if area == "CHN" else "雇员平均月薪（ILOSTAT）"
+            out[area] = {"label": label, "points": rows}
+    return out
+
+
+# --------------------------------------------------------------------------------------
+# Latest month (United States and China)
+# --------------------------------------------------------------------------------------
+
+def latest_block(store: Store, gold: dict) -> dict:
+    """Gold, CNY rate and US wage for the latest month with all three available.
+
+    China publishes wages once a year, so the Chinese hourly figures here pair the
+    latest annual wage with the latest month's gold price; the periods are stated
+    explicitly in the output instead of being blended into one number."""
+    gm = dict((p, v) for p, v in gold["monthly"])
+    cny = store.series("fx_lcu_usd_ecb", "CHN")
+    ahe = store.series("us_ahe_all_sa", "USA")
+    months = sorted(p for p in gm if p in cny and p in ahe)
+    if not months:
+        return {}
+    p = months[-1]
+    usd_g = gm[p] / GRAMS_PER_TROY_OUNCE
+    cny_g = usd_g * cny[p].value
+    out = {
+        "period": p,
+        "gold_usd_oz": gm[p],
+        "gold_usd_g": usd_g,
+        "cny_per_usd": cny[p].value,
+        "gold_cny_g": cny_g,
+        "us_ahe": ahe[p].value,
+        "us_ahe_preliminary": "preliminary" in ahe[p].note,
+        "us_gold_g_per_hour": ahe[p].value / usd_g,
+        "cn": [],
+    }
+    wage_year = max((y for (s, a, y) in store.items if s == "cn_wage_nonprivate" and a == "CHN"), default=None)
+    hours = china_annual_hours(store, wage_year) if wage_year else None
+    for series, label in (("cn_wage_nonprivate", "城镇非私营单位"), ("cn_wage_private", "城镇私营单位")):
+        o = store.get(series, "CHN", wage_year) if wage_year else None
+        if not o:
+            continue
+        for basis, hrs in (("statutory", STATUTORY_HOURS_CN), ("actual", hours["mean"] * 52 if hours else None)):
+            if hrs is None:
+                continue
+            hourly = o.value / hrs
+            out["cn"].append({"series": series, "label": label, "wage_year": wage_year, "annual": o.value,
+                              "basis": basis, "hours_year": hrs, "hourly": hourly, "gold_g_per_hour": hourly / cny_g})
+    return out
+
+
+def fx_recent(store: Store, months: int = 36) -> dict:
+    out = {}
+    for area in sorted(store.areas("fx_lcu_usd_ecb")):
+        s = store.series("fx_lcu_usd_ecb", area)
+        out[area] = [[p, s[p].value] for p in sorted(s)[-months:]]
+    return out
+
+
 def finite(x):
     if isinstance(x, float) and not math.isfinite(x):
         raise ValueError("non-finite number in dataset")

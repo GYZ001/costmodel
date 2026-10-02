@@ -104,6 +104,26 @@ export interface Dataset {
   us_monthly: Record<"us_ahe_pns_sa" | "us_ahe_all_sa", [string, number, number][]>;
   us_items: Record<string, UsItem>;
   cn_hours_monthly: [string, number][];
+  wage_gold_history: Record<string, { label: string; points: [string, number, number, string][] }>;
+  latest: {
+    period: string;
+    gold_usd_oz: number;
+    gold_usd_g: number;
+    cny_per_usd: number;
+    gold_cny_g: number;
+    us_ahe: number;
+    us_ahe_preliminary: boolean;
+    us_gold_g_per_hour: number;
+    cn: { series: string; label: string; wage_year: string; annual: number; basis: "statutory" | "actual"; hours_year: number; hourly: number; gold_g_per_hour: number }[];
+  };
+  fx_recent_ecb: Record<string, [string, number][]>;
+  nbs_price_releases: {
+    built_at: string;
+    listing: string;
+    from: string | null;
+    to: string | null;
+    groups: { kind: string; count: number; first: string; last: string; example: string }[];
+  } | null;
   checks: Check[];
   sources: SourceInfo[];
   stale: string[];

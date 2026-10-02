@@ -24,6 +24,13 @@ from .common import check_csv_header, to_float
 DATA = "https://rplumber.ilo.org/data/indicator/?id={id}&sex=SEX_T{extra}&timefrom={start}&format=.csv"
 DIC = "https://rplumber.ilo.org/metadata/dic/?var={var}&lang=en&format=.csv"
 
+# The same earnings converted by ILOSTAT itself into US dollars.  Used only to
+# validate units: our "local value ÷ World Bank exchange rate" must match it.
+CUR_INDICATORS = {
+    "EAR_EHRA_SEX_CUR_NB_A": "ilo_hourly_mean",
+    "EAR_EMTA_SEX_CUR_NB_A": "ilo_monthly_mean",
+}
+
 INDICATORS = {
     "EAR_EHRA_SEX_NB_A": ("ilo_hourly_mean", ""),
     "EAR_EHRM_SEX_NB_A": ("ilo_hourly_median", ""),
@@ -50,6 +57,19 @@ def collect(f: Fetcher, start: int = 2000) -> tuple[list[Obs], dict[str, dict[st
             notes = "|".join(x for x in (r.get("note_indicator"), r.get("note_source"), r.get("note_classif")) if x)
             # One series per ILOSTAT source, so a country with several sources keeps them apart.
             out.append(Obs(f"{series}@{r['source']}", r["ref_area"], r["time"], v, snap.key, note=notes))
+    for ind, series in CUR_INDICATORS.items():
+        snap = f.get(
+            f"ilostat/{ind}",
+            DATA.format(id=ind, extra="", start=start),
+            ext="csv",
+            check=check_csv_header("ref_area", "source", "time", "obs_value"),
+        )
+        for r in csv.DictReader(io.StringIO(snap.read().decode("utf-8-sig"))):
+            v = to_float(r["obs_value"])
+            cur = next((r[k] for k in r if k.startswith("classif") and (r[k] or "").startswith("CUR_")), "")
+            if v is None or r["sex"] != "SEX_T" or not cur.endswith("_USD"):
+                continue
+            out.append(Obs(f"{series}_usd@{r['source']}", r["ref_area"], r["time"], v, snap.key, note=cur))
     dictionaries = {}
     for var in ("source", "note_source", "note_indicator"):
         snap = f.get(f"ilostat/dic_{var}", DIC.format(var=var), ext="csv", check=check_csv_header(var, f"{var}.label"))

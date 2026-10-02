@@ -82,12 +82,18 @@ def main(argv=None) -> int:
         "icp2021_pli_us": build.icp_levels(store),
         "us_monthly": build.us_monthly(store, gold),
         "us_items": build.us_items(store, gold),
+        "wage_gold_history": build.wage_gold_history(store, gold, meta, ilo_dic),
+        "latest": build.latest_block(store, gold),
+        "fx_recent_ecb": build.fx_recent(store),
+        "nbs_price_releases": nbs.price_release_summary(),
         "cn_hours_monthly": [[p, o.value] for p, o in sorted(store.series("cn_weekly_hours_enterprise", "CHN").items())],
     }
     checks = validate.run_all(store, dataset, years, today.isoformat())
     for c in checks:
         print(f"[check:{c['status']}] {c['title']} — {c['detail']}", flush=True)
     f.save_manifest()
+    from .config import DATA_DIR
+    (DATA_DIR / "checks.json").write_text(json.dumps(checks, ensure_ascii=False, indent=1) + "\n", encoding="utf-8")
     dataset["checks"] = checks
     dataset["sources"] = describe(_merged_manifest(f))
     dataset["stale"] = [k for k, s in f.used.items() if s.status == "stale"]

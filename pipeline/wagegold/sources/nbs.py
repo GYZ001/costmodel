@@ -57,15 +57,21 @@ def page_text(html: str) -> str:
     return re.sub(r"\s+", " ", text)
 
 
-def discover(f: Fetcher, pages: int = 30) -> list[Release]:
+def discover(f: Fetcher, pages: int = 36) -> tuple[list[Release], list[dict]]:
+    """Wanted releases, plus an index of every listed release whose title mentions
+    价格 (prices) - the evidence for which price statistics NBS currently publishes."""
     seen: dict[str, Release] = {}
+    price_titles: dict[str, dict] = {}
     for p in range(pages):
         url = LIST_URL + ("" if p == 0 else f"index_{p}.html")
         html = f.get_transient(url).decode("utf-8", "replace")
         for ym, tid, day, title in LINK_RE.findall(html):
+            title = title.strip()
+            if "价格" in title:
+                price_titles[tid] = {"date": f"{day[:4]}-{day[4:6]}-{day[6:]}", "title": title, "url": f"{LIST_URL}{ym}/{tid}.html"}
             if tid not in seen and (WAGE_TITLE.match(title) or MIGRANT_TITLE.match(title) or ECONOMY_TITLE.search(title)):
-                seen[tid] = Release(f"{LIST_URL}{ym}/{tid}.html", f"nbs/release/{ym}/{tid}", title.strip(), day)
-    return list(seen.values())
+                seen[tid] = Release(f"{LIST_URL}{ym}/{tid}.html", f"nbs/release/{ym}/{tid}", title, day)
+    return list(seen.values()), sorted(price_titles.values(), key=lambda r: r["date"])
 
 
 def collect(f: Fetcher) -> list[Obs]:
@@ -73,13 +79,54 @@ def collect(f: Fetcher) -> list[Obs]:
     if f.offline:
         snaps = [(s, _title_of(s)) for s in f.committed("nbs/release/")]
     else:
-        for rel in discover(f):
+        releases, price_titles = discover(f)
+        write_price_index(price_titles)
+        for rel in releases:
             snap = f.get(rel.key, rel.url, ext="html", check=_check_release(rel.title))
             snaps.append((snap, rel.title))
     out: list[Obs] = []
     for snap, title in snaps:
         out += parse_release(snap.read().decode("utf-8", "replace"), title, snap.key)
     return out
+
+
+def write_price_index(rows: list[dict]) -> None:
+    import json
+    from datetime import datetime, timezone
+
+    from ..config import DATA_DIR
+
+    path = DATA_DIR / "derived" / "nbs_price_release_index.json"
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps({
+        "built_at": datetime.now(timezone.utc).replace(microsecond=0).isoformat(),
+        "listing": LIST_URL,
+        "note": "Every release on the NBS '最新发布' listing pages scanned in this run whose title contains 价格.",
+        "releases": rows,
+    }, ensure_ascii=False, indent=1) + "\n", encoding="utf-8")
+
+
+def price_release_summary() -> dict | None:
+    """Group the committed index by release type (title with dates and numbers removed)."""
+    import json
+    import re as _re
+
+    from ..config import DATA_DIR
+
+    path = DATA_DIR / "derived" / "nbs_price_release_index.json"
+    if not path.exists():
+        return None
+    idx = json.loads(path.read_text(encoding="utf-8"))
+    groups: dict[str, dict] = {}
+    for r in idx["releases"]:
+        kind = _re.sub(r"\d{4}年|\d{1,2}月份?|[上中下]旬|[一二三四]季度|同比|环比|上涨|下降|持平|[\d.]+%|\s", "", r["title"])
+        g = groups.setdefault(kind, {"kind": kind, "count": 0, "first": r["date"], "last": r["date"], "example": r["url"]})
+        g["count"] += 1
+        g["first"] = min(g["first"], r["date"])
+        g["last"] = max(g["last"], r["date"])
+    dates = [r["date"] for r in idx["releases"]]
+    return {"built_at": idx["built_at"], "listing": idx["listing"], "from": min(dates) if dates else None,
+            "to": max(dates) if dates else None, "groups": sorted(groups.values(), key=lambda g: -g["count"])}
 
 
 def _title_of(snap: Snapshot) -> str:

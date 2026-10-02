@@ -130,6 +130,24 @@ def nbs_consistency(store: Store) -> Check:
     return Check("nbs_internal", "国家统计局工资：前后年份与增速自洽", "fail" if bad else "pass", "；".join(msgs))
 
 
+def china_ilo_equals_nbs(store: Store) -> Check:
+    """ILOSTAT's China monthly earnings should be NBS urban private-unit wages / 12."""
+    from .build import pick_source
+
+    s = pick_source(store, "ilo_monthly_mean", "CHN")
+    nbs = {**store.series("cn_wage_private__implied_prev", "CHN"), **store.series("cn_wage_private", "CHN")}
+    if not s or not nbs:
+        return Check("cn_ilo_nbs", "中国：ILOSTAT 月薪 = 国家统计局私营单位年薪 ÷ 12", "warn", "缺少可对比年份")
+    ilo = store.series(s, "CHN")
+    common = sorted(set(ilo) & set(nbs))
+    if not common:
+        return Check("cn_ilo_nbs", "中国：ILOSTAT 月薪 = 国家统计局私营单位年薪 ÷ 12", "warn", "没有重叠年份")
+    worst = max(common, key=lambda y: _rel(ilo[y].value * 12, nbs[y].value))
+    d = _rel(ilo[worst].value * 12, nbs[worst].value)
+    return Check("cn_ilo_nbs", "中国：ILOSTAT 月薪 = 国家统计局私营单位年薪 ÷ 12", "pass" if d < 0.002 else "fail",
+                 f"重叠年份 {', '.join(common)}；最大偏差 {d:.3%}（{worst}：ILOSTAT×12 = {ilo[worst].value * 12:,.0f}，国家统计局 {nbs[worst].value:,.0f}）")
+
+
 def cohd_ppp_identity(store: Store) -> Check:
     worst = (0.0, "")
     n = 0
@@ -173,7 +191,7 @@ def identities(dataset: dict) -> Check:
 def run_all(store: Store, dataset: dict, years: list[str], today: str) -> list[dict]:
     checks = [
         gold_cross_source(store), gold_freshness(store, today), fx_cross_source(store),
-        fx_annual_vs_monthly(store, years), bls_vs_fred(store), nbs_consistency(store),
+        fx_annual_vs_monthly(store, years), bls_vs_fred(store), nbs_consistency(store), china_ilo_equals_nbs(store),
         cohd_ppp_identity(store), us_ppp_is_one(store, years), identities(dataset),
     ]
     return [asdict(c) for c in checks]

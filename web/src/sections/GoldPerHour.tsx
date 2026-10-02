@@ -73,7 +73,7 @@ export function GoldPerHour(scope: Scope) {
         <p className="note">
           {i.j([
             i.t("gold.note_order"),
-            ovs ? i.t("gold.note_concepts", { min: ovs.min, max: ovs.max, n: ovs.n }) : "",
+            ovs ? i.t("gold.note_concepts", { min: ovs.min, max: ovs.max, median: ovs.median, below: ovs.below, n: ovs.n }) : "",
             i.t("gold.note_median"),
             i.t("gold.note_sources"),
             fxGap != null

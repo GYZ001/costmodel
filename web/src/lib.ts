@@ -31,7 +31,7 @@ const regionNames = new Map<string, Intl.DisplayNames | null>();
 
 /** The economy's name in the reader's language (the browser's own list of region names),
  *  else the World Bank's (English) name - the same rule in every language. */
-export function countryName(i: I18n, c: Country): string {
+export function countryName(i: I18n, c: Pick<Country, "name_en" | "iso2">): string {
   const loc = i.lang.locale;
   if (!regionNames.has(loc)) {
     let dn: Intl.DisplayNames | null = null;

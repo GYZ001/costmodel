@@ -30,7 +30,12 @@ export function Methods({ ds }: { ds: Dataset }) {
   const i = useI18n();
   const repo = `https://github.com/GYZ001/costmodel/blob/${BRANCH}/`;
   const k = ds.constants;
-  const name = (iso: string) => (ds.countries[iso] ? countryName(i, ds.countries[iso]) : iso);
+  // Economies are named alike whether or not any of their data could be used; codes that
+  // match no economy (ILOSTAT areas, see kind "area") are shown as they are.
+  const name = (iso: string) => {
+    const e = ds.countries[iso] ?? ds.economies[iso];
+    return e ? countryName(i, e) : iso;
+  };
   /** One row per economy, data item and kind of reason: the excluded years and the first reason given. */
   const groups = useMemo(() => {
     const m = new Map<string, { area: string; scope: string; kind: string; years: string[]; detail: string }>();

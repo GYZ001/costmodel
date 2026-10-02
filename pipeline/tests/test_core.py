@@ -291,14 +291,22 @@ def test_restricts_reads_coverage_labels():
 
 
 def test_median_shown_only_from_the_primary_source():
+    # Coverage first: OECD's full-coverage wage leads over an ILOSTAT mean with limited
+    # coverage, and a median of another source is not drawn next to it.
     wages = [{"key": "oecd_fte", "restricted": False, "hourly_lcu": 10.0, "monthly_lcu": 1700.0, "source_id": "OECD",
               "role": None, "mrole": None},
              {"key": "ilo_median_monthly", "restricted": False, "hourly_lcu": None, "monthly_lcu": 1500.0,
               "source_id": "ILOSTAT X:1", "role": None, "mrole": None},
-             {"key": "ilo_mean_monthly", "restricted": False, "hourly_lcu": None, "monthly_lcu": 1800.0,
+             {"key": "ilo_mean_monthly", "restricted": True, "hourly_lcu": None, "monthly_lcu": 1800.0,
               "source_id": "ILOSTAT X:1", "role": None, "mrole": None}]
     build.mark_roles(wages)
     assert [w["mrole"] for w in wages] == ["primary", None, None]
+    # An ILOSTAT mean covering all employees leads over OECD; its own survey's median is drawn with it.
+    wages[2]["restricted"] = False
+    for w in wages:
+        w["mrole"] = w["role"] = None
+    build.mark_roles(wages)
+    assert [w["mrole"] for w in wages] == [None, "typical", "primary"]
 
 
 def test_prove_identity_failure_next_to_a_proven_year_is_unknown():

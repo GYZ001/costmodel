@@ -1,7 +1,8 @@
 """Turn parsed observations into the dataset the website renders.
 
-All arithmetic happens here (and is unit-tested), so the browser only displays
-numbers and never derives new ones.  Every derived figure is computed from
+Every figure derived from the source data is computed here (and unit-tested); the
+browser only adds display arithmetic on top (ratios, quantiles, index lines, US-dollar
+values at the market rate).  Every derived figure is computed from
 inputs of the SAME period: a year's average wage is converted with that year's
 average exchange rate and that year's average gold price, and compared with
 that year's prices.
@@ -982,16 +983,19 @@ def ilo_variants(store: Store, units: UnitGraph, area: str, year: str, ilo_dic: 
         if monthly:
             # Hours only from the same survey (same ILOSTAT source) as the earnings, and
             # only hours that passed UnitGraph._hours.
+            # The survey's own hourly figure, if ILOSTAT publishes one, makes a derived one
+            # redundant; another survey's hourly figure does not.
+            same_survey_hourly = direct is not None and direct.source == monthly.source
             hours = hours_by_source.get(monthly.source)
             hours_obs = store.get(f"ilo_weekly_hours@{monthly.source}", units.ilo_area(area), year) if hours else None
-            derive = hours is not None and direct is None
+            derive = hours is not None and not same_survey_hourly
             label = M(f"w.ilo_{concept}_monthly")
             out.append(WageVariant(
                 key=f"ilo_{concept}_monthly", label=label, concept=concept, source=src_label(monthly),
                 monthly_lcu=monthly.obs.value,
                 hourly_lcu=monthly.obs.value / (hours * WEEKS_PER_MONTH) if derive else None,
                 hours_week=hours if derive else None,
-                method=M("d.method.ilo_derived" if derive else "d.method.ilo_monthly_only" if direct else "d.method.ilo_no_hours"),
+                method=M("d.method.ilo_derived" if derive else "d.method.ilo_monthly_only" if same_survey_hourly else "d.method.ilo_no_hours"),
                 snapshots=[monthly.obs.snapshot] + ([hours_obs.snapshot] if derive else []),
                 caveat=caveat(monthly), restricted=monthly.restricted, currency=monthly.currency,
                 label_hourly=M("w.derived_hourly", label=label) if derive else None, **ids(monthly),
@@ -1097,20 +1101,27 @@ def oecd_vs_survey(countries: dict) -> dict | None:
     if not ratios:
         return None
     lo, hi = min(ratios), max(ratios)
-    return {"n": len(ratios), "min": lo[0], "min_at": [lo[1], lo[2]], "max": hi[0], "max_at": [hi[1], hi[2]]}
+    rs = sorted(r for r, _a, _y in ratios)
+    mid = len(rs) // 2
+    return {"n": len(ratios), "min": lo[0], "min_at": [lo[1], lo[2]], "max": hi[0], "max_at": [hi[1], hi[2]],
+            "median": rs[mid] if len(rs) % 2 else (rs[mid - 1] + rs[mid]) / 2,
+            "below": sum(r < 1 for r in rs) / len(rs)}
 
 
-# Which variant leads each economy's row, by the same rule for every economy: OECD's
-# full-time-equivalent wage (one definition across its members), then ILOSTAT averages
-# whose notes do not limit their coverage, then ILOSTAT averages whose notes do (e.g.
-# urban areas or the private sector only); a figure published per hour before one
-# derived from a monthly figure.
+# Which variant leads each economy's row, by the same rule for every economy: coverage
+# first, then the compilation that covers the most economies, so that as many economies
+# as possible are compared on one kind of figure.  ILOSTAT's employee averages whose
+# notes do not limit their coverage; then OECD's full-time-equivalent wage (all
+# employees, but a national-accounts concept that ILOSTAT's survey averages mostly fall
+# below - see oecd_vs_survey); then ILOSTAT averages whose notes limit their coverage
+# (e.g. urban areas or the private sector only).  Among ILOSTAT figures, one published
+# per hour comes before one derived from a monthly figure.
 def _primary_rank(w: dict) -> tuple | None:
     k = w["key"]
     if k == "oecd_fte":
-        return (0, 0)
+        return (1, 0)
     if k in ("ilo_mean_hourly", "ilo_mean_monthly"):
-        return (2 if w["restricted"] else 1, 0 if k.endswith("hourly") else 1)
+        return (2 if w["restricted"] else 0, 0 if k.endswith("hourly") else 1)
     return None
 
 

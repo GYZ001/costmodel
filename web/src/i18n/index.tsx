@@ -57,21 +57,34 @@ export function I18nProvider({ children }: { children: ReactNode }) {
     if (cats[code]) return;
     const load = loaderOf(code);
     if (!load) return;
-    load().then((cat) => setCats((c) => ({ ...c, [code]: cat })));
+    let live = true;
+    load()
+      .then((cat) => setCats((c) => ({ ...c, [code]: cat })))
+      // A catalog that cannot be loaded (offline, or replaced by a newer deployment):
+      // go back to the language shown, so that choosing it again retries.
+      .catch(() => live && setCode(shown));
+    return () => {
+      live = false;
+    };
   }, [code, cats]);
 
+  // The page's language and direction follow what is shown; the reader's choice (code)
+  // is what is remembered, also while its catalog is still loading.
   useEffect(() => {
     document.documentElement.lang = lang.code;
     document.documentElement.dir = lang.dir;
+  }, [lang]);
+
+  useEffect(() => {
     try {
-      localStorage.setItem("lang", lang.code);
+      localStorage.setItem("lang", code);
     } catch {
       /* private mode: the choice is not remembered */
     }
     const url = new URL(location.href);
-    url.searchParams.set("lang", lang.code);
+    url.searchParams.set("lang", code);
     history.replaceState(null, "", url);
-  }, [lang]);
+  }, [code]);
 
   const value = useMemo<I18n>(() => {
     const ctx: Ctx = { cat: cats[shown] ?? {}, fallback: en as Catalog, locale: lang.locale };

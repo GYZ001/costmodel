@@ -34,7 +34,7 @@ export function PriceStructure(scope: Scope) {
     return { rows, values, isos };
   }, [ds, group, picks, i, base]);
   const hl = useMemo(() => new Set(picks.filter((p) => ds.countries[p]).map((p) => countryName(i, ds.countries[p]))), [ds, picks, i]);
-  const baseName = base === "WORLD" ? i.t("ps.world") : countryName(i, ds.countries[base]);
+  const baseName = base === "WORLD" ? i.t("ps.world_name") : countryName(i, ds.countries[base]);
   const option = useMemo(() => heatmapOption({
     rows, cols: CATS.map((c) => i.t(`catshort.${c}`)), values, highlightRows: hl,
     label: (r) => i.n(r * 100, "int"),

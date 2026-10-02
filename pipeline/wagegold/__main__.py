@@ -114,6 +114,9 @@ def _build_and_write(store, f, meta, ilo_dic, today, save) -> int:
         "wage_gold_history": build.wage_gold_history(store, gold, meta, ilo_dic, units),
     }
     dataset["oecd_vs_survey"] = build.oecd_vs_survey(dataset["countries"])
+    # Names of every economy, including those whose inputs were all left out (named in
+    # dataset.exclusions but absent from countries).
+    dataset["economies"] = {a: {"name_en": i["name_en"], "iso2": i["iso2"]} for a, i in sorted(meta.items()) if i.get("is_economy")}
     dataset["exclusions"] = _dedupe(units.log)
     checks = validate.run_all(store, dataset, years, today.isoformat())
     for c in checks:

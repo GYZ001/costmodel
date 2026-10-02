@@ -144,7 +144,11 @@ export interface Dataset {
     points: [string, number, number, Msg | string, boolean, Part][];
   }>;
   /** ILOSTAT survey mean monthly earnings ÷ OECD's FTE wage, same economy and year: range over all such pairs. */
-  oecd_vs_survey: { n: number; min: number; min_at: [string, string]; max: number; max_at: [string, string] } | null;
+  /** ILOSTAT mean monthly wage ÷ OECD full-time-equivalent wage over every economy-year with both:
+   *  range, median, and the share of pairs below 1. */
+  oecd_vs_survey: { n: number; min: number; min_at: [string, string]; max: number; max_at: [string, string]; median: number; below: number } | null;
+  /** Name and ISO2 code of every economy (also those absent from countries because all their inputs were left out). */
+  economies: Record<string, { name_en: string; iso2: string }>;
   /** kind: unit / identity / missing / notes / check / area (see build.UnitGraph._exclude); year "*" = every year */
   exclusions: { area: string; year: string; scope: string; kind: string; detail: Part }[];
   checks: Check[];

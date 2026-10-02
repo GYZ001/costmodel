@@ -41,12 +41,19 @@ def test_nbs_wage_release():
 
 
 def test_nbs_hours_month_and_year():
-    html = "<p>12 月份，全国城镇调查失业率为 5.1% 。全国企业就业人员周平均工作时间为 48.6 小时。</p>"
+    html = '<meta name="PubDate" content="2026/01/19 10:00"><p>12 月份，全国城镇调查失业率为 5.1% 。全国企业就业人员周平均工作时间为 48.6 小时。</p>'
     obs = nbs.parse_release(html, "2025年国民经济稳中有进", "nbs/release/202601/t20260119_1")
     assert [(o.period, o.value) for o in obs] == [("2025-12", 48.6)]
-    html = "<p>8 月份，全国城镇调查失业率为 5.3% ，比上月上升 0.1 个百分点。全国企业就业人员周平均工作时间为 48.2 小时。</p>"
+    html = "<p>2026/09/15 10:00 来源：国家统计局</p><p>8 月份，全国城镇调查失业率为 5.3% ，比上月上升 0.1 个百分点。全国企业就业人员周平均工作时间为 48.2 小时。</p>"
     obs = nbs.parse_release(html, "8月份国民经济运行平稳", "nbs/release/202609/t20260915_1")
     assert [(o.period, o.value) for o in obs] == [("2026-08", 48.2)]
+
+
+def test_nbs_reposted_release_uses_page_date():
+    # Re-posted in Feb 2023 during the site migration; the page keeps its original date.
+    html = "<p>2022/03/15 10:00</p><p>2 月份，全国城镇调查失业率为 5.5% 。全国企业就业人员周平均工作时间为 46.7 小时。</p>"
+    obs = nbs.parse_release(html, "1-2月份国民经济恢复好于预期", "nbs/release/202302/t20230203_1901402")
+    assert [(o.period, o.value) for o in obs] == [("2022-02", 46.7)]
 
 
 def test_chain_identity():

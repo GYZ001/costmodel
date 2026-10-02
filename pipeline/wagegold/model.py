@@ -20,6 +20,9 @@ class Store:
     """All observations, indexed for lookups by (series, area, period)."""
 
     items: dict[tuple[str, str, str], Obs] = field(default_factory=dict)
+    _by_sa: dict[tuple[str, str], dict[str, Obs]] = field(default_factory=dict, repr=False)
+    _areas: dict[str, set[str]] = field(default_factory=dict, repr=False)
+    _series_of_area: dict[str, set[str]] = field(default_factory=dict, repr=False)
 
     def add(self, obs: Obs) -> None:
         key = (obs.series, obs.area, obs.period)
@@ -27,6 +30,9 @@ class Store:
         if prev is not None and abs(prev.value - obs.value) > 1e-9 * max(1.0, abs(obs.value)):
             raise ValueError(f"conflicting values for {key}: {prev.value} ({prev.snapshot}) vs {obs.value} ({obs.snapshot})")
         self.items[key] = obs
+        self._by_sa.setdefault((obs.series, obs.area), {})[obs.period] = obs
+        self._areas.setdefault(obs.series, set()).add(obs.area)
+        self._series_of_area.setdefault(obs.area, set()).add(obs.series)
 
     def extend(self, observations) -> None:
         for o in observations:
@@ -36,10 +42,13 @@ class Store:
         return self.items.get((series, area, period))
 
     def series(self, series: str, area: str) -> dict[str, Obs]:
-        return {p: o for (s, a, p), o in self.items.items() if s == series and a == area}
+        return dict(self._by_sa.get((series, area), {}))
 
     def areas(self, series: str) -> set[str]:
-        return {a for (s, a, _), _o in self.items.items() if s == series}
+        return set(self._areas.get(series, ()))
+
+    def series_names(self, area: str, prefix: str) -> list[str]:
+        return sorted(s for s in self._series_of_area.get(area, ()) if s.startswith(prefix))
 
     def by_series(self) -> dict[str, list[Obs]]:
         out: dict[str, list[Obs]] = defaultdict(list)

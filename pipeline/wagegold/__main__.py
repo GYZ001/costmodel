@@ -86,21 +86,23 @@ def main(argv=None) -> int:
 
     years = [str(y) for y in range(2000, today.year + 1)]
     gold = build.gold_tables(store)
+    gates = build.Gates(store)
     dataset = {
         "generated_at": datetime.now(timezone.utc).replace(microsecond=0).isoformat(),
         "constants": {"grams_per_troy_ounce": GRAMS_PER_TROY_OUNCE, "weeks_per_month": build.WEEKS_PER_MONTH,
                       "statutory_hours_cn": build.STATUTORY_HOURS_CN},
         "gold": gold,
-        "countries": build.country_years(store, gold, meta, ilo_dic, years),
+        "countries": build.country_years(store, gold, meta, ilo_dic, years, gates),
         "icp2021_pli_us": build.icp_levels(store),
         "us_monthly": build.us_monthly(store, gold),
         "us_items": build.us_items(store, gold),
-        "wage_gold_history": build.wage_gold_history(store, gold, meta, ilo_dic),
+        "wage_gold_history": build.wage_gold_history(store, gold, meta, ilo_dic, gates),
         "latest": build.latest_block(store, gold),
         "fx_recent_ecb": build.fx_recent(store),
         "nbs_price_releases": nbs.price_release_summary(),
         "cn_hours_monthly": [[p, o.value] for p, o in sorted(store.series("cn_weekly_hours_enterprise", "CHN").items())],
     }
+    dataset["exclusions"] = _dedupe(gates.log)
     checks = validate.run_all(store, dataset, years, today.isoformat())
     for c in checks:
         print(f"[check:{c['status']}] {c['title']} — {c['detail']}", flush=True)
@@ -119,6 +121,16 @@ def main(argv=None) -> int:
     out.write_text(json.dumps(dataset, ensure_ascii=False, separators=(",", ":"), allow_nan=False), encoding="utf-8")
     print(f"wrote {out} ({out.stat().st_size / 1e6:.1f} MB)")
     return 0
+
+
+def _dedupe(rows: list[dict]) -> list[dict]:
+    seen, out = set(), []
+    for r in rows:
+        k = (r["area"], r["year"], r["scope"])
+        if k not in seen:
+            seen.add(k)
+            out.append(r)
+    return sorted(out, key=lambda r: (r["area"], r["year"], r["scope"]))
 
 
 def _merged_manifest(f: Fetcher) -> dict:

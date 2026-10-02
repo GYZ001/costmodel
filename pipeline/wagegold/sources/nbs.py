@@ -56,6 +56,18 @@ POSITION_KEYS = ["cn_wage_large_ent", "cn_wage_large_ent_managers", "cn_wage_lar
 MIGRANT_RE = re.compile(r"农民工月均收入\s*为?\s*(\d+)\s*元\s*，\s*比上年增加\s*(\d+)\s*元\s*，\s*增长\s*([\d.]+)\s*%")
 HOURS_RE = re.compile(r"全国企业就业人员周平均工作时间为\s*([\d.]+)\s*小时")
 HOURS_MONTH_RE = re.compile(r"(\d{1,2})\s*月份，全国城镇调查失业率")
+PUBDATE_META_RE = re.compile(r'name="PubDate"\s+content="(\d{4})/(\d{2})/(\d{2})')
+PUBDATE_TEXT_RE = re.compile(r"(20\d\d)/(\d\d)/(\d\d) \d\d:\d\d")
+
+
+def published(html: str, text: str) -> tuple[int, int]:
+    """Publication date as stated on the page itself.  The URL date is not used:
+    pages re-posted during NBS's 2023 site migration carry the migration date in
+    their URL but keep the original publication time on the page."""
+    m = PUBDATE_META_RE.search(html) or PUBDATE_TEXT_RE.search(text)
+    if not m:
+        raise ValueError("no publication date on the page")
+    return int(m.group(1)), int(m.group(2))
 
 
 @dataclass
@@ -188,8 +200,7 @@ def parse_release(html: str, title: str, snapshot: str) -> list[Obs]:
             if not near or int(near[-1].group(1)) != month:
                 raise ValueError(f"{snapshot}: title says month {month}, text near the hours sentence says "
                                  f"{near[-1].group(1) if near else 'nothing'}")
-            released = re.search(r"/t(\d{4})(\d{2})\d{2}_", snapshot)
-            ry, rm = int(released.group(1)), int(released.group(2))
+            ry, rm = published(html, text)
             year = ry if month <= rm else ry - 1
             out.append(Obs("cn_weekly_hours_enterprise", "CHN", f"{year}-{month:02d}", float(hit.group(1)), snapshot))
     return out

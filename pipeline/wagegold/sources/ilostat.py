@@ -17,7 +17,7 @@ from __future__ import annotations
 import csv
 import io
 
-from ..fetch import Fetcher
+from ..fetch import Fetcher, FetchError
 from ..model import Obs
 from .common import check_csv_header, to_float
 
@@ -28,7 +28,9 @@ DIC = "https://rplumber.ilo.org/metadata/dic/?var={var}&lang=en&format=.csv"
 # validate units: our "local value ÷ World Bank exchange rate" must match it.
 CUR_INDICATORS = {
     "EAR_EHRA_SEX_CUR_NB_A": "ilo_hourly_mean",
+    "EAR_EHRM_SEX_CUR_NB_A": "ilo_hourly_median",
     "EAR_EMTA_SEX_CUR_NB_A": "ilo_monthly_mean",
+    "EAR_EMTM_SEX_CUR_NB_A": "ilo_monthly_median",
 }
 
 INDICATORS = {
@@ -58,12 +60,16 @@ def collect(f: Fetcher, start: int = 2000) -> tuple[list[Obs], dict[str, dict[st
             # One series per ILOSTAT source, so a country with several sources keeps them apart.
             out.append(Obs(f"{series}@{r['source']}", r["ref_area"], r["time"], v, snap.key, note=notes))
     for ind, series in CUR_INDICATORS.items():
-        snap = f.get(
-            f"ilostat/{ind}",
-            DATA.format(id=ind, extra="", start=start),
-            ext="csv",
-            check=check_csv_header("ref_area", "source", "time", "obs_value"),
-        )
+        try:  # validation-only data: without it the unit check reports "not verifiable"
+            snap = f.get(
+                f"ilostat/{ind}",
+                DATA.format(id=ind, extra="", start=start),
+                ext="csv",
+                check=check_csv_header("ref_area", "source", "time", "obs_value"),
+            )
+        except FetchError as exc:
+            print(f"[skip] ilostat {ind}: {exc}")
+            continue
         for r in csv.DictReader(io.StringIO(snap.read().decode("utf-8-sig"))):
             v = to_float(r["obs_value"])
             cur = next((r[k] for k in r if k.startswith("classif") and (r[k] or "").startswith("CUR_")), "")

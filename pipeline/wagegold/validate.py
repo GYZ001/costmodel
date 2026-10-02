@@ -67,26 +67,6 @@ def fx_cross_source(store: Store) -> Check:
                  f"{n} 个国家-月份对比，最大偏差 {worst[0]:.2%}（{worst[1]}）")
 
 
-def fx_annual_vs_monthly(store: Store, years: list[str]) -> Check:
-    worst = (0.0, "")
-    n = 0
-    for area in store.areas("fx_lcu_usd_ecb"):
-        if area == "EUR":
-            continue
-        monthly = store.series("fx_lcu_usd_ecb", area)
-        for y in years:
-            wdi = store.get("fx_lcu_usd", area, y)
-            m = annual_mean(monthly, y)
-            if wdi and m:
-                n += 1
-                d = _rel(m[0], wdi.value)
-                if d > worst[0]:
-                    worst = (d, f"{area} {y}：WDI {wdi.value:.4f}，ECB 月均之均值 {m[0]:.4f}")
-    status = "pass" if worst[0] < 0.03 else "fail"
-    return Check("fx_wdi_vs_ecb", "汇率：世界银行 WDI 年均 vs ECB 月均的年度平均", status,
-                 f"{n} 个国家-年份对比，最大偏差 {worst[0]:.2%}（{worst[1]}）")
-
-
 def bls_vs_fred(store: Store) -> Check:
     pairs = [("us_ahe_all_sa", "us_ahe_all_sa_fred")]
     worst = (0.0, "")
@@ -148,24 +128,6 @@ def china_ilo_equals_nbs(store: Store) -> Check:
                  f"重叠年份 {', '.join(common)}；最大偏差 {d:.3%}（{worst}：ILOSTAT×12 = {ilo[worst].value * 12:,.0f}，国家统计局 {nbs[worst].value:,.0f}）")
 
 
-def cohd_ppp_identity(store: Store) -> Check:
-    worst = (0.0, "")
-    n = 0
-    for (s, a, p), o in store.items.items():
-        if s != "cohd_total":
-            continue
-        ppp_cost = store.get("cohd_total_ppp", a, p)
-        ppp = store.get("ppp_hfce", a, p)
-        if ppp_cost and ppp and ppp_cost.value > 0:
-            n += 1
-            d = _rel(o.value / ppp_cost.value, ppp.value)
-            if d > worst[0]:
-                worst = (d, f"{a} {p}")
-    status = "pass" if worst[0] < 0.05 else "warn"
-    return Check("cohd_ppp", "健康饮食成本：本币值 ÷ PPP 值 = WDI 居民消费 PPP", status,
-                 f"{n} 个国家-年份，最大偏差 {worst[0]:.1%}（{worst[1]}）；偏差大说明世行两处 PPP 版本不同")
-
-
 def us_ppp_is_one(store: Store, years: list[str]) -> Check:
     vals = [store.get("ppp_hfce", "USA", y) for y in years]
     vals = [v for v in vals if v]
@@ -188,11 +150,23 @@ def identities(dataset: dict) -> Check:
                  f"{n} 条记录，最大相对误差 {worst:.1e}")
 
 
+def exclusions_summary(dataset: dict) -> Check:
+    ex = dataset.get("exclusions", [])
+    by_scope: dict[str, set] = {}
+    for e in ex:
+        by_scope.setdefault(e["scope"].split(":")[0], set()).add(e["area"])
+    names = {"fx": "汇率", "ppp": "购买力平价", "cohd": "健康饮食成本", "wage": "工资"}
+    detail = "；".join(f"{names.get(k, k)}：{len(v)} 个经济体（{', '.join(sorted(v)[:12])}{'…' if len(v) > 12 else ''}）"
+                     for k, v in sorted(by_scope.items())) or "无"
+    return Check("record_gates", "记录级一致性：跨数据集货币单位与汇率核对", "pass",
+                 f"不一致的记录已剔除并在下表列出原因。{detail}")
+
+
 def run_all(store: Store, dataset: dict, years: list[str], today: str) -> list[dict]:
     checks = [
         gold_cross_source(store), gold_freshness(store, today), fx_cross_source(store),
-        fx_annual_vs_monthly(store, years), bls_vs_fred(store), nbs_consistency(store), china_ilo_equals_nbs(store),
-        cohd_ppp_identity(store), us_ppp_is_one(store, years), identities(dataset),
+        bls_vs_fred(store), nbs_consistency(store), china_ilo_equals_nbs(store),
+        us_ppp_is_one(store, years), exclusions_summary(dataset), identities(dataset),
     ]
     return [asdict(c) for c in checks]
 

@@ -58,6 +58,100 @@ def gold_tables(store: Store) -> dict:
 
 
 # --------------------------------------------------------------------------------------
+# Record-level consistency gates
+#
+# Every computed figure combines numbers from different publishers (a wage from
+# ILOSTAT, an exchange rate and a PPP from WDI, a diet cost from the World Bank food
+# team).  They must be in the SAME currency unit; redenominations and euro
+# adoptions break that silently (e.g. old vs new leone, BGN vs EUR).  Each pair is
+# checked against a second official conversion of the same quantity, and only
+# the metrics that depend on a failing pair are dropped, with the reason recorded.
+# --------------------------------------------------------------------------------------
+
+# A currency-unit mismatch shows up as a fixed conversion factor; the smallest one
+# among real redenominations / euro changeovers is Latvia's 1 EUR = 0.702804 LVL
+# (×1.42).  Different PPP vintages or exchange-rate conventions move figures by a
+# few percent to ~15 %, which is NOT a unit error, so the unit test uses ±25 %.
+TOL_UNIT = 0.25
+TOL_FX = 0.03  # WDI annual exchange rate vs mean of ECB monthly reference rates (same currency, same concept)
+# Survey earnings (mean or median) vs national-accounts wage per FTE differ by concept
+# (up to ~2-3× for medians where informality is high); only a larger gap signals a unit error.
+OECD_RATIO = (1 / 3, 3.0)
+
+
+def _rel(a: float, b: float) -> float:
+    return abs(a - b) / abs(b)
+
+
+class Gates:
+    def __init__(self, store: Store):
+        self.store = store
+        self.log: list[dict] = []
+        self._ppp_unit: dict[str, tuple[bool | None, str]] = {}
+
+    def _record(self, area, year, scope, ok, detail):
+        if ok is False:
+            self.log.append({"area": area, "year": year, "scope": scope, "detail": detail})
+        return ok
+
+    def ppp_unit(self, area: str) -> bool | None:
+        """WDI PPP and WDI exchange rate in the same unit?  In 2021 the WDI PPP IS the
+        ICP 2021 benchmark, so PPP/FX must equal ICP's own price level index."""
+        if area not in self._ppp_unit:
+            s = self.store
+            ppp, fx = s.get("ppp_hfce", area, "2021"), s.get("fx_lcu_usd", area, "2021")
+            icp, icp_us = s.get("icp21_pli_wl_hfce", area, "2021"), s.get("icp21_pli_wl_hfce", "USA", "2021")
+            if not (ppp and fx and icp and icp_us):
+                self._ppp_unit[area] = (None, "无 2021 年基准可核对")
+            else:
+                d = _rel(ppp.value / fx.value, icp.value / icp_us.value)
+                self._ppp_unit[area] = (d < TOL_UNIT, f"2021 年 WDI 购买力平价÷汇率 = {ppp.value / fx.value:.3f}，ICP 2021 价格水平 = {icp.value / icp_us.value:.3f}")
+        ok, detail = self._ppp_unit[area]
+        if ok is False and not any(g["area"] == area and g["scope"] == "ppp" for g in self.log):
+            self._record(area, "全部年份", "ppp", False, "WDI 购买力平价与汇率货币单位不一致：" + detail)
+        return ok
+
+    def fx(self, area: str, year: str) -> bool | None:
+        ecb = annual_mean(self.store.series("fx_lcu_usd_ecb", area), year) if area != "USA" else None
+        wdi = self.store.get("fx_lcu_usd", area, year)
+        if not ecb or not wdi:
+            return None
+        d = _rel(wdi.value, ecb[0])
+        return self._record(area, year, "fx", d < TOL_FX,
+                            f"WDI 年均汇率 {wdi.value:.4f} 与 ECB 月均汇率的年平均 {ecb[0]:.4f} 相差 {d:.1%}")
+
+    def cohd(self, area: str, year: str) -> bool | None:
+        lcu, ppp_cost, ppp = (self.store.get(k, area, year) for k in ("cohd_total", "cohd_total_ppp", "ppp_hfce"))
+        if not (lcu and ppp_cost and ppp and ppp_cost.value > 0):
+            return None
+        implied = lcu.value / ppp_cost.value
+        d = _rel(implied, ppp.value)
+        return self._record(area, year, "cohd", d < TOL_UNIT,
+                            f"健康饮食成本隐含的购买力平价 {implied:.4g} 与 WDI {ppp.value:.4g} 不一致（相差 {d:.0%}），货币单位不同")
+
+    def wage(self, key: str, series: str, area: str, year: str, value_lcu: float, monthly: bool) -> bool | None:
+        """Our LCU÷WDI-FX vs ILOSTAT's own USD conversion of the same source, and the
+        level vs OECD's average wage where available."""
+        s, verdicts = self.store, []
+        fx = s.get("fx_lcu_usd", area, year)
+        if "@" in series and fx:
+            base, code = series.split("@", 1)
+            usd = s.get(f"{base}_usd@{code}", area, year)
+            if usd and usd.value > 0:
+                d = abs(value_lcu / fx.value / usd.value - 1)
+                verdicts.append(self._record(area, year, f"wage:{key}", d < TOL_UNIT,
+                    f"按 WDI 汇率折合 {value_lcu / fx.value:,.2f} 美元，ILOSTAT 自身折合 {usd.value:,.2f} 美元（相差 {d:.0%}），货币单位或汇率不一致"))
+        oecd = s.get("oecd_avg_annual_wage", area, year)
+        if monthly and oecd:
+            r = value_lcu * 12 / oecd.value
+            verdicts.append(self._record(area, year, f"wage:{key}", OECD_RATIO[0] <= r <= OECD_RATIO[1],
+                f"月薪 × 12 = {value_lcu * 12:,.0f}，OECD 全职当量平均年薪 {oecd.value:,.0f}（比值 {r:.2f}），数量级不符"))
+        if any(v is False for v in verdicts):
+            return False
+        return True if verdicts else None
+
+
+# --------------------------------------------------------------------------------------
 # Wages
 # --------------------------------------------------------------------------------------
 
@@ -65,16 +159,13 @@ def pick_source(store: Store, base: str, area: str) -> str | None:
     """Among ILOSTAT sources for one indicator and economy, keep ONE source for all
     years: the one with the most recent observation (ties: the longest history).
     Mixing sources across years would mix concepts."""
-    cands = defaultdict(list)
-    for (s, a, p) in store.items:
-        if a == area and s.startswith(base + "@"):
-            cands[s].append(p)
+    cands = {s: list(store.series(s, area)) for s in store.series_names(area, base + "@")}
     if not cands:
         return None
     return max(cands, key=lambda s: (max(cands[s]), len(cands[s])))
 
 
-def ilo_variants(store: Store, area: str, year: str, ilo_dic: dict) -> list[WageVariant]:
+def ilo_variants(store: Store, area: str, year: str, ilo_dic: dict, gates: "Gates") -> list[WageVariant]:
     out: list[WageVariant] = []
     hours_series = pick_source(store, "ilo_weekly_hours", area)
     hours = store.get(hours_series, area, year) if hours_series else None
@@ -89,7 +180,7 @@ def ilo_variants(store: Store, area: str, year: str, ilo_dic: dict) -> list[Wage
     ):
         s = pick_source(store, base, area)
         o = store.get(s, area, year) if s else None
-        if o:
+        if o and gates.wage(f"ilo_{concept}_hourly", s, area, year, o.value, monthly=False) is not False:
             out.append(WageVariant(
                 key=f"ilo_{concept}_hourly", label=f"雇员{label}", concept=concept, source=src_label(s),
                 monthly_lcu=None, hourly_lcu=o.value, hours_week=None,
@@ -101,7 +192,7 @@ def ilo_variants(store: Store, area: str, year: str, ilo_dic: dict) -> list[Wage
     ):
         s = pick_source(store, base, area)
         o = store.get(s, area, year) if s else None
-        if not o:
+        if not o or gates.wage(f"ilo_{concept}_monthly", s, area, year, o.value, monthly=True) is False:
             continue
         has_direct = any(v.concept == concept and v.hourly_lcu is not None and v.hours_week is None for v in out)
         hourly = o.value / (hours.value * WEEKS_PER_MONTH) if hours else None
@@ -126,6 +217,29 @@ def _notes(o: Obs, ilo_dic: dict) -> str:
             if lab and not lab.startswith("Repository: ILO-STATISTICS"):
                 labels.append(lab)
     return "；".join(dict.fromkeys(labels))
+
+
+def oecd_variant(store: Store, area: str, year: str, gates: "Gates") -> WageVariant | None:
+    w = store.get("oecd_avg_annual_wage", area, year)
+    if not w:
+        return None
+    # The unit OECD states for the figure must be the economy's currency, i.e. the
+    # currency of the WDI exchange rate it will be divided by.
+    if CURRENCY.get(area) and w.note != CURRENCY[area]:
+        gates.log.append({"area": area, "year": year, "scope": "wage:oecd",
+                          "detail": f"OECD 标注的货币单位 {w.note} 与该经济体货币 {CURRENCY[area]} 不一致"})
+        return None
+    h = store.get("oecd_usual_weekly_hours_ft", area, year)
+    return WageVariant(
+        key="oecd_fte", label="全职当量平均工资（OECD）", concept="mean", source="OECD · Average annual wages",
+        monthly_lcu=w.value / 12,
+        hourly_lcu=w.value / (h.value * 52) if h else None,
+        hours_week=h.value if h else None,
+        method=(f"全职当量平均年薪 ÷（全职雇员通常周工时 {h.value:.1f} 小时 × 52）" if h
+                else "OECD 未公布该国全职雇员通常周工时，只用于月薪口径"),
+        snapshots=[w.snapshot] + ([h.snapshot] if h else []),
+        caveat="国民经济核算口径：工资总额 ÷ 全职当量雇员数，含高收入者；时薪按全职雇员通常工时折算（含带薪假期）",
+    )
 
 
 def china_variants(store: Store, year: str) -> list[WageVariant]:
@@ -196,27 +310,31 @@ def us_bls_variant(store: Store, year: str) -> WageVariant | None:
 # Country-year table
 # --------------------------------------------------------------------------------------
 
-def country_years(store: Store, gold: dict, meta: dict, ilo_dic: dict, years: list[str]) -> dict:
+def country_years(store: Store, gold: dict, meta: dict, ilo_dic: dict, years: list[str], gates: Gates) -> dict:
     out = {}
     for area, info in sorted(meta.items()):
         if not info.get("is_economy"):
             continue
         rec_years = {}
+        ppp_unit_ok = gates.ppp_unit(area)
         for y in years:
             fx = store.get("fx_lcu_usd", area, y)
             g = gold["annual"].get(y)
-            if not fx or not g:
+            if not fx or not g or gates.fx(area, y) is False:
                 continue
-            ppp = store.get("ppp_hfce", area, y)
+            ppp = store.get("ppp_hfce", area, y) if ppp_unit_ok is not False else None
             gold_lcu_g = g["usd_g"] * fx.value
-            cohd = {k: store.get(f"cohd_{k}", area, y) for k in ["total"] + COHD_GROUPS}
+            cohd_ok = ppp is not None and gates.cohd(area, y) is not False
+            cohd = {k: store.get(f"cohd_{k}", area, y) if cohd_ok else None for k in ["total"] + COHD_GROUPS}
             variants = []
             if area == "CHN":
                 variants += china_variants(store, y)
             if area == "USA":
                 v = us_bls_variant(store, y)
                 variants += [v] if v else []
-            variants += ilo_variants(store, area, y, ilo_dic)
+            ov = oecd_variant(store, area, y, gates)
+            variants += [ov] if ov else []
+            variants += ilo_variants(store, area, y, ilo_dic, gates)
             if not variants and not cohd["total"]:
                 continue
             pli = ppp.value / fx.value if ppp else None
@@ -247,6 +365,7 @@ def country_years(store: Store, gold: dict, meta: dict, ilo_dic: dict, years: li
                 "income": info["income"],
                 "g20": area in G20,
                 "currency": CURRENCY.get(area),
+                "ppp_unit_verified": ppp_unit_ok,
                 "years": rec_years,
             }
     return out
@@ -254,25 +373,31 @@ def country_years(store: Store, gold: dict, meta: dict, ilo_dic: dict, years: li
 
 # Which variant leads each economy's row: the cross-country ILOSTAT concept first,
 # then national sources where ILOSTAT has no usable hourly figure for that year.
-PRIMARY_ORDER = ["ilo_mean_hourly", "ilo_mean_monthly", "cn_wage_nonprivate", "cn_wage_private", "bls_ces_ahe"]
+# OECD members: OECD's harmonised FTE wage; others: ILOSTAT; China: NBS (ILOSTAT has
+# no hours for China and lags NBS); the US BLS series is shown as a national reference.
+PRIMARY_ORDER = ["oecd_fte", "ilo_mean_hourly", "ilo_mean_monthly", "cn_wage_nonprivate", "cn_wage_private", "bls_ces_ahe"]
 TYPICAL_ORDER = ["ilo_median_hourly", "ilo_median_monthly"]
 
 
 def mark_roles(wages: list[dict]) -> None:
-    for order, role in ((PRIMARY_ORDER, "primary"), (TYPICAL_ORDER, "typical")):
-        for key in order:
-            hit = next((w for w in wages if w["key"] == key and w["hourly_lcu"]), None)
-            if hit:
-                hit["role"] = role
-                break
+    """role = primary / typical for the hourly view; mrole = primary / typical for the monthly view."""
+    for field, need in (("role", "hourly_lcu"), ("mrole", "monthly_lcu")):
+        for order, role in ((PRIMARY_ORDER, "primary"), (TYPICAL_ORDER, "typical")):
+            for key in order:
+                hit = next((w for w in wages if w["key"] == key and w[need]), None)
+                if hit:
+                    hit[field] = role
+                    break
 
 
 def wage_metrics(v: WageVariant, gold_lcu_g: float, fx: float, ppp: float | None, cohd: float | None) -> dict:
     d = {
-        "role": None, "key": v.key, "label": v.label, "concept": v.concept, "source": v.source, "method": v.method,
+        "role": None, "mrole": None, "key": v.key, "label": v.label, "concept": v.concept, "source": v.source, "method": v.method,
         "caveat": v.caveat, "snapshots": v.snapshots,
         "monthly_lcu": v.monthly_lcu, "hourly_lcu": v.hourly_lcu, "hours_week": v.hours_week,
         "monthly_gold_g": v.monthly_lcu / gold_lcu_g if v.monthly_lcu else None,
+        "monthly_ppp": v.monthly_lcu / ppp if v.monthly_lcu and ppp else None,
+        "cohd_days_per_month": v.monthly_lcu / cohd if v.monthly_lcu and cohd else None,
     }
     h = v.hourly_lcu
     d.update({
@@ -348,7 +473,7 @@ def us_items(store: Store, gold: dict) -> dict:
 # Monthly wage in grams of gold, by year (for the "gold is a moving ruler" chart)
 # --------------------------------------------------------------------------------------
 
-def wage_gold_history(store: Store, gold: dict, meta: dict, ilo_dic: dict) -> dict:
+def wage_gold_history(store: Store, gold: dict, meta: dict, ilo_dic: dict, gates: Gates) -> dict:
     """One consistent monthly-earnings series per economy, converted to grams of gold
     with each year's average gold price and exchange rate.
 
@@ -365,7 +490,8 @@ def wage_gold_history(store: Store, gold: dict, meta: dict, ilo_dic: dict) -> di
         if s:
             code = s.split("@", 1)[1]
             for p, o in store.series(s, area).items():
-                pts[p] = (o.value, f"ILOSTAT · {ilo_dic.get('source', {}).get(code, code)}")
+                if gates.wage("ilo_mean_monthly", s, area, p, o.value, monthly=True) is not False:
+                    pts[p] = (o.value, f"ILOSTAT · {ilo_dic.get('source', {}).get(code, code)}")
         if area == "CHN":
             for p, o in store.series("cn_wage_private", "CHN").items():
                 pts[p] = (o.value / 12, "国家统计局 · 城镇私营单位平均工资 ÷ 12")
@@ -373,7 +499,7 @@ def wage_gold_history(store: Store, gold: dict, meta: dict, ilo_dic: dict) -> di
         for y in sorted(pts):
             fx = store.get("fx_lcu_usd", area, y)
             g = gold["annual"].get(y)
-            if fx and g:
+            if fx and g and gates.fx(area, y) is not False:
                 lcu, src = pts[y]
                 rows.append([y, lcu, lcu / (g["usd_g"] * fx.value), src])
         if len(rows) >= 3:

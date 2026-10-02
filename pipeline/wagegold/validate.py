@@ -70,7 +70,7 @@ def identities(dataset: dict) -> Check:
 
 def exclusions_summary(dataset: dict) -> Check:
     """What was left out and why, by kind of reason (an overview, not a pass/fail check)."""
-    order = ["unit", "identity", "missing", "notes", "check", "area"]  # names: catalog keys kind.<kind>
+    order = ["unit", "identity", "missing", "notes", "check", "area", "chosen"]  # names: catalog keys kind.<kind>
     by_kind: dict[str, set] = {}
     for e in dataset.get("exclusions", []):
         by_kind.setdefault(e.get("kind", "unit"), set()).add(e["area"])

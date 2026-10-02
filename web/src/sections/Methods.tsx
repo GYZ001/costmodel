@@ -112,7 +112,9 @@ export function Methods({ ds }: { ds: Dataset }) {
         <h3>{i.t("m.excl_title", { n: ds.exclusions.length })}</h3>
         <p className="small ink2" style={{ margin: "0 0 8px" }}>
           {i.j([
-            i.t("m.excl_units", { mf: k.max_factor }),
+            // The two smallest changeover factors since 2000, from the euro's fixed conversion
+            // rates (1 euro = 0.787564 Irish pounds = 0.702804 Latvian lats).
+            i.t("m.excl_units", { mf: k.max_factor, ie: 1 / 0.787564, lv: 1 / 0.702804 }),
             i.t("m.excl_rates", { mf: k.max_factor }),
             i.t("m.excl_joins"),
             i.t("m.excl_rule"),

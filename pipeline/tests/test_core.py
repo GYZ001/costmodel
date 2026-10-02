@@ -278,6 +278,13 @@ def test_units_hours_with_scale_error_are_not_used():
 
 
 def test_restricts_reads_coverage_labels():
+    assert not build.restricts("S4", "Geographical coverage: Total national")
+    assert build.restricts("S4", "Geographical coverage: Total national, excluding some areas")
+    assert build.restricts("S4", "Geographical coverage: Total national, excluding overseas territories")
+    assert build.restricts("S4", "Geographical coverage: Urban areas only")
+    assert not build.restricts("S4", "Geographical coverage: Not applicable")
+    assert build.restricts("T3", "Age coverage - maximum age: 64 years old")
+    assert "T2" not in build.COVERAGE_NOTES  # a minimum (working) age limits no one's coverage
     assert not build.restricts("T12", "Working time arrangement coverage: Full-time equivalents")
     assert not build.restricts("T12", "Working time arrangement coverage: Full-time and part time workers")
     assert build.restricts("T12", "Working time arrangement coverage: Full-time workers")
@@ -338,3 +345,15 @@ def test_cross_source_gap_between_time_factor_and_week_month_is_kept_unconfirmed
     vs, u = variants(4400.0)
     u.explain("AAA", "2018", True)
     assert vs == [] and sum("d.tu.verdict_undecided" in _keys(e["detail"]) for e in u.log) == 2
+
+
+def test_oecd_vs_survey_summary():
+    def row(o, i):
+        return {"wages": [{"key": "oecd_fte", "monthly_lcu": o}, {"key": "ilo_mean_monthly", "monthly_lcu": i}]}
+    countries = {"AAA": {"years": {"2020": row(100.0, 80.0), "2021": row(100.0, 120.0)}},
+                 "BBB": {"years": {"2020": row(200.0, 100.0), "2021": {"wages": [{"key": "oecd_fte", "monthly_lcu": 1.0}]}}}}
+    s = build.oecd_vs_survey(countries)
+    assert s["n"] == 3 and s["min"] == 0.5 and s["max"] == 1.2 and s["min_at"] == ["BBB", "2020"]
+    assert s["median"] == 0.8 and abs(s["below"] - 2 / 3) < 1e-12
+    countries["CCC"] = {"years": {"2020": row(100.0, 90.0)}}
+    assert build.oecd_vs_survey(countries)["median"] == (0.8 + 0.9) / 2  # even count: mean of the middle two

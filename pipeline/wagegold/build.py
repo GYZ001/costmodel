@@ -190,24 +190,27 @@ class IloRecord:
 # ILOSTAT note types that define what an earnings figure measures (not just where it
 # comes from): central tendency, value type, gross/net, job coverage, reference period,
 # coverage of area / population / establishment size / institutional sector / economic
-# activity / reference group / working time, working-time concept, components of
-# earnings, minimum-wage type, employment definition.
-COVERAGE_NOTES = ("S4", "S5", "S6", "S7", "S8", "S9", "T12")
+# activity / reference group / working time / maximum age, working-time concept,
+# components of earnings, minimum-wage type, employment definition.
+COVERAGE_NOTES = ("S4", "S5", "S6", "S7", "S8", "S9", "T12", "T3")
 CONCEPT_NOTES = ("T8", "T9", "T10", "T11", "T33", "T34", "S3", *COVERAGE_NOTES, "I19", "I20")
 
 
 def restricts(prefix: str, label: str) -> bool:
     """Whether a coverage note limits a figure to part of a country's employees, read from
     ILOSTAT's label.  Every area, establishment-size, sector, activity, reference-group,
-    population or working-time note does, except those stating the full scope - the
-    whole national territory, all employees (or all employment), full- and part-time
-    workers, full-time equivalents (which re-weight all employees rather than select
-    some), establishments of every size (the smaller ones by a sample) - and the
-    exclusions every household survey has (people in institutions or collective
-    quarters, armed forces), which do not change who the figure is about."""
+    population, working-time or maximum-age note does, except those stating the full
+    scope - the whole national territory (with no area excluded), all employees (or all
+    employment), full- and part-time workers, full-time equivalents (which re-weight all
+    employees rather than select some), establishments of every size (the smaller ones
+    by a sample) - and the exclusions every household survey has (people in institutions
+    or collective quarters, armed forces), which do not change who the figure is about.
+    A geographical note of "Not applicable" states no area and limits nothing.  Minimum-
+    age notes are not coverage notes: every survey sets a working age, from which
+    employees are counted; a maximum age leaves employed people out."""
     text = label.split(":", 1)[-1].strip().lower()
     if prefix == "S4":
-        return not text.startswith("total national")
+        return text not in ("total national", "not applicable")
     if prefix == "S9":
         return not (text == "employees" or text.startswith("total"))
     if prefix == "T12":
@@ -423,8 +426,13 @@ class UnitGraph:
         identity fails although the unit is the same, cause unknown), missing (the
         publisher has no value), notes (by the publisher's own notes not a nominal
         average or median wage of the year, or its status is unreliable), check (fails
-        this project's magnitude, time-unit or hours checks), area.  year "*" = every year."""
+        this project's magnitude, time-unit or hours checks), area, chosen (usable, but
+        another figure of the same kind comes first).  year "*" = every year."""
         self.log.append({"area": area, "year": year, "scope": scope, "kind": kind, "detail": detail})
+
+    def log_not_chosen(self, area: str, year: str, scope: str, detail: Msg) -> None:
+        """A usable figure another figure of the same kind was preferred to (ilo_variants)."""
+        self._exclude(area, year, scope, detail, "chosen")
 
     def _match_ilo_areas(self, meta: dict) -> dict[str, str]:
         """ILOSTAT economy codes are ISO3 except a few (Kosovo is KOS, WDI uses XKX).
@@ -949,6 +957,13 @@ def ilo_variants(store: Store, units: UnitGraph, area: str, year: str, ilo_dic: 
                         x.restricted, x.source != main[k], -len(history[k][x.source]), x.source)
             if k not in chosen or rank(r) < rank(chosen[k]):
                 chosen[k] = r
+
+    # A usable record not chosen is named in the exclusions, with the one chosen instead.
+    for r in usable.get(year, []):
+        c = chosen.get((r.concept, r.unit))
+        if c is not None and c is not r:
+            units.log_not_chosen(area, year, _wage_scope(r), M("d.ilo.not_chosen", source=r.source_name, v=r.obs.value,
+                                                              chosen=c.source_name))
 
     def src_label(r: IloRecord) -> str:
         return f"ILOSTAT · {r.source_name}"

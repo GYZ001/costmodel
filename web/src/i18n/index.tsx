@@ -46,36 +46,40 @@ function initialLang(): string {
 }
 
 export function I18nProvider({ children }: { children: ReactNode }) {
+  // code: the language the reader chose; shown: the language whose catalog is on the
+  // page (English until the chosen catalog has loaded, so text, direction and number
+  // formats always come from one catalog).  Only a language actually shown is
+  // remembered; a catalog that fails to load leaves the page as it was, and choosing
+  // the language again retries.
   const [code, setCode] = useState(initialLang);
+  const [attempt, setAttempt] = useState(0);
   const [cats, setCats] = useState<Record<string, Catalog>>({ en: en as Catalog });
-  // Until the chosen catalog has loaded, the page stays in English (language, direction
-  // and number formats included), so text and formatting always come from one catalog.
-  const shown = cats[code] ? code : DEFAULT_LANG;
+  const [shown, setShown] = useState(DEFAULT_LANG);
   const lang = AVAILABLE.find((l) => l.code === shown) ?? AVAILABLE[0];
 
   useEffect(() => {
-    if (cats[code]) return;
+    if (cats[code]) {
+      setShown(code);
+      return;
+    }
     const load = loaderOf(code);
     if (!load) return;
     let live = true;
     load()
-      .then((cat) => setCats((c) => ({ ...c, [code]: cat })))
-      // A catalog that cannot be loaded (offline, or replaced by a newer deployment):
-      // go back to the language shown, so that choosing it again retries.
-      .catch(() => live && setCode(shown));
+      .then((cat) => live && setCats((c) => ({ ...c, [code]: cat })))
+      .catch(() => undefined);
     return () => {
       live = false;
     };
-  }, [code, cats]);
+  }, [code, cats, attempt]);
 
-  // The page's language and direction follow what is shown; the reader's choice (code)
-  // is what is remembered, also while its catalog is still loading.
   useEffect(() => {
     document.documentElement.lang = lang.code;
     document.documentElement.dir = lang.dir;
   }, [lang]);
 
   useEffect(() => {
+    if (shown !== code) return; // not yet (or not) shown: the stored choice stays as it is
     try {
       localStorage.setItem("lang", code);
     } catch {
@@ -84,14 +88,17 @@ export function I18nProvider({ children }: { children: ReactNode }) {
     const url = new URL(location.href);
     url.searchParams.set("lang", code);
     history.replaceState(null, "", url);
-  }, [code]);
+  }, [shown, code]);
 
   const value = useMemo<I18n>(() => {
     const ctx: Ctx = { cat: cats[shown] ?? {}, fallback: en as Catalog, locale: lang.locale };
     return {
       lang,
       langs: AVAILABLE,
-      setLang: setCode,
+      setLang: (c: string) => {
+        setCode(c);
+        setAttempt((n) => n + 1);
+      },
       t: (key, params) => template(key, params ?? {}, ctx),
       r: (part) => render(part, ctx),
       n: (x, fmt = "num") => (x === null || x === undefined ? "—" : formatNumber(x, fmt, lang.locale)),

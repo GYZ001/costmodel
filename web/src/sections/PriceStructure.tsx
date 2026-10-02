@@ -17,15 +17,17 @@ export function PriceStructure(scope: Scope) {
   const theme = useThemeVersion();
   const { ds, group, picks } = scope;
   const pli = ds.icp2021_pli;
+  // Every economy ICP priced, named alike whether or not its wage data could be used.
+  const econ = (iso: string) => ds.countries[iso] ?? ds.economies[iso];
   // Base of comparison: the world average (ICP's own index base) or any economy.
   const [base, setBase] = useState<string>("WORLD");
   const baseOf = (cat: string): number | null => (base === "WORLD" ? 100 : pli[base]?.[cat] ?? null);
 
   const { rows, values, isos } = useMemo(() => {
     const isos = Object.keys(pli)
-      .filter((iso) => ds.countries[iso] && (group === "all" || ds.countries[iso].g20 || picks.includes(iso)))
+      .filter((iso) => econ(iso) && (group === "all" || ds.countries[iso]?.g20 || picks.includes(iso)))
       .sort((a, b) => (pli[b].hfce ?? 0) - (pli[a].hfce ?? 0));
-    const rows = isos.map((iso) => countryName(i, ds.countries[iso]));
+    const rows = isos.map((iso) => countryName(i, econ(iso)));
     const values: [number, number, number | null][] = [];
     isos.forEach((iso, r) => CATS.forEach((cat, c) => {
       const v = pli[iso][cat], b = baseOf(cat);
@@ -34,7 +36,7 @@ export function PriceStructure(scope: Scope) {
     return { rows, values, isos };
   }, [ds, group, picks, i, base]);
   const hl = useMemo(() => new Set(picks.filter((p) => ds.countries[p]).map((p) => countryName(i, ds.countries[p]))), [ds, picks, i]);
-  const baseName = base === "WORLD" ? i.t("ps.world_name") : countryName(i, ds.countries[base]);
+  const baseName = base === "WORLD" ? i.t("ps.world_name") : countryName(i, econ(base));
   const option = useMemo(() => heatmapOption({
     rows, cols: CATS.map((c) => i.t(`catshort.${c}`)), values, highlightRows: hl,
     label: (r) => i.n(r * 100, "int"),
@@ -54,7 +56,7 @@ export function PriceStructure(scope: Scope) {
   }, [pli, i]);
   const baseOptions = useMemo(() => {
     const cmp = byName(i);
-    return Object.keys(pli).filter((iso) => ds.countries[iso]).map((iso) => [iso, countryName(i, ds.countries[iso])] as const)
+    return Object.keys(pli).filter((iso) => econ(iso)).map((iso) => [iso, countryName(i, econ(iso))] as const)
       .sort((a, b) => cmp(a[1], b[1]));
   }, [pli, ds, i]);
 

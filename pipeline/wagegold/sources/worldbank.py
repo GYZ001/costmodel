@@ -51,6 +51,19 @@ ICP_CATEGORIES = {
 }
 ICP_MEASURES = {"PX.WL": "icp21_pli_wl", "PPPGlob": "icp21_ppp"}
 
+# Food Prices for Nutrition (source 88): least-cost healthy diet per person per day,
+# total and by food group, in local currency at each year's prices.
+FPN_SERIES = {
+    "CoHD_LCU": "cohd_total",
+    "CoHD_ss_LCU": "cohd_staples",
+    "CoHD_v_LCU": "cohd_vegetables",
+    "CoHD_f_LCU": "cohd_fruits",
+    "CoHD_asf_LCU": "cohd_animal",
+    "CoHD_lns_LCU": "cohd_legumes",
+    "CoHD_of_LCU": "cohd_oils",
+    "CoHD_PPP": "cohd_total_ppp",
+}
+
 
 def _wdi_ok(data) -> bool:
     return isinstance(data, list) and len(data) == 2 and isinstance(data[1], list) and len(data[1]) > 0
@@ -65,10 +78,18 @@ def collect_countries(f: Fetcher) -> dict[str, dict]:
         check=check_json(_wdi_ok, "WDI country list empty"),
     )
     rows = json.loads(snap.read())[1]
+    zh = f.get(
+        "worldbank/countries_zh",
+        f"{API}/zh/country?format=json&per_page=400",
+        ext="json",
+        check=check_json(_wdi_ok, "WDI Chinese country list empty"),
+    )
+    names_zh = {r["id"]: r["name"] for r in json.loads(zh.read())[1]}
     return {
         r["id"]: {
             "iso2": r["iso2Code"],
             "name_en": r["name"],
+            "name_zh": names_zh.get(r["id"]),
             "region": r["region"]["value"],
             "income": r["incomeLevel"]["value"],
             "is_economy": r["region"]["id"] != "NA",
@@ -115,4 +136,25 @@ def collect_icp2021(f: Fetcher) -> list[Obs]:
             var = {v["concept"]: v["id"] for v in row["variable"]}
             cat = ICP_CATEGORIES[var["Series"]]
             out.append(Obs(f"{prefix}_{cat}", var["Country"], "2021", float(row["value"]), snap.key))
+    return out
+
+
+def collect_fpn(f: Fetcher) -> list[Obs]:
+    out: list[Obs] = []
+    for code, series in FPN_SERIES.items():
+        snap = f.get(
+            f"worldbank/fpn_{code}",
+            f"{API}/sources/88/country/all/series/{code}/time/all?format=json&per_page=20000",
+            ext="json",
+            check=check_json(lambda d: d.get("source", {}).get("data"), f"FPN {code} payload empty"),
+        )
+        payload = json.loads(snap.read())
+        if payload.get("pages", 1) != 1:
+            raise ValueError(f"FPN {code}: paging not handled")
+        for row in payload["source"]["data"]:
+            if row["value"] is None:
+                continue
+            var = {v["concept"]: v["id"] for v in row["variable"]}
+            out.append(Obs(series, var["Country"], var["Time"].removeprefix("YR"), float(row["value"]), snap.key,
+                           note=var.get("Classification", "")))
     return out

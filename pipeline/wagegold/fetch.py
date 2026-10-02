@@ -74,9 +74,15 @@ class Fetcher:
         *,
         ext: str,
         json_body: object | None = None,
+        record_body: object | None = None,
         headers: dict[str, str] | None = None,
         check: Check | None = None,
     ) -> Snapshot:
+        """Fetch ``url`` (POSTing ``json_body`` if given) unless offline.
+
+        ``record_body`` is what the manifest stores as the request body; pass it
+        when ``json_body`` carries a credential that must not be committed.
+        """
         if key in self.used:
             return self.used[key]
         if self.offline:
@@ -113,11 +119,29 @@ class Fetcher:
             bytes=len(body),
             content_type=ctype,
             method="POST" if json_body is not None else "GET",
-            request_body=json_body,
+            request_body=record_body if record_body is not None else json_body,
             attempted_at=attempted_at,
         )
         self._record(snap)
         return snap
+
+    def committed(self, prefix: str) -> list[Snapshot]:
+        """Previously committed snapshots whose key starts with ``prefix``."""
+        out = []
+        for key in sorted(self.manifest):
+            if key.startswith(prefix):
+                snap = self._previous(key)
+                if snap is not None:
+                    out.append(snap)
+        return out
+
+    def get_transient(self, url: str) -> bytes:
+        """Download without snapshotting: only for discovery pages (e.g. release
+        listings) whose content is not itself used as data."""
+        if self.offline:
+            raise FetchError(f"offline: cannot discover via {url}")
+        body, _ = self._download(url, None, None)
+        return body
 
     def save_manifest(self) -> None:
         """Persist metadata for every snapshot used in this run (and keep the rest)."""

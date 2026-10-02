@@ -94,12 +94,12 @@ def nbs_consistency(store: Store) -> Check:
     for series in ("cn_wage_nonprivate", "cn_wage_private", "cn_migrant_monthly"):
         implied = store.series(f"{series}__implied_prev", "CHN")
         direct = store.series(series, "CHN")
-        for p, o in implied.items():
+        for p, o in sorted(implied.items()):  # sorted: output must not depend on fetch order
             if p in direct:
                 same = abs(direct[p].value - o.value) < 0.5
                 bad |= not same
                 msgs.append(f"{series} {p}：本年发布 {direct[p].value:.0f}，次年发布反推 {o.value:.0f}{'' if same else ' ✗'}")
-        for p, o in direct.items():
+        for p, o in sorted(direct.items()):
             if "growth_pct=" in o.note:
                 prev = direct.get(str(int(p) - 1)) or implied.get(str(int(p) - 1))
                 if prev:

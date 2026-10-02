@@ -403,7 +403,7 @@ def pick_source(store: Store, base: str, area: str) -> str | None:
     cands = {s: list(store.series(s, area)) for s in store.series_names(area, base + "@")}
     if not cands:
         return None
-    return max(cands, key=lambda s: (max(cands[s]), len(cands[s])))
+    return max(cands, key=lambda s: (max(cands[s]), len(cands[s]), s))
 
 
 def _usable_linked(units: UnitGraph, area: str) -> dict[str, list[IloRecord]]:
@@ -421,7 +421,7 @@ def ilo_variants(store: Store, units: UnitGraph, area: str, year: str, ilo_dic: 
     for y, recs in usable.items():
         for r in recs:
             history[(r.concept, r.unit)][r.source].append(y)
-    main = {k: max(v, key=lambda src: (max(v[src]), len(v[src]))) for k, v in history.items()}
+    main = {k: max(v, key=lambda src: (max(v[src]), len(v[src]), src)) for k, v in history.items()}
     out: list[WageVariant] = []
     chosen: dict[tuple[str, str], IloRecord] = {}
     for r in usable.get(year, []):
@@ -500,7 +500,14 @@ def china_variants(store: Store, units: UnitGraph, year: str, definitions: dict)
     n_months = len([p for p in store.series("cn_weekly_hours_enterprise", "CHN") if p.startswith(year + "-")])
     no_hours = (f"该年已公布的企业就业人员周平均工作时间只有 {n_months} 个月（少于 6 个月），不折算时薪" if n_months
                 else "该年没有企业就业人员周平均工作时间数据，不折算时薪")
-    d = definitions.get(year) or (definitions[max(definitions)] if definitions else {})
+    d = definitions.get(year, {})  # never borrowed from another year: coverage changes between years
+
+    def release_title(series: str) -> str:
+        """The NBS release the figure comes from (one combined release, or one per measure)."""
+        marker = {"cn_wage_nonprivate": "城镇非私营", "cn_wage_private": "城镇私营", "cn_wage_large_ent": "规模以上企业"}[series]
+        titles = [r["title"] for r in d.get("releases", [])]
+        hit = next((t for t in titles if marker in t), None) or next((t for t in titles if "城镇单位" in t), None)
+        return f"国家统计局《{hit}》" if hit else "国家统计局"
     out = []
     for series, label in CN_SERIES:
         o = store.get(series, "CHN", year)
@@ -515,7 +522,7 @@ def china_variants(store: Store, units: UnitGraph, year: str, definitions: dict)
             notes.append(f"国家统计局注明该年统计覆盖范围有变化（名义增长 {o.note.split('growth_pct=')[1]}%，按可比口径增长 {comp.value}%"
                          + (f"；可比口径是指{d['comparable']}" if d.get("comparable") else "") + "）")
         out.append(WageVariant(
-            key=series, label=label, concept="mean", source=f"国家统计局《{year}年城镇单位就业人员年平均工资情况》",
+            key=series, label=label, concept="mean", source=release_title(series),
             monthly_lcu=monthly,
             hourly_lcu=monthly / (hours["mean"] * WEEKS_PER_MONTH) if hours else None,
             hours_week=hours["mean"] if hours else None,
@@ -780,7 +787,7 @@ def wage_gold_history(store: Store, gold: dict, meta: dict, ilo_dic: dict, units
         pts: dict[str, list] = {}
         src_name = None
         if cands:
-            src = max(cands, key=lambda k: (max(r.obs.period for r in cands[k]), len(cands[k])))
+            src = max(cands, key=lambda k: (max(r.obs.period for r in cands[k]), len(cands[k]), k))
             src_name = ilo_dic.get("source", {}).get(src, src)
             prev = None
             for r in sorted(cands[src], key=lambda r: r.obs.period):

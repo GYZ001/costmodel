@@ -27,6 +27,10 @@ LIST_URL = "https://www.stats.gov.cn/sj/zxfb/"
 LINK_RE = re.compile(r"href=\"\./(\d{6})/(t(\d{8})_\d+)\.html\"[^>]*title='([^']+)'")
 
 WAGE_TITLE = re.compile(r"^(\d{4})年城镇单位就业人员年平均工资情况$")
+# For 2021 and 2022 NBS published the two urban-unit averages and the large-enterprise
+# figures as separate releases, e.g. "2022年城镇非私营单位就业人员年平均工资114029元".
+WAGE_PART_TITLE = re.compile(r"^(\d{4})年城镇(非私营|私营)单位就业人员年平均工资\d+元$")
+LARGE_ENT_TITLE = re.compile(r"^(\d{4})年规模以上企业就业人员年平均工资情况$")
 MIGRANT_TITLE = re.compile(r"^(\d{4})年农民工监测调查报告$")
 CPI_TITLE = re.compile(r"^(\d{4})年(\d{1,2})月份居民消费价格")
 # Monthly "national economy" releases; the title fixes the reference month.
@@ -125,8 +129,8 @@ def discover(f: Fetcher, pages: int = 64) -> tuple[list[Release], list[dict]]:
             title = title.strip()
             if re.search(r"价格|工资|收入", title):
                 price_titles[tid] = {"date": f"{day[:4]}-{day[4:6]}-{day[6:]}", "title": title, "url": f"{LIST_URL}{ym}/{tid}.html"}
-            if tid not in seen and (WAGE_TITLE.match(title) or MIGRANT_TITLE.match(title) or CPI_TITLE.match(title)
-                                    or is_economy_release(title)):
+            if tid not in seen and (WAGE_TITLE.match(title) or WAGE_PART_TITLE.match(title) or LARGE_ENT_TITLE.match(title)
+                                    or MIGRANT_TITLE.match(title) or CPI_TITLE.match(title) or is_economy_release(title)):
                 seen[tid] = Release(f"{LIST_URL}{ym}/{tid}.html", f"nbs/release/{ym}/{tid}", title, day)
     return list(seen.values()), sorted(price_titles.values(), key=lambda r: r["date"])
 
@@ -167,12 +171,16 @@ def write_wage_definitions(snaps: list[tuple[Snapshot, str]]) -> None:
 
     from ..config import DATA_DIR
 
-    rows = {}
-    for snap, title in snaps:
-        if m := WAGE_TITLE.match(title):
+    rows: dict[str, dict] = {}
+    for snap, title in sorted(snaps, key=lambda st: st[0].key):
+        if m := (WAGE_TITLE.match(title) or WAGE_PART_TITLE.match(title) or LARGE_ENT_TITLE.match(title)):
             text = re.sub(r"\s+", "", body_text(snap.read().decode("utf-8", "replace")))
-            found = {k: (rx.search(text).group(1) if rx.search(text) else None) for k, rx in DEFINITIONS.items()}
-            rows[m.group(1)] = {"title": title, "url": snap.url, "snapshot": snap.key, **found}
+            row = rows.setdefault(m.group(1), {"releases": []})
+            row["releases"].append({"title": title, "url": snap.url, "snapshot": snap.key})
+            for k, rx in DEFINITIONS.items():  # a year published in several releases: first wording found
+                if row.get(k) is None:
+                    hit = rx.search(text)
+                    row[k] = hit.group(1) if hit else None
     path = DATA_DIR / "derived" / "nbs_wage_definitions.json"
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(dict(sorted(rows.items())), ensure_ascii=False, indent=1) + "\n", encoding="utf-8")
@@ -351,9 +359,13 @@ def _check_release(title: str):
 def parse_release(html: str, title: str, snapshot: str) -> list[Obs]:
     text = page_text(html)
     out: list[Obs] = []
-    if m := WAGE_TITLE.match(title):
+    if (m := WAGE_TITLE.match(title)) or (m := WAGE_PART_TITLE.match(title)) or (m := LARGE_ENT_TITLE.match(title)):
         year = int(m.group(1))
-        for series, rx in WAGE_RE.items():
+        # Which averages the release must contain, from its title.
+        want = (list(WAGE_RE) if WAGE_TITLE.match(title) else
+                ["cn_wage_nonprivate" if m.group(2) == "非私营" else "cn_wage_private"] if WAGE_PART_TITLE.match(title) else [])
+        for series in want:
+            rx = WAGE_RE[series]
             hit = rx.search(text)
             if not hit:
                 raise ValueError(f"{snapshot}: no match for {series}")
@@ -367,6 +379,8 @@ def parse_release(html: str, title: str, snapshot: str) -> list[Obs]:
         if hit := POSITION_RE.search(text):
             for key, v in zip(POSITION_KEYS, hit.groups()):
                 out.append(Obs(key, "CHN", str(year), int(v), snapshot))
+        elif LARGE_ENT_TITLE.match(title):
+            raise ValueError(f"{snapshot}: no large-enterprise wage sentence")
     elif m := MIGRANT_TITLE.match(title):
         year = int(m.group(1))
         hit = MIGRANT_RE.search(text)

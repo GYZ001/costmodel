@@ -274,7 +274,7 @@ def china_variants(store: Store, year: str) -> list[WageVariant]:
             method=(f"月均收入 ÷（企业就业人员周平均工作时间 {hours['mean']:.1f} 小时 × 52/12）" if hours
                     else "缺少同年工时数据，不折算时薪"),
             snapshots=[o.snapshot] + (hours["snapshots"] if hours else []),
-            caveat="工时采用全国企业就业人员周平均工作时间，农民工自身工时未单独公布",
+            caveat="工时采用全国企业就业人员周平均工作时间；本项目存档的农民工监测调查报告未公布农民工工时",
         ))
     return out
 

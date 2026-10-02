@@ -1,19 +1,10 @@
-node_modules
-dist
-.DS_Store
-*.log
-.env.local
-.env.production.local
-
-# Python
+node_modules/
+dist/
 __pycache__/
 *.py[cod]
-*$py.class
-*.so
-.Python
-*.egg-info/
-.eggs/
-
-# Config files
-data_service/config.json
+.pytest_cache/
+.venv/
+.DS_Store
+*.log
 .env
+.env.*

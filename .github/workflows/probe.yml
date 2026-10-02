@@ -1,0 +1,24 @@
+# 临时探针：在有完整外网的 GitHub runner 上实测候选官方数据接口。
+# 只在探针文件变化时由 push 触发；也可在 Actions 页面点 "Run workflow" 手动运行。
+name: probe-sources
+
+on:
+  push:
+    paths:
+      - "tools/probe/**"
+      - ".github/workflows/probe.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: python tools/probe/probe.py tools/probe/targets.json

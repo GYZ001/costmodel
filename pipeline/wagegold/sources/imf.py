@@ -20,6 +20,6 @@ def _check(body: bytes) -> None:
 
 
 def collect(f: Fetcher) -> list[Obs]:
-    snap = f.get("imf/pcps_pgold_monthly", URL, ext="xml", check=_check)
+    snap = f.get("imf/pcps_pgold_monthly", URL, ext="xml", check=_check, timeout=60, retries=2)
     text = snap.read().decode("utf-8", "replace")
     return [Obs("gold_usd_oz_imf", "WLD", f"{y}-{m}", float(v), snap.key) for y, m, v in OBS_RE.findall(text)]

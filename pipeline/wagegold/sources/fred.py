@@ -38,7 +38,7 @@ SERIES = {
 def collect(f: Fetcher) -> list[Obs]:
     out: list[Obs] = []
     for fred_id, (series, area, invert) in SERIES.items():
-        snap = f.get(f"fred/{fred_id}", URL.format(id=fred_id), ext="csv", check=_check(fred_id))
+        snap = f.get(f"fred/{fred_id}", URL.format(id=fred_id), ext="csv", check=_check(fred_id), timeout=30, retries=1)
         for row in csv.DictReader(io.StringIO(snap.read().decode("utf-8-sig"))):
             v = to_float(row[fred_id])
             if v is None:

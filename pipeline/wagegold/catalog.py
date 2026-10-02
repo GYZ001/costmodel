@@ -26,6 +26,7 @@ LB_TO_KG = 1 / 0.45359237
 US_ITEMS = {
     "flour": ("面粉（白面粉，通用）", "每磅", "kg", LB_TO_KG),
     "rice": ("大米（白米，长粒，生）", "每磅", "kg", LB_TO_KG),
+    "pasta": ("意面与通心粉", "每磅", "kg", LB_TO_KG),
     "bread_white": ("白面包（切片）", "每磅", "kg", LB_TO_KG),
     "ground_beef": ("牛肉馅（100% 牛肉）", "每磅", "kg", LB_TO_KG),
     "sirloin_steak": ("西冷牛排（USDA Choice，去骨）", "每磅", "kg", LB_TO_KG),

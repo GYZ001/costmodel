@@ -4,6 +4,7 @@ CES (Current Employment Statistics), total private:
   CES0500000003 / CEU0500000003  average hourly earnings, all employees (SA / NSA), since 2006-03
   CES0500000008 / CEU0500000008  average hourly earnings, production & nonsupervisory (SA / NSA), since 1964
   CES0500000002 / CEU0500000002  average weekly hours, all employees (SA / NSA)
+  CES0500000007 / CEU0500000007  average weekly hours, production & nonsupervisory (SA / NSA)
 
 CPI Average Price data (AP), U.S. city average: see AP_ITEMS.
 
@@ -31,12 +32,15 @@ CES_SERIES = {
     "CEU0500000008": "us_ahe_pns_nsa",
     "CES0500000002": "us_awh_all_sa",
     "CEU0500000002": "us_awh_all_nsa",
+    "CES0500000007": "us_awh_pns_sa",
+    "CEU0500000007": "us_awh_pns_nsa",
 }
 
 # BLS AP series id -> item key.  Labels and unit conversions live in catalog.US_ITEMS.
 AP_SERIES = {
     "APU0000701111": "flour",
     "APU0000701312": "rice",
+    "APU0000701322": "pasta",
     "APU0000702111": "bread_white",
     "APU0000703112": "ground_beef",
     "APU0000703613": "sirloin_steak",

@@ -15,6 +15,7 @@ import hashlib
 import json
 import time
 import urllib.error
+import urllib.parse
 import urllib.request
 from dataclasses import asdict, dataclass, field
 from datetime import datetime, timezone
@@ -62,6 +63,9 @@ class Fetcher:
     timeout: int = 120
     manifest: dict[str, dict] = field(default_factory=dict)
     used: dict[str, Snapshot] = field(default_factory=dict)
+    # Hosts that already failed at the network level in this run: further requests to
+    # them fall back to committed snapshots at once instead of waiting out more timeouts.
+    unreachable: dict[str, str] = field(default_factory=dict)
 
     def __post_init__(self) -> None:
         if MANIFEST_PATH.exists():
@@ -77,6 +81,8 @@ class Fetcher:
         record_body: object | None = None,
         headers: dict[str, str] | None = None,
         check: Check | None = None,
+        timeout: int | None = None,
+        retries: int | None = None,
     ) -> Snapshot:
         """Fetch ``url`` (POSTing ``json_body`` if given) unless offline.
 
@@ -94,7 +100,10 @@ class Fetcher:
 
         attempted_at = _now()
         try:
-            body, ctype = self._download(url, json_body, headers)
+            host = urllib.parse.urlsplit(url).hostname or ""
+            if host in self.unreachable:
+                raise FetchError(f"{host} unreachable earlier in this run: {self.unreachable[host]}")
+            body, ctype = self._download(url, json_body, headers, timeout, retries)
             if check is not None:
                 check(body)
         except Exception as exc:  # noqa: BLE001 - any failure falls back to the previous snapshot
@@ -140,7 +149,7 @@ class Fetcher:
         listings) whose content is not itself used as data."""
         if self.offline:
             raise FetchError(f"offline: cannot discover via {url}")
-        body, _ = self._download(url, None, None)
+        body, _ = self._download(url, None, None, timeout=60, retries=2)
         return body
 
     def save_manifest(self) -> None:
@@ -162,7 +171,8 @@ class Fetcher:
             return None
         return Snapshot(**meta)
 
-    def _download(self, url: str, json_body: object | None, headers: dict[str, str] | None) -> tuple[bytes, str | None]:
+    def _download(self, url: str, json_body: object | None, headers: dict[str, str] | None,
+                  timeout: int | None = None, retries: int | None = None) -> tuple[bytes, str | None]:
         hdrs = {"User-Agent": USER_AGENT, "Accept": "*/*"}
         hdrs.update(headers or {})
         data = None
@@ -170,18 +180,21 @@ class Fetcher:
             data = json.dumps(json_body).encode()
             hdrs["Content-Type"] = "application/json"
         last: Exception | None = None
-        for attempt in range(self.retries):
+        network_error = False
+        for attempt in range(retries or self.retries):
             req = urllib.request.Request(url, data=data, headers=hdrs, method="POST" if data else "GET")
             try:
-                with urllib.request.urlopen(req, timeout=self.timeout) as resp:
+                with urllib.request.urlopen(req, timeout=timeout or self.timeout) as resp:
                     return resp.read(), resp.headers.get("Content-Type")
             except urllib.error.HTTPError as exc:
-                last = exc
+                last, network_error = exc, False
                 if exc.code < 500 and exc.code != 429:
                     break  # a 4xx other than rate limiting will not fix itself
-            except (urllib.error.URLError, TimeoutError, ConnectionError) as exc:
-                last = exc
+            except (urllib.error.URLError, TimeoutError, ConnectionError, OSError) as exc:
+                last, network_error = exc, True
             time.sleep(2 * 2**attempt)
+        if network_error:
+            self.unreachable[urllib.parse.urlsplit(url).hostname or ""] = f"{type(last).__name__}: {last}"[:200]
         raise FetchError(f"download failed: {last}")
 
 

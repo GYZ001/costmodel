@@ -48,7 +48,7 @@ export function ChinaUs({ ds }: Scope) {
               {cnRow.wages.filter((w) => w.key.startsWith("cn_") && (w.quote || w.caveat)).map((w) => (
                 <div key={w.key} style={{ marginBottom: 8 }}>
                   <dt style={{ fontWeight: 600, color: "var(--ink)" }}>{w.label}（{w.source}）</dt>
-                  {w.quote && <dd style={{ margin: "2px 0 0" }}>国家统计局原文：“{w.quote}”</dd>}
+                  {w.quote && <dd style={{ margin: "2px 0 0" }}>国家统计局原文摘录（按原文顺序，“……”表示中间有省略）：{w.quote}</dd>}
                   {w.caveat && <dd style={{ margin: "2px 0 0" }}>本项目说明：{w.caveat}</dd>}
                 </div>
               ))}

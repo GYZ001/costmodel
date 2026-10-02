@@ -64,9 +64,12 @@ export default function App({ ds }: { ds: Dataset }) {
           const ys = wageYears(c, view);
           if (view === "hourly" && wageYears(c, "monthly").includes(year)) return `${countryName(c)}（该年无同口径时薪，可切换“按月薪”）`;
           const medianNow = c.years[year]?.wages.some((w) => w.concept === "median" && (view === "hourly" ? w.hourly_gold_g : w.monthly_gold_g));
-          if (ys.length) return `${countryName(c)}（${medianNow ? "该年只有中位数；" : ""}平均工资最近 ${ys[0]} 年）`;
           const ms = view === "hourly" ? wageYears(c, "monthly") : [];
-          if (ms.length) return `${countryName(c)}（无同口径时薪；月薪最近 ${ms[0]} 年）`;
+          if (ys.length) {
+            const later = ms.length && ms[0] > ys[0] ? `；平均月薪最近 ${ms[0]} 年` : "";
+            return `${countryName(c)}（${medianNow ? "该年只有中位数；" : ""}平均${view === "hourly" ? "时薪" : "月薪"}最近 ${ys[0]} 年${later}）`;
+          }
+          if (ms.length) return `${countryName(c)}（无同口径时薪；平均月薪最近 ${ms[0]} 年）`;
           // Economies whose verified figures are all medians have no primary (average) figure.
           const med = Object.keys(c.years).filter((y) => c.years[y].wages.some((w) => w.concept === "median" && (w.hourly_gold_g || w.monthly_gold_g))).sort();
           return `${countryName(c)}${med.length ? `（只有中位数，没有平均工资；中位数最近 ${med[med.length - 1]} 年）` : "（无可核对工资数据）"}`;

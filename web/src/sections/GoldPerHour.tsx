@@ -36,7 +36,7 @@ export function GoldPerHour(scope: Scope) {
           highlight: scope.picks.includes(iso),
           tip: [
             ...wageNotes(w, scope.view, c, 160),
-            ...(t ? wageNotes(t, scope.view, c, 120).map((x, i) => (i === 0 ? `中位数（同一调查）：${x}` : x)).slice(0, 2) : []),
+            ...(t ? wageNotes(t, scope.view, c, 120).map((x, i) => (i === 0 ? `中位数（同一调查）：${x}` : x)) : []),
             `当地金价：${money(row.gold_lcu_g, c.currency)}/克（${year} 年均）`,
             ...fxNote(row, c),
           ],
@@ -51,6 +51,11 @@ export function GoldPerHour(scope: Scope) {
     [rows, scope.picks, scope.view],
   );
   const cnW = primaryWage(scope.ds.countries.CHN?.years[scope.year], scope.view);
+  // Largest gap between the official rate and the World Bank's GDP conversion factor, over the economies drawn.
+  const fxGap = useMemo(() => {
+    const ds = rows.filter(({ row }) => primaryWage(row, scope.view)).map(({ row }) => row.fx_vs_gdp_factor).filter((d): d is number => d != null);
+    return ds.length ? Math.max(...ds.map((d) => Math.max(d, 1 / d))) - 1 : null;
+  }, [rows, scope.view]);
   const option = useMemo(
     () => rankingOption({
       items,
@@ -73,7 +78,7 @@ export function GoldPerHour(scope: Scope) {
           <span><span className="sw" style={{ background: "var(--deemph)" }} />其他经济体</span>
           <span><span className="sw" style={{ background: "var(--s2)", borderRadius: "50%" }} />同一调查的中位{scope.view === "hourly" ? "时薪" : "月薪"}（有数据时）</span>
         </div>
-        <Chart option={option} height={rankingHeight(items.length)} ariaLabel="各经济体每小时工资可换黄金克数排名" />
+        <Chart option={option} height={rankingHeight(items.length)} ariaLabel={`各经济体${scope.view === "hourly" ? "每小时" : "每月"}工资可换黄金克数排名`} />
         <p className="note">
           工资的选用顺序：OECD 全职当量平均工资（时薪按 OECD 公布的全职雇员通常周工时折算）→ 国际劳工组织 ILOSTAT 覆盖全国全体雇员的平均工资
           （只有月薪的，用同一调查的每周实际工时折算）→ 国家统计机构自己的数据（中国国家统计局、美国劳工统计局，覆盖范围按其原文说明）→
@@ -85,7 +90,7 @@ export function GoldPerHour(scope: Scope) {
           {cnW && <>中国 {scope.year} 年用的是：{wageLabel(cnW, scope.view)}（{cnW.source}）。</>}
           每个经济体所用口径与发布方的注释见悬停提示和数据表。
           金价：世界银行 Pink Sheet 月均价的年平均；汇率：世界银行 WDI 年均官方汇率。它与世界银行换算该年 GDP 所用的因子逐年核对，相差在 ×/÷1.4 以内，
-          只能证明两者是同一货币单位，不证明是同一个汇率：财年换算或多重汇率下两者可能相差一两成，相差 0.5% 以上时悬停提示里会列出。
+          只能证明两者是同一货币单位，不证明是同一个汇率（财年换算或多重汇率下两者会不同{fxGap != null && <>；本图 {scope.year} 年各经济体两者最多相差 {sig(fxGap * 100, 2)}%</>}），相差 0.5% 以上时悬停提示里会列出。
         </p>
         <DataTable items={items} />
       </div>

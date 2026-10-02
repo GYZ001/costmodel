@@ -2,7 +2,7 @@ import { useMemo } from "react";
 import type { Scope } from "../App";
 import { Chart } from "../Chart";
 import { linesOption } from "../charts";
-import { countryName, fmt, sig, useThemeVersion } from "../lib";
+import { countryName, fmt, levelBoundsText, sig, useThemeVersion } from "../lib";
 
 export function GoldRuler({ ds, picks, slotOf }: Scope) {
   const theme = useThemeVersion();
@@ -101,7 +101,8 @@ export function GoldRuler({ ds, picks, slotOf }: Scope) {
           }).join("；")}。
           每个经济体用一条序列：OECD 全职当量工资或 ILOSTAT 某一调查的平均月薪中，不受覆盖范围限制的年份最多的一条（至少 3 年）。
           折线在这些地方断开，不把可能不可比的两个数连成一条线：发布方注明序列中断或口径、覆盖范围变化（如 ILOSTAT 的“Break in series”、国家统计局的“可比口径”）；
-          ILOSTAT 对数值的口径注释前后不同；同一来源相邻两点的变化与同期名义人均收入（世界银行居民消费或 GDP 除以人口）的变化相差超过 {fmt(ds.constants.level_bound, 2)} 倍（OECD 平均工资序列中出现过的最大偏离），或无法核对。
+          ILOSTAT 对数值的口径注释前后不同；同一来源相邻两点的变化，与同期名义人均居民消费和人均 GDP（世界银行本币值 ÷ 人口）的变化相比，
+          偏离都超出 OECD 同口径平均工资在同样年数内相对同一参照出现过的最大偏离（以人均居民消费为参照：{levelBoundsText(ds, "hfce")}），或无法核对。
           孤立的点（前后都断开）画成圆点。
           {breaks.length > 0 && <> 所选经济体的断开处：{breaks.join("；")}。</>}
           {noHistory.length > 0 && <> 没有同一来源 3 年以上可核对的平均工资序列（OECD 或 ILOSTAT 平均月薪）：{noHistory.join("、")}。</>}

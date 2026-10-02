@@ -168,9 +168,9 @@ export function RealWage(scope: Scope) {
               ))}
             </div>
             {diet.length ? (
-              <Chart option={sOpt} height={rankingHeight(diet.length)} ariaLabel="2021 年一天健康饮食需要的工作分钟数，按食物类别拆分" />
+              <Chart option={sOpt} height={rankingHeight(diet.length)} ariaLabel={`${GROUP_YEAR} 年一天健康饮食需要的工作分钟数，按食物类别拆分`} />
             ) : (
-              <p className="muted">所选范围内没有 2021 年的分项数据。</p>
+              <p className="muted">所选范围内没有 {GROUP_YEAR || "—"} 年的分项数据。</p>
             )}
             <details>
               <summary>查看数据表</summary>

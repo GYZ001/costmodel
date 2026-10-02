@@ -178,6 +178,31 @@ def test_nbs_decline_wording():
     obs = {(o.series, o.period): (o.value, o.note) for o in nbs.parse_release(html, title, "nbs/x")}
     assert obs[("cn_wage_private", "2027")] == (71000, "growth_pct=-0.8")
     assert obs[("cn_wage_private__implied_prev", "2026")] == (71590, "")
+    # The comparable basis and the large-enterprise growth can be declines too.
+    html = ("<p>2027年，全国城镇私营单位就业人员年平均工资为71000元，比上年减少590元，名义下降0.8%，按可比口径下降0.3%。</p>"
+            "<p>规模以上企业就业人员年平均工资为100000元，比上年减少900元，名义下降0.9%，按可比口径下降0.2%。</p>")
+    obs = {(o.series, o.period): (o.value, o.note) for o in nbs.parse_release(html, title, "nbs/x")}
+    assert obs[("cn_wage_private__comparable_growth", "2027")] == (-0.3, "")
+    assert obs[("cn_wage_large_ent", "2027")] == (100000, "growth_pct=-0.9")
+    assert obs[("cn_wage_large_ent__comparable_growth", "2027")] == (-0.2, "")
+    try:  # a comparable-basis statement this parser cannot read is an error, not dropped
+        nbs.parse_release(html.replace("按可比口径下降0.3%", "按可比口径计算有所下降"), title, "nbs/x")
+    except ValueError:
+        return
+    raise AssertionError("unread comparable basis not detected")
+
+
+def test_cpi_aside_naming_a_period_does_not_change_the_period():
+    text = "8月份，全国居民消费价格同比上涨0.6%，涨幅比7月份扩大0.1个百分点；其中，食品价格同比上涨2.8%，非食品价格上涨0.2%。"
+    assert _yoy(text, 8) == ["全国居民消费价格同比上涨0.6%", "食品价格同比上涨2.8%", "非食品价格上涨0.2%"]
+
+
+def test_nbs_quote_is_labelled_excerpts_in_document_order():
+    t = "注：[2]可比口径是指甲。附注1.指标解释（2）工资总额：乙。需要明确的是，工资总额是税前工资，丙。2.统计范围丁。戊。己。3.其他"
+    x = lambda sec, piece: {"section": sec, "text": piece, "pos": t.index(piece), "end": t.index(piece) + len(piece)}  # noqa: E731
+    q = build.excerpts_quote([x("统计范围", "己。"), x("统计范围", "丁。"), x("指标解释", "需要明确的是，工资总额是税前工资，丙。"),
+                              x("注[2]", "可比口径是指甲。"), None])
+    assert q == "注[2]：“可比口径是指甲。”；指标解释：“需要明确的是，工资总额是税前工资，丙。”；统计范围：“丁。……己。”"
 
 
 def test_economy_release_cpi_sentences_stay_in_cpi_paragraph():
@@ -342,6 +367,13 @@ def _per_head(area, years, ppp, per_head):
     return [("population", area, y, ppp * 500 / v, "s") for y, v in zip(years, per_head)]
 
 
+def _oecd_yardstick(area, years, wages, per_head):
+    """An OECD average-wage series and the household consumption per head it is set
+    against, from which the level bounds are derived."""
+    rows = [r for y in years for r in _wdi(area, y, 1.0, 1.0)] + _per_head(area, years, 1.0, per_head)
+    return rows + [Obs("oecd_avg_annual_wage", area, y, w, "s", "OOD") for y, w in zip(years, wages)]
+
+
 def test_units_scale_error_singled_out_by_its_own_series():
     # PRY BX:14043 2020: the hourly figure is 1/192 of its neighbours, the monthly one is in line.
     years = ["2019", "2020", "2021"]
@@ -362,13 +394,17 @@ def test_history_breaks_at_level_shift_and_primary_switch_is_marked():
     obs = []
     for y, m in zip(years, (1000.0, 1050.0, 1100.0, 1900.0)):  # 2023->2024: ×1.73 against ×1.05
         obs += [Obs("ilo_monthly_mean@X:1", "AAA", y, m, "s", "T8:127 T9:133"), Obs("ilo_monthly_mean_usd@X:1", "AAA", y, m, "s")]
-    s = _store(*rows, *obs, Obs("gold_usd_oz", "WLD", "2021-01", 1800.0, "s"))
+    # OECD's own series moved at most ×1.10 a year against consumption per head.
+    oecd = _oecd_yardstick("OOO", years, [100.0, 115.5, 121.0, 127.6], [100.0, 105.0, 110.0, 116.0])
+    s = _store(*rows, *obs, *oecd, Obs("gold_usd_oz", "WLD", "2021-01", 1800.0, "s"))
     u = build.UnitGraph(s, DIC, years, META)
+    assert abs(u.level_bound("hfce_lcu", 1) - 1.10) < 1e-9 and abs(u.level_bound("hfce_lcu", 5) - 1.10) < 1e-9
     gold = {"annual": {y: {"usd_g": 60.0} for y in years}}
     meta = {"AAA": {"is_economy": True, "name_en": "A"}}
     pts = build.wage_gold_history(s, gold, meta, DIC, u)["AAA"]["points"]
-    assert [p[4] for p in pts] == [False, False, False, True] and "×/÷1.4" in pts[3][5]
-    assert "相邻年份的变化超出" in build.ilo_variants(s, u, "AAA", "2024", DIC)[0].caveat
+    assert [p[4] for p in pts] == [False, False, False, True] and "×/÷1.10" in pts[3][5]
+    caveat = build.ilo_variants(s, u, "AAA", "2024", DIC)[0].caveat
+    assert caveat.startswith("与同一来源最近的其他年份相比变化过大") and "OECD 同口径工资 1 年内相对它的最大偏离 ×/÷1.10" in caveat
     w = lambda sid, key, notes, label: {"role": None, "mrole": "primary", "series_id": sid, "series_key": key,  # noqa: E731
                                         "notes_sig": notes, "label": label, "source": "x"}
     recs = {"2022": {"wages": [w("A", "A", [], "a")]}, "2023": {"wages": [w("A n1", "A", ["n1"], "a")]},
@@ -414,6 +450,9 @@ def test_restricts_reads_coverage_labels():
     assert build.restricts("S9", "Reference group coverage: Insured persons")
     assert not build.restricts("S5", "Population coverage: Excluding both institutional population and armed forces and/or conscripts")
     assert build.restricts("S5", "Population coverage: Nationals only")
+    assert build.restricts("S6", "Establishment size coverage: All establishments with at least 50 employees")
+    assert not build.restricts("S6", "Establishment size coverage: All establishments with at least 50 employees "
+                                     "and a sample of those with less than 50 employees")
 
 
 def test_median_shown_only_from_the_primary_source():
@@ -435,7 +474,8 @@ def test_prove_identity_failure_next_to_a_proven_year_is_unknown():
                ("hfce_lcu", "AAA", "2006", 99.15 * 500, "s"), ("hfce_intl", "AAA", "2006", 500.0, "s"))
     u = build.UnitGraph(s, DIC, years, META)
     _f, p = u._factors("AAA")
-    assert p["2006"][0] is True and p["2005"][0] is None and "原因不明" in p["2005"][1]
+    assert p["2006"][0] is True and p["2005"][0] is None and "原因不明" in p["2005"][1] and p["2005"][2] == "identity"
+    assert "可能是货币单位不同" not in p["2005"][1]
 
 
 def test_nbs_split_wage_releases():
@@ -451,3 +491,22 @@ def test_nbs_split_wage_releases():
     except ValueError:
         return
     raise AssertionError("missing large-enterprise sentence not detected")
+
+
+def test_cross_source_gap_between_time_factor_and_week_month_is_kept_unconfirmed():
+    def variants(b_value):
+        s = _store(*_wdi("AAA", "2018", 10.0, 8.0),
+                   Obs("ilo_monthly_mean@X:1", "AAA", "2018", 1000.0, "s", "T8:127 T9:133"),
+                   Obs("ilo_monthly_mean_usd@X:1", "AAA", "2018", 100.0, "s"),
+                   Obs("ilo_monthly_mean@Y:2", "AAA", "2018", b_value, "s", "T8:127 T9:133"),
+                   Obs("ilo_monthly_mean_usd@Y:2", "AAA", "2018", b_value / 10, "s"),
+                   ("population", "AAA", "2018", 1e6, "s"))
+        u = build.UnitGraph(s, DIC, ["2018"], META)
+        return build.ilo_variants(s, u, "AAA", "2018", DIC), u
+    # ×3: a concept gap or a time-unit error - kept, said to be unconfirmed.
+    vs, _u = variants(3000.0)
+    assert len(vs) == 1 and "无法确认" in vs[0].caveat
+    # ×4.4 (a week-month factor) with nothing else to decide: neither is used.
+    vs, u = variants(4400.0)
+    u.explain("AAA", "2018", True)
+    assert vs == [] and sum("一并不用" in e["detail"] for e in u.log) == 2

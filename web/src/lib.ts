@@ -67,8 +67,19 @@ export function wageNotes(w: Wage, view: View, c: Country, max = 0): string[] {
     w.source,
     ...switchNote.map((t) => cut(t, max)),
     ...(w.caveat ? [`口径注释：${cut(w.caveat, max)}`] : []),
-    ...(w.quote ? [`发布方原文：${cut(w.quote, max)}`] : []),
+    ...(w.quote ? [`发布方原文摘录：${cut(w.quote, max)}`] : []),
   ];
+}
+
+/** The continuity bound against one yardstick, for a few spans: "相隔 1 年 ×/÷1.25、2 年 ×/÷1.53…". */
+export function levelBoundsText(ds: Dataset, yardstick: "hfce" | "gdp"): string {
+  const b = ds.constants.level_bounds[yardstick] ?? {};
+  const spans = Object.keys(b).map(Number).sort((x, y) => x - y);
+  if (!spans.length) return "档案中没有可用的 OECD 数据";
+  const shown = spans.filter((k) => [1, 2, 3, 5, 10].includes(k));
+  const longest = spans[spans.length - 1];
+  const tail = shown.includes(longest) ? "" : `，相隔 ${longest} 年及以上 ×/÷${fmt(b[String(longest)], 2)}`;
+  return `相隔 ${shown.map((k) => `${k} 年 ×/÷${fmt(b[String(k)], 2)}`).join("、")}${tail}`;
 }
 
 /** The exchange-rate line for a row: the official rate, and where the World Bank converted

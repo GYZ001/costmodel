@@ -68,10 +68,10 @@ WAGE_RE = {
 # Headline of the large-enterprise average, in the combined releases ("规模以上企业就业
 # 人员年平均工资为98096元") and the separate 2021/2022 ones ("全国规模以上企业…为92492元").
 LARGE_ENT_RE = re.compile(r"规模以上企业就业人员年平均工资\s*为\s*(\d+)\s*元")
-# Inside the headline sentence: "…名义增长4.4%，按可比口径增长4.2%" - NBS flags a change in
-# statistical coverage (the comparable basis is explained in the release's notes).
-NOMINAL_RE = re.compile(r"名义增长\s*(?:\[\d+\])?\s*([\d.]+)\s*%")
-COMPARABLE_RE = re.compile(r"按可比口径\s*(?:\[\d+\])?\s*增长\s*([\d.]+)\s*%")
+# Inside the headline sentence: "…名义增长4.4%，按可比口径增长4.2%" (or 下降) - NBS flags a
+# change in statistical coverage (the comparable basis is explained in the release's notes).
+NOMINAL_RE = re.compile(r"名义(增长|下降)\s*(?:\[\d+\])?\s*([\d.]+)\s*%")
+COMPARABLE_RE = re.compile(r"按可比口径\s*(?:\[\d+\])?\s*(增长|下降)\s*([\d.]+)\s*%")
 POSITION_RE = re.compile(
     r"规模以上企业就业人员年平均工资为\s*(\d+)\s*元，其中，?\s*中层及以上管理人员\s*(\d+)\s*元，专业技术人员\s*(\d+)\s*元，"
     r"办事人员和有关人员\s*(\d+)\s*元，社会生产服务和生活服务人员\s*(\d+)\s*元，生产制造及有关人员\s*(\d+)\s*元"
@@ -177,10 +177,20 @@ def collect(f: Fetcher) -> list[Obs]:
 
 # The release's own notes: "2、统计范围…" (or "2.统计范围…") up to the next numbered note.
 SCOPE_RE = re.compile(r"2[、.]统计范围(.+?。)(?=3[、.])")
-DEFINITIONS = {
-    "comparable": re.compile(r"可比口径是指([^。]+)。"),
-    "gross": re.compile(r"(工资总额是税前工资[^。]*。)"),
-}
+# Definitions quoted from a release, by where they sit in it: a sentence of the
+# indicator notes ("指标解释"), and the footnote defining the comparable basis ("[2]可比口径是指…").
+GROSS_RE = re.compile(r"工资总额是税前工资")
+COMPARABLE_DEF_RE = re.compile(r"(\[\d+\])?(可比口径是指[^。]+。)")
+
+
+def _excerpt(section: str, text: str, start: int, end: int) -> dict:
+    """A verbatim piece of a release's text (whitespace removed), with where it sits."""
+    return {"section": section, "text": text[start:end], "pos": start, "end": end}
+
+
+def _sentence(text: str, i: int) -> tuple[int, int]:
+    """The whole sentence around position i (from after the previous "。" to its own)."""
+    return text.rfind("。", 0, i) + 1, text.index("。", i) + 1
 
 
 def scope_series(sentence: str) -> list[str] | None:
@@ -214,18 +224,24 @@ def write_wage_definitions(snaps: list[tuple[Snapshot, str]]) -> None:
         text = re.sub(r"\s+", "", body_text(snap.read().decode("utf-8", "replace")))
         if MIGRANT_TITLE.match(title):
             hit = MIGRANT_DEF_RE.search(text)
-            row["definition"] = hit.group(1) if hit else None
+            row["definition"] = _excerpt("指标解释", text, hit.start(1), hit.end(1)) if hit else None
         else:
             # A release about one measure (2021, 2022) describes only that measure.
             part = WAGE_PART_TITLE.match(title)
             only = (["cn_wage_nonprivate" if part.group(2) == "非私营" else "cn_wage_private"] if part
                     else ["cn_wage_large_ent"] if LARGE_ENT_TITLE.match(title) else None)
-            scope = SCOPE_RE.search(text)
-            row["scope"] = [{"text": x + "。", "series": only or scope_series(x)}
-                            for x in (scope.group(1).split("。") if scope else []) if x]
-            for k, rx in DEFINITIONS.items():
-                hit = rx.search(text)
-                row[k] = hit.group(1) if hit else None
+            row["scope"] = []
+            if scope := SCOPE_RE.search(text):
+                start = scope.start(1)
+                for x in scope.group(1).split("。"):
+                    if x:
+                        row["scope"].append({**_excerpt("统计范围", text, start, start + len(x) + 1),
+                                             "series": only or scope_series(x)})
+                    start += len(x) + 1
+            hit = GROSS_RE.search(text)
+            row["gross"] = _excerpt("指标解释", text, *_sentence(text, hit.start())) if hit else None
+            hit = COMPARABLE_DEF_RE.search(text)
+            row["comparable"] = (_excerpt(f"注{hit.group(1) or ''}", text, hit.start(2), hit.end(2)) if hit else None)
         rows[snap.key] = row
     path = DATA_DIR / "derived" / "nbs_wage_definitions.json"
     path.parent.mkdir(parents=True, exist_ok=True)
@@ -331,10 +347,11 @@ def yoy_sentences(text: str, month: int, topic: str | None = None) -> list[dict]
                 continue
         hits = []
         for clause in re.split(r"(?<=[，；])", sentence):
+            if ASIDE_RE.search(clause):
+                continue  # an aside neither reports this period's change nor changes what is inherited
             period = _period(clause) or period
             comparison = _comparison(clause) or comparison
-            if (inside and period == f"month:{month}" and comparison == "yoy" and not ASIDE_RE.search(clause)
-                    and CHANGE_RE.search(clause)):
+            if inside and period == f"month:{month}" and comparison == "yoy" and CHANGE_RE.search(clause):
                 hits.append(clause.rstrip("，；。"))
         if hits:
             out.append({"text": sentence, "yoy": hits})
@@ -440,11 +457,21 @@ def _signed(hit: re.Match) -> tuple[int, int, float]:
     return int(value), int(change) * (1 if up == "增加" else -1), float(pct) * (1 if rise == "增长" else -1)
 
 
+def _rate(hit: re.Match) -> float:
+    """A NOMINAL_RE / COMPARABLE_RE match as a signed percentage."""
+    rise, pct = hit.groups()
+    return float(pct) * (1 if rise == "增长" else -1)
+
+
 def _comparable(series: str, year: int, text: str, hit: re.Match, snapshot: str) -> list[Obs]:
-    """The comparable-basis growth NBS states in the same sentence as a headline figure."""
+    """The comparable-basis growth NBS states in the same sentence as a headline figure.
+    A sentence that speaks of the comparable basis without a rate this parser reads is
+    an error: the coverage change it flags must not be lost."""
     sentence = text[hit.start():text.find("。", hit.start())]
     comp = COMPARABLE_RE.search(sentence)
-    return [Obs(f"{series}__comparable_growth", "CHN", str(year), float(comp.group(1)), snapshot)] if comp else []
+    if comp is None and "可比口径" in sentence:
+        raise ValueError(f"{snapshot}: {series} sentence mentions 可比口径 but no rate was read: {sentence!r}")
+    return [Obs(f"{series}__comparable_growth", "CHN", str(year), _rate(comp), snapshot)] if comp else []
 
 
 def parse_release(html: str, title: str, snapshot: str) -> list[Obs]:
@@ -474,7 +501,7 @@ def parse_release(html: str, title: str, snapshot: str) -> list[Obs]:
             with_growth = next((h for h in hits if NOMINAL_RE.search(text[h.start():text.find("。", h.start())])), hits[0])
             nominal = NOMINAL_RE.search(text[with_growth.start():text.find("。", with_growth.start())])
             out.append(Obs("cn_wage_large_ent", "CHN", str(year), int(hits[0].group(1)), snapshot,
-                           note=f"growth_pct={nominal.group(1)}" if nominal else ""))
+                           note=f"growth_pct={_rate(nominal)}" if nominal else ""))
             out += _comparable("cn_wage_large_ent", year, text, with_growth, snapshot)
         elif LARGE_ENT_TITLE.match(title):
             raise ValueError(f"{snapshot}: no large-enterprise wage sentence")

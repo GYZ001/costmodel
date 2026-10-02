@@ -155,7 +155,8 @@ def identities(dataset: dict) -> Check:
 
 def exclusions_summary(dataset: dict) -> Check:
     """What was left out and why, by kind of reason (an overview, not a pass/fail check)."""
-    names = {"unit": "无法证明同一货币单位", "missing": "发布方未发布该年数值", "notes": "发布方的注释或观测状态表明不能使用",
+    names = {"unit": "无法证明同一货币单位", "identity": "恒等关系不成立（货币单位相同，原因不明）", "missing": "发布方未发布该年数值",
+             "notes": "按发布方的注释不属于当年名义平均或中位工资，或观测状态为不可靠",
              "check": "数量级、时间单位或工时核对不通过", "area": "地区代码无法对应"}
     by_kind: dict[str, set] = {}
     for e in dataset.get("exclusions", []):

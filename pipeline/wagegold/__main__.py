@@ -107,7 +107,9 @@ def _build_and_write(store, f, meta, ilo_dic, today, save) -> int:
         "constants": {"grams_per_troy_ounce": GRAMS_PER_TROY_OUNCE, "weeks_per_month": build.WEEKS_PER_MONTH,
                       "assumed_hours_cn": build.ASSUMED_HOURS_CN, "max_factor": build.MAX_FACTOR,
                       "time_factor": build.TIME_FACTOR, "unit_gap": build.UNIT_GAP,
-                      "level_bound": units.level_bound, "level_basis": units.level_basis},
+                      # widest move of OECD's same-concept wages against nominal income per head, by
+                      # yardstick and years apart (cumulative), used for the continuity check
+                      "level_bounds": {k.split("_")[0]: {str(n): v for n, v in b.items()} for k, b in units.level_bounds.items()}},
         "gold": gold,
         "countries": build.country_years(store, gold, meta, ilo_dic, years, units, nbs.wage_definitions()),
         "icp2021_pli_us": build.icp_levels(store, meta),

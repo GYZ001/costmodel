@@ -134,8 +134,10 @@ export interface Dataset {
     grams_per_troy_ounce: number; weeks_per_month: number; assumed_hours_cn: number;
     /** bound for currency units; for one figure in two time units; for figures of different concepts */
     max_factor: number; time_factor: number; unit_gap: number;
-    /** how far a same-concept series can move against nominal consumption per head in a year, and why */
-    level_bound: number; level_basis: string;
+    /** By yardstick (hfce = household consumption per head, gdp = GDP per head) and years
+     *  apart: the widest move OECD's same-concept average wage made against it over that
+     *  many years or fewer (the continuity check's bound). */
+    level_bounds: Record<string, Record<string, number>>;
   };
   gold: {
     monthly: [string, number][];

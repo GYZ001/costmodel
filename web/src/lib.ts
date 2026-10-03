@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import type { I18n } from "./i18n";
 import type { Msg } from "./i18n/render";
-import type { Country, CountryYear, Dataset, Wage } from "./types";
+import type { Country, CountryYear, Dataset, LivingGroup, Wage } from "./types";
 
 export type View = "hourly" | "monthly";
 
@@ -131,6 +131,9 @@ export function foodGroupYears(ds: Dataset): string[] {
     for (const [y, row] of Object.entries(c.years)) if (keys.every((k) => row.cohd[k] != null)) ys.add(y);
   return [...ys].sort();
 }
+
+/** Groups of household consumption in display order (catalog keys liv.g.<key>); "other" last. */
+export const LIVING_GROUPS: LivingGroup[] = ["food", "housing", "furnishings", "clothing", "transport", "communication", "other"];
 
 export function primaryWage(row: CountryYear | undefined, view: View = "hourly"): Wage | undefined {
   return row?.wages.find((w) => (view === "hourly" ? w.role : w.mrole) === "primary");

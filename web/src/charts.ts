@@ -375,3 +375,217 @@ export function linesOption(opts: {
     }),
   };
 }
+
+/** Horizontal ranking of a ratio with a reference line (e.g. 100% = one month's wage),
+ *  hollow dots for the same ratio computed with other figures of the same row, and an
+ *  optional aligned side panel (its own axis, 0–100%) for a context share. Largest at top. */
+export function ratioRankingOption(opts: {
+  items: (RankItem & { others: { value: number; label: string }[]; side: number | null })[];
+  valueName: string;
+  otherName: string;
+  sideName?: string; // omit to leave the side panel out (narrow screens)
+  splitNumber?: number; // fewer value-axis ticks on narrow screens
+  ref: { value: number; label: string };
+  format: (v: number) => string;
+  sideFormat: (v: number) => string;
+  kv: KV;
+}): EChartsCoreOption {
+  const p = palette();
+  const items = [...opts.items].sort((a, b) => a.value - b.value);
+  const names = items.map((i) => i.name);
+  const byName = new Map(items.map((i) => [i.name, i]));
+  const anyFocus = items.some((i) => i.highlight);
+  const labelled = (i: RankItem | undefined) => !!i && (i.highlight || (!anyFocus && items.length <= 25));
+  const left = labelWidth(names);
+  const side = !!opts.sideName;
+  const mainRight = side ? "27%" : 72;
+  const yBase = categoryAxis(p, names, (n) => !!byName.get(n)?.highlight);
+  return {
+    animation: false,
+    grid: [
+      { left, right: mainRight, top: 24, bottom: 28, containLabel: false },
+      ...(side ? [{ left: "77%", right: 16, top: 24, bottom: 28, containLabel: false }] : []),
+    ],
+    xAxis: [
+      {
+        type: "value", min: 0, gridIndex: 0, splitNumber: opts.splitNumber,
+        axisLine: { show: false }, axisTick: { show: false },
+        splitLine: { lineStyle: { color: p.grid, width: 1 } },
+        axisLabel: { ...baseText(p), hideOverlap: true, formatter: (v: number) => opts.format(v) },
+      },
+      ...(side ? [{
+        type: "value", min: 0, max: 1, gridIndex: 1, splitNumber: 2,
+        axisLine: { show: false }, axisTick: { show: false },
+        splitLine: { lineStyle: { color: p.grid, width: 1 } },
+        axisLabel: { ...baseText(p), fontSize: 10.5, hideOverlap: true, formatter: (v: number) => opts.sideFormat(v) },
+      }] : []),
+    ],
+    // The side panel's title sits in the top margin, where the main panel has the reference label.
+    graphic: side ? [{ type: "text", left: "77%", top: 4, silent: true, style: { text: opts.sideName, fill: p.ink2, fontSize: 11, fontFamily: font() } }] : [],
+    yAxis: [
+      { ...yBase, gridIndex: 0 },
+      ...(side ? [{ ...yBase, gridIndex: 1, axisLabel: { show: false }, axisLine: { lineStyle: { color: p.axis } } }] : []),
+    ],
+    tooltip: {
+      ...tooltipBox(p),
+      trigger: "axis",
+      axisPointer: { type: "shadow", shadowStyle: { color: p.grid, opacity: 0.35 } },
+      formatter: (params: { name: string }[]) => {
+        const it = byName.get(params[0]?.name);
+        if (!it) return "";
+        const others = it.others.map((o) => `<div>${escapeHtml(opts.kv(o.label, opts.format(o.value)))}</div>`).join("");
+        return `<div style="font-weight:600;margin-bottom:2px">${escapeHtml(it.name)}</div>` +
+          `<div><b>${escapeHtml(opts.kv(opts.valueName, opts.format(it.value)))}</b></div>${others}` +
+          it.tip.map((t) => `<div style="color:${p.ink2}">${escapeHtml(t)}</div>`).join("");
+      },
+    },
+    series: [
+      {
+        name: opts.valueName,
+        type: "bar",
+        xAxisIndex: 0, yAxisIndex: 0,
+        barMaxWidth: 14,
+        barCategoryGap: "30%",
+        data: items.map((i) => ({
+          value: i.value,
+          itemStyle: { color: i.highlight || !anyFocus ? p.accent : p.deemph, borderRadius: [0, 4, 4, 0] },
+        })),
+        markLine: {
+          silent: true, symbol: "none",
+          lineStyle: { color: p.ink2, type: "dashed", width: 1 },
+          label: { formatter: opts.ref.label, position: "end", color: p.ink2, fontSize: 11 },
+          data: [{ xAxis: opts.ref.value }],
+        },
+        z: 2,
+      },
+      {
+        name: opts.otherName,
+        type: "scatter",
+        xAxisIndex: 0, yAxisIndex: 0,
+        symbolSize: 8,
+        itemStyle: { color: p.surface, borderColor: p.ink2, borderWidth: 1.5 },
+        data: items.flatMap((i) => i.others.map((o) => [o.value, i.name])),
+        z: 3,
+      },
+      {
+        // The bars' values, on a layer above the dots, on the page colour: a dot never covers a number.
+        type: "scatter",
+        xAxisIndex: 0, yAxisIndex: 0,
+        symbol: "circle", symbolSize: 1, itemStyle: { color: "transparent" }, silent: true, tooltip: { show: false },
+        data: items.filter((i) => labelled(i)).map((i) => [i.value, i.name]),
+        label: {
+          show: true, position: "right", distance: 4, color: p.ink2, fontSize: 11.5,
+          backgroundColor: p.surface, padding: [1, 2], borderRadius: 2,
+          formatter: (d: { value: [number, string] }) => opts.format(d.value[0]),
+        },
+        z: 4,
+      },
+      ...(side ? [{
+        name: opts.sideName,
+        type: "bar",
+        xAxisIndex: 1, yAxisIndex: 1,
+        barMaxWidth: 10,
+        barCategoryGap: "30%",
+        itemStyle: { color: p.deemph, borderRadius: [0, 3, 3, 0] },
+        data: items.map((i) => i.side),
+        label: {
+          show: true, position: "right", color: p.ink2, fontSize: 10.5,
+          formatter: (d: { value: number | null }) => (d.value != null ? opts.sideFormat(d.value) : ""),
+        },
+      }] : []),
+    ],
+  };
+}
+
+/** Horizontal stacked bars of a composition (fixed part order; the last part neutral grey),
+ *  with a signed extra: a hatched segment where it is positive, a tick at the row's total
+ *  where it is negative (the parts then add up to more than the total). Optional reference line. */
+export function compositionOption(opts: {
+  rows: { name: string; parts: number[]; total: number; extra: number; highlight: boolean; tip: string[] }[];
+  partNames: string[];
+  extraName: string;
+  totalName: string;
+  order: (a: { parts: number[]; total: number }, b: { parts: number[]; total: number }) => number; // top first
+  format: (v: number) => string;
+  ref?: { value: number; label: string };
+  endLabel?: (r: { parts: number[]; total: number }) => string; // default: the total
+  splitNumber?: number; // fewer value-axis ticks on narrow screens
+  kv: KV;
+}): EChartsCoreOption {
+  const p = palette();
+  const rows = [...opts.rows].sort(opts.order);
+  const names = rows.map((r) => r.name);
+  const byName = new Map(rows.map((r) => [r.name, r]));
+  const last = opts.partNames.length - 1;
+  const colorOf = (k: number) => (k === last ? p.deemph : p.series[k]);
+  const inverse = true; // rows top first, so a vertical line runs from the top: its label goes at its start
+  return {
+    animation: false,
+    grid: { left: labelWidth(names), right: 64, top: opts.ref ? 24 : 8, bottom: 28, containLabel: false },
+    xAxis: {
+      type: "value", min: 0, splitNumber: opts.splitNumber,
+      axisLine: { show: false }, axisTick: { show: false },
+      splitLine: { lineStyle: { color: p.grid } },
+      axisLabel: { ...baseText(p), hideOverlap: true, formatter: (v: number) => opts.format(v) },
+    },
+    yAxis: categoryAxis(p, names, (n) => !!byName.get(n)?.highlight, inverse),
+    tooltip: {
+      ...tooltipBox(p),
+      trigger: "axis",
+      axisPointer: { type: "shadow", shadowStyle: { color: p.grid, opacity: 0.35 } },
+      formatter: (params: { name: string }[]) => {
+        const r = byName.get(params[0]?.name);
+        if (!r) return "";
+        const sw = (c: string) => `<span style="display:inline-block;width:14px;height:2px;background:${c};vertical-align:4px;margin-inline-end:6px"></span>`;
+        const lines = opts.partNames.map((pn, k) => `<div>${sw(colorOf(k))}${escapeHtml(opts.kv(pn, opts.format(r.parts[k])))}</div>`).join("");
+        const extra = r.extra !== 0 ? `<div>${sw(p.axis)}${escapeHtml(opts.kv(opts.extraName, (r.extra < 0 ? "−" : "") + opts.format(Math.abs(r.extra))))}</div>` : "";
+        return `<div style="font-weight:600;margin-bottom:2px">${escapeHtml(r.name)}</div><div><b>${escapeHtml(opts.kv(opts.totalName, opts.format(r.total)))}</b></div>${lines}${extra}` +
+          r.tip.map((t) => `<div style="color:${p.ink2}">${escapeHtml(t)}</div>`).join("");
+      },
+    },
+    series: [
+      ...opts.partNames.map((pn, k) => ({
+        name: pn,
+        type: "bar",
+        stack: "total",
+        barMaxWidth: 14,
+        barCategoryGap: "30%",
+        itemStyle: { color: colorOf(k), borderColor: p.surface, borderWidth: 1 },
+        data: rows.map((r) => r.parts[k]),
+        ...(k === 0 && opts.ref ? {
+          markLine: {
+            silent: true, symbol: "none",
+            lineStyle: { color: p.ink2, type: "dashed", width: 1 },
+            label: { formatter: opts.ref.label, position: inverse ? "start" : "end", color: p.ink2, fontSize: 11 },
+            data: [{ xAxis: opts.ref.value }],
+          },
+        } : {}),
+      })),
+      {
+        name: opts.extraName,
+        type: "bar",
+        stack: "total",
+        barMaxWidth: 14,
+        barCategoryGap: "30%",
+        itemStyle: {
+          color: p.surface, borderColor: p.axis, borderWidth: 1,
+          decal: { symbol: "rect", dashArrayX: [1, 0], dashArrayY: [2, 3], rotation: Math.PI / 4, color: p.axis },
+        },
+        data: rows.map((r) => (r.extra > 0 ? r.extra : 0)),
+        label: {
+          show: true, position: "right", color: p.ink2, fontSize: 11.5,
+          formatter: (d: { name: string }) => { const r = byName.get(d.name); return r ? (opts.endLabel ? opts.endLabel(r) : opts.format(r.total)) : ""; },
+        },
+      },
+      {
+        name: opts.totalName,
+        type: "scatter",
+        symbol: "rect",
+        symbolSize: [2, 14],
+        itemStyle: { color: p.ink },
+        data: rows.map((r) => (r.extra < 0 ? [r.total, r.name] : null)).filter(Boolean),
+        z: 4,
+      },
+    ],
+  };
+}

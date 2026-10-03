@@ -3,6 +3,7 @@ import * as echarts from "echarts/core";
 import { BarChart, CustomChart, HeatmapChart, LineChart, ScatterChart } from "echarts/charts";
 import {
   DataZoomComponent,
+  GraphicComponent,
   GridComponent,
   MarkLineComponent,
   TooltipComponent,
@@ -13,7 +14,7 @@ import type { EChartsCoreOption } from "echarts/core";
 
 echarts.use([
   BarChart, LineChart, ScatterChart, HeatmapChart, CustomChart,
-  GridComponent, TooltipComponent, MarkLineComponent, VisualMapComponent, DataZoomComponent,
+  GraphicComponent, GridComponent, TooltipComponent, MarkLineComponent, VisualMapComponent, DataZoomComponent,
   SVGRenderer,
 ]);
 

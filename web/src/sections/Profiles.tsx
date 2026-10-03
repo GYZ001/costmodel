@@ -1,7 +1,7 @@
 import { useMemo } from "react";
 import type { Scope } from "../App";
 import { useI18n } from "../i18n";
-import { byName, countryName, grams, minutes, money, wageCurrency, wageLabel } from "../lib";
+import { byName, countryName, grams, LIVING_GROUPS, minutes, money, primaryWage, typicalWage, wageCurrency, wageLabel } from "../lib";
 import type { Country, Wage } from "../types";
 import { scopeLabel } from "./Methods";
 
@@ -62,6 +62,9 @@ function Profile({ scope, iso, c }: { scope: Scope; iso: string; c: Country }) {
   const pli = ds.icp2021_pli[iso]?.hfce;
   const excl = ds.exclusions.filter((e) => e.area === iso && (e.year === year || e.year === "*"));
   const wages = [...row.wages].sort((a, b) => Number(!(a.role || a.mrole)) - Number(!(b.role || b.mrole)));
+  const L = row.living;
+  const mw = primaryWage(row, "monthly"), tw = typicalWage(row, "monthly");
+  const sp = ds.icp2021_spending[iso];
 
   return (
     <div className="card profile">
@@ -76,7 +79,27 @@ function Profile({ scope, iso, c }: { scope: Scope; iso: string; c: Country }) {
         <div><dt>{i.t("prof.gold")}</dt><dd>{row.gold_lcu_g != null ? i.t("u.per_gram", { v: money(i, row.gold_lcu_g, c.currency) }) : "—"}</dd></div>
         <div><dt>{i.t("prof.diet")}</dt><dd>{row.cohd.total != null ? i.t("u.per_day", { v: money(i, row.cohd.total, c.currency) }) : "—"}</dd></div>
         <div><dt>{i.t("prof.pli")}</dt><dd>{pli != null ? i.n(pli, "int") : "—"}</dd></div>
+        <div><dt>{i.t("prof.liv_cons")}</dt><dd>{L.consumption_month != null ? i.t("u.per_month", { v: money(i, L.consumption_month, c.currency) }) : "—"}</dd></div>
+        <div><dt>{i.t("prof.liv_ratio")}</dt><dd>{mw?.living_ratio != null ? i.n(mw.living_ratio, "pct0") : "—"}</dd></div>
+        <div><dt>{i.t("prof.liv_ratio_median")}</dt><dd>{tw?.living_ratio != null ? i.n(tw.living_ratio, "pct0") : "—"}</dd></div>
+        <div><dt>{i.t("prof.liv_residents")}</dt><dd>{L.residents_per_employed != null ? i.n(L.residents_per_employed, "d1") : "—"}</dd></div>
+        <div><dt>{i.t("prof.liv_employees")}</dt><dd>{L.employees_share != null ? i.n(L.employees_share, "pct0") : "—"}</dd></div>
       </dl>
+      {sp && (
+        <p className="small ink2" style={{ margin: "0 0 8px" }}>
+          {i.j([
+            i.t("prof.liv_split", {
+              year: sp.year,
+              list: i.j(LIVING_GROUPS.map((g) => i.t(sp.consumption_month != null ? "prof.liv_part_amount" : "prof.liv_part", {
+                group: i.t(`liv.g.${g}`), share: sp.shares[g],
+                amount: sp.consumption_month != null ? money(i, sp.shares[g] * sp.consumption_month, c.currency) : "",
+              })), "enum"),
+            }),
+            i.t("prof.liv_gov", { year: sp.year, share: sp.government,
+              amount: sp.consumption_month != null ? money(i, sp.government * sp.consumption_month, c.currency) : "—" }),
+          ], "sentence")}
+        </p>
+      )}
 
       {wages.length > 0 && <div className="table-scroll">
         <table className="data">
@@ -89,6 +112,7 @@ function Profile({ scope, iso, c }: { scope: Scope; iso: string; c: Country }) {
               <th>{i.t("col.gold_per_hour")}</th>
               <th>{i.t("col.ppp_hour")}</th>
               <th>{i.t("col.minutes")}</th>
+              <th>{i.t("col.living")}</th>
             </tr>
           </thead>
           <tbody>
@@ -107,6 +131,7 @@ function Profile({ scope, iso, c }: { scope: Scope; iso: string; c: Country }) {
                   <td>{grams(i, w.hourly_gold_g)}</td>
                   <td>{i.n(w.hourly_ppp, "d1")}</td>
                   <td>{minutes(i, w.minutes_per_cohd_day)}</td>
+                  <td>{w.living_ratio != null ? i.n(w.living_ratio, "pct0") : "—"}</td>
                 </tr>
               );
             })}

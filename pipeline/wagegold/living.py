@@ -89,17 +89,17 @@ def icp_spending(store: Store, code: str, exclude) -> dict | None:
 
     aic, hfce, gov = get("aic"), get("hfce"), get("gov_individual")
     if not aic or not hfce or not gov:
-        exclude(M("d.liv.icp_missing", parts=[k for k, o in (("aic", aic), ("hfce", hfce), ("gov_individual", gov)) if not o]), "missing")
+        exclude(M("d.liv.icp_missing", parts=[M(f"liv.part.{k}") for k, o in (("aic", aic), ("hfce", hfce), ("gov_individual", gov)) if not o]), "missing")
         return None
     parts = {k: get(k) for k in AIC_PARTS}
     missing = [k for k, o in parts.items() if o is None]
     if missing:
-        exclude(M("d.liv.icp_missing", parts=missing), "missing")
+        exclude(M("d.liv.icp_missing", parts=[M(f"liv.part.{k}") for k in missing]), "missing")
         return None
     x = {k: o.value for k, o in parts.items()}
     negative = [k for k, v in x.items() if v < 0]
     if negative or hfce.value <= 0:
-        exclude(M("d.liv.icp_negative", parts=negative or ["hfce"]), "check")
+        exclude(M("d.liv.icp_negative", parts=[M(f"liv.part.{k}") for k in negative or ["hfce"]]), "check")
         return None
     na = get(NET_ABROAD)
     net_abroad = na.value if na else aic.value - sum(x.values())

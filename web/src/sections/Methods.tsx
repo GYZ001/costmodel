@@ -17,6 +17,8 @@ const SCOPE_KEYS: Record<string, string> = {
   "wage:ilo_monthly_median": "scope.ilo_monthly_median",
   "wage:ilo_hourly_mean": "scope.ilo_hourly_mean",
   "wage:ilo_hourly_median": "scope.ilo_hourly_median",
+  "living:split": "scope.living_split",
+  "living:context": "scope.living_context",
 };
 
 export function scopeLabel(i: I18n, scope: string): string {
@@ -71,6 +73,7 @@ export function Methods({ ds }: { ds: Dataset }) {
             {li("m.f_step3")}
             {li("m.f_oecd")}
             {li("m.f_ilo")}
+            {li("m.f_living")}
           </ul>
         </div>
         <div className="card">
@@ -86,6 +89,8 @@ export function Methods({ ds }: { ds: Dataset }) {
             {li("m.c_time_units", { tf: k.time_factor, ug: k.unit_gap, hours: k.hours_in_month })}
             {li("m.c_continuity", { tf: k.time_factor, hfce: levelBoundsText(i, ds, "hfce"), gdp: levelBoundsText(i, ds, "gdp") })}
             {li("m.c_diet")}
+            {li("m.c_living", { mf: k.max_factor })}
+            {li("m.c_living_not")}
             {li("m.c_intl_dollar")}
             {li("m.c_same_year", { g20: i.t("controls.g20"), all: i.t("controls.all") })}
             {li("m.c_monthly_view")}

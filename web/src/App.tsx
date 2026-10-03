@@ -6,6 +6,7 @@ import { HowItWorks } from "./sections/HowItWorks";
 import { GoldPerHour } from "./sections/GoldPerHour";
 import { GoldBuys } from "./sections/GoldBuys";
 import { RealWage } from "./sections/RealWage";
+import { LivingCosts } from "./sections/LivingCosts";
 import { PriceStructure } from "./sections/PriceStructure";
 import { GoldRuler } from "./sections/GoldRuler";
 import { Profiles } from "./sections/Profiles";
@@ -133,6 +134,7 @@ export default function App({ ds }: { ds: Dataset }) {
           <a href="#gold">{i.t("nav.gold")}</a>
           <a href="#buys">{i.t("nav.buys")}</a>
           <a href="#real">{i.t("nav.real")}</a>
+          <a href="#living">{i.t("nav.living")}</a>
           <a href="#structure">{i.t("nav.structure")}</a>
           <a href="#ruler">{i.t("nav.ruler")}</a>
           <a href="#profiles">{i.t("nav.profiles")}</a>
@@ -186,6 +188,7 @@ export default function App({ ds }: { ds: Dataset }) {
         <GoldPerHour {...scope} />
         <GoldBuys {...scope} />
         <RealWage {...scope} />
+        <LivingCosts {...scope} />
         <PriceStructure {...scope} />
         <GoldRuler {...scope} />
         <Profiles {...scope} />

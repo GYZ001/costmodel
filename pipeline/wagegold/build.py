@@ -1187,9 +1187,9 @@ def country_years(store: Store, gold: dict, meta: dict, ilo_dic: dict, years: li
                 "cohd": {k: _v(o) for k, o in cohd.items()},
                 "cohd_days_per_g": gold_lcu_g / cohd["total"].value if cohd["total"] and gold_lcu_g else None,
                 "living": {"consumption_month": cons, "residents_per_employed": ctx["residents_per_employed"],
-                           "employees_share": ctx["employees_share"], "snapshots": sorted(set(cons_snaps) | set(ctx["snapshots"]))},
+                           "employees_share": ctx["employees_share"]},
                 "wages": wages,
-                "snapshots": sorted({o.snapshot for o in [fx, ppp, cohd["total"]] if o}),
+                "snapshots": sorted({o.snapshot for o in [fx, ppp, cohd["total"]] if o} | set(cons_snaps) | set(ctx["snapshots"])),
             }
         mark_switches(rec_years)
         for row in rec_years.values():  # identifiers used only to find switches

@@ -39,6 +39,9 @@ export interface Wage {
   minutes_per_cohd_day: number | null;
   monthly_ppp: number | null;
   cohd_days_per_month: number | null;
+  /** Household consumption per resident per month ÷ this monthly wage (same year, the same
+   *  currency unit): what the average resident consumes in a month, as a share of the wage. */
+  living_ratio: number | null;
 }
 
 export interface Switch {
@@ -69,7 +72,33 @@ export interface CountryYear {
   gold_usdeq_g: number | null;
   cohd: Record<CohdKey, number | null>;
   cohd_days_per_g: number | null;
+  /** Household final consumption per resident per month (WDI, LCU), and context: residents
+   *  per employed person and employees' share of the employed (ILO modelled estimates). */
+  living: { consumption_month: number | null; residents_per_employed: number | null; employees_share: number | null };
   wages: Wage[];
+  snapshots: string[];
+}
+
+/** Groups of household consumption (catalog keys liv.g.<key>), in display order. */
+export type LivingGroup = "food" | "housing" | "furnishings" | "clothing" | "transport" | "communication" | "other";
+
+/** The ICP benchmark composition of an economy's household consumption: shares of household
+ *  consumption (households and NPISHs); "other" is the rest of domestic consumption. */
+export interface IcpSpending {
+  year: string;
+  shares: Record<LivingGroup, number>;
+  /** published parts of "other" (restaurants & hotels, alcohol & tobacco) and the rest */
+  other_parts: { restaurants_hotels: number; alcohol_tobacco: number; rest: number } | null;
+  /** residents' purchases abroad less visitors' purchases here (negative: visitors spend more) */
+  net_abroad: number;
+  net_abroad_published: boolean;
+  /** government individual consumption (free or subsidised services) on top, as a share of household consumption */
+  government: number;
+  /** ICP's household consumption ÷ WDI's current figure for the year, after any currency-unit change; and that change */
+  revision: number | null;
+  unit_change: number | null;
+  /** WDI consumption per resident per month in that year, where ICP's shares divide it (else null) */
+  consumption_month: number | null;
   snapshots: string[];
 }
 
@@ -141,6 +170,8 @@ export interface Dataset {
   countries: Record<string, Country>;
   /** ICP 2021 category price level indices as ICP publishes them (world = 100). */
   icp2021_pli: Record<string, Record<string, number>>;
+  /** ICP 2021 composition of household consumption, by economy. */
+  icp2021_spending: Record<string, IcpSpending>;
   /** [year, monthly wage in LCU, grams of gold, source line, series breaks before this point, why] */
   wage_gold_history: Record<string, {
     label: Msg; source_id: string; restricted: boolean;

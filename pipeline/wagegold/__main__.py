@@ -116,6 +116,7 @@ def _build_and_write(store, f, meta, ilo_dic, today, save) -> int:
         "gold": gold,
         "countries": build.country_years(store, gold, meta, ilo_dic, years, units),
         "icp2021_pli": build.icp_levels(store, meta),
+        "icp2021_spending": build.icp_spending(store, meta, units),
         "wage_gold_history": build.wage_gold_history(store, gold, meta, ilo_dic, units),
     }
     dataset["oecd_vs_survey"] = build.oecd_vs_survey(dataset["countries"])

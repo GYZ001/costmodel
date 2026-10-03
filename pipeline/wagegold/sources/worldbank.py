@@ -11,7 +11,11 @@ WDI (source 2):
   NE.CON.PRVT.PP.CD  in current international $: their ratio is the household PPP in
                      the unit of WDI's LCU series
   The last four only serve to check, year by year, that the exchange rate and the
-  PPP are in the same currency unit as WDI's LCU series (see build.UnitGraph).
+  PPP are in the same currency unit as WDI's LCU series (see build.UnitGraph); household
+  consumption ÷ population is also each year's consumption per resident (living.py).
+  SP.POP.0014.TO     Population aged 0-14
+  SL.EMP.TOTL.SP.ZS  Employment to population ratio, 15+ (ILO modelled estimate)
+  SL.EMP.WORK.ZS     Wage and salaried workers, % of total employment (ILO modelled)
 
 ICP 2021 (source 90): price level indices (World = 100) and PPPs (US$ = 1) for
 expenditure categories, from the 2021 benchmark comparison, and expenditure (local
@@ -38,6 +42,11 @@ WDI_INDICATORS = {
     "NY.GDP.MKTP.CD": "gdp_usd",
     "NE.CON.PRVT.CN": "hfce_lcu",
     "NE.CON.PRVT.PP.CD": "hfce_intl",
+    # Living costs (living.py): context beside the consumption-to-wage ratio, ILO modelled
+    # estimates in WDI
+    "SP.POP.0014.TO": "population_0_14",
+    "SL.EMP.TOTL.SP.ZS": "emp_to_pop_15plus",
+    "SL.EMP.WORK.ZS": "employees_pct_emp",
 }
 
 # ICP 2021 series id -> short category key used throughout the project

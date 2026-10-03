@@ -68,6 +68,24 @@ def identities(dataset: dict) -> Check:
     return Check("identity_chain", "pass" if worst < 1e-9 else "fail", M("c.identity", n=n, worst=worst))
 
 
+def living_arithmetic(dataset: dict) -> Check:
+    """Arithmetic self-test of the living-cost figures: each wage's ratio × the wage =
+    consumption per resident; each ICP composition's shares + net purchases abroad = 1.
+    Both come from the same inputs, so this tests this site's arithmetic, not the data."""
+    worst, n = 0.0, 0
+    for c in dataset["countries"].values():
+        for row in c["years"].values():
+            cons = row["living"]["consumption_month"]
+            for w in row["wages"]:
+                if w["living_ratio"] is not None:
+                    n += 1
+                    worst = max(worst, _rel(w["living_ratio"] * w["monthly_lcu"], cons))
+    for sp in dataset.get("icp2021_spending", {}).values():
+        n += 1
+        worst = max(worst, abs(sum(sp["shares"].values()) + sp["net_abroad"] - 1))
+    return Check("living_arith", "pass" if worst < 1e-9 else "fail", M("c.identity", n=n, worst=worst))
+
+
 def exclusions_summary(dataset: dict) -> Check:
     """What was left out and why, by kind of reason (an overview, not a pass/fail check)."""
     order = ["unit", "identity", "missing", "notes", "check", "area", "chosen"]  # names: catalog keys kind.<kind>
@@ -82,7 +100,7 @@ def exclusions_summary(dataset: dict) -> Check:
 def run_all(store: Store, dataset: dict, years: list[str], today: str) -> list[dict]:
     checks = [
         gold_cross_source(store), gold_freshness(store, today),
-        us_ppp_is_one(store, years), exclusions_summary(dataset), identities(dataset),
+        us_ppp_is_one(store, years), exclusions_summary(dataset), identities(dataset), living_arithmetic(dataset),
     ]
     return [asdict(c) for c in checks]
 

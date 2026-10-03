@@ -390,3 +390,50 @@ def test_series_continued_with_its_publishers_release():
     u2 = build.UnitGraph(_store(*wdi, *rows, *bad), DIC, years, META)
     assert not u2.area("AAA")["ilo"].get("2022")
     assert any(e["detail"]["k"] == "d.ext.disagree" for e in u2.log)
+
+
+def _icp(code: str, **cn) -> list:
+    return [Obs(f"icp21_cn_{k}", code, "2021", v, "icp", "Testland") for k, v in cn.items()]
+
+
+ICP_OK = dict(food_nonalc=20, alcohol_tobacco=3, clothing=5, housing=25, furnishings=5, health=12, transport=10,
+              communication=3, recreation=6, education=8, restaurants_hotels=4, misc=9, net_purchases_abroad=-10,
+              hfce=80, gov_individual=20, aic=100)
+
+
+def test_icp_composition_adds_up_and_derives_other():
+    from wagegold import living
+    log = []
+    sp = living.icp_spending(_store(*_icp("AAA", **ICP_OK)), "AAA", lambda d, k: log.append((d, k)))
+    assert not log
+    # Domestic consumption = 80 - (-10) = 90; the six groups 68, so other = 22 (of 80).
+    assert abs(sp["shares"]["other"] - 22 / 80) < 1e-12 and abs(sp["net_abroad"] + 10 / 80) < 1e-12
+    assert abs(sum(sp["shares"].values()) + sp["net_abroad"] - 1) < 1e-12
+    assert abs(sp["government"] - 20 / 80) < 1e-12
+    # Net purchases abroad not published: the identity gives it.
+    sp2 = living.icp_spending(_store(*_icp("AAA", **{k: v for k, v in ICP_OK.items() if k != "net_purchases_abroad"})), "AAA", lambda d, k: log.append(k))
+    assert sp2 and not sp2["net_abroad_published"] and abs(sp2["net_abroad"] + 10 / 80) < 1e-12
+
+
+def test_icp_composition_failing_an_identity_is_left_out():
+    from wagegold import living
+    log = []
+    bad = {**ICP_OK, "gov_individual": 30}  # 80 + 30 != 100
+    assert living.icp_spending(_store(*_icp("AAA", **bad)), "AAA", lambda d, k: log.append(k)) is None
+    assert log == ["identity"]
+    log.clear()
+    missing = {k: v for k, v in ICP_OK.items() if k != "housing"}
+    assert living.icp_spending(_store(*_icp("AAA", **missing)), "AAA", lambda d, k: log.append(k)) is None
+    assert log == ["missing"]
+
+
+def test_residents_per_employed_and_bounds():
+    from wagegold import living
+    s = _store(Obs("population", "AAA", "2021", 1000, "p"), Obs("population_0_14", "AAA", "2021", 200, "p"),
+               Obs("emp_to_pop_15plus", "AAA", "2021", 50, "e"), Obs("employees_pct_emp", "AAA", "2021", 80, "e"))
+    log = []
+    c = living.context(s, "AAA", "2021", lambda y, d: log.append(d))
+    assert abs(c["residents_per_employed"] - 1000 / 400) < 1e-12 and c["employees_share"] == 0.8 and not log
+    s2 = _store(Obs("population", "AAA", "2021", 1000, "p"), Obs("population_0_14", "AAA", "2021", 200, "p"),
+                Obs("emp_to_pop_15plus", "AAA", "2021", 150, "e"))
+    assert living.context(s2, "AAA", "2021", lambda y, d: log.append(d))["residents_per_employed"] is None and log

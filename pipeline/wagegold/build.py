@@ -15,6 +15,7 @@ from collections import defaultdict
 from dataclasses import dataclass, field
 from typing import Callable
 
+from . import living
 from .catalog import G20
 from .config import GRAMS_PER_TROY_OUNCE
 from .model import Obs, Store, annual_mean
@@ -1163,6 +1164,12 @@ def country_years(store: Store, gold: dict, meta: dict, ilo_dic: dict, years: li
             wages = [wage_metrics(v, gold_lcu_g, fx.value if fx else None, ppp.value if ppp else None,
                                   cohd["total"].value if cohd["total"] else None) for v in variants]
             mark_roles(wages)
+            # Living costs: household consumption per resident per month (WDI LCU, the unit L
+            # every wage here is attached to), and each monthly wage's ratio to it.
+            cons, cons_snaps = living.consumption_month(store, area, y)
+            ctx = living.context(store, area, y, lambda yy, why, a=area: units._exclude(a, yy, "living:context", why, "check"))
+            for w in wages:
+                w["living_ratio"] = cons / w["monthly_lcu"] if cons and w["monthly_lcu"] else None
             gdp_lcu, gdp_usd = store.get("gdp_lcu", area, y), store.get("gdp_usd", area, y)
             rec_years[y] = {
                 "fx": fx.value if fx else None,
@@ -1179,6 +1186,8 @@ def country_years(store: Store, gold: dict, meta: dict, ilo_dic: dict, years: li
                 "gold_usdeq_g": g["usd_g"] / pli if pli else None,
                 "cohd": {k: _v(o) for k, o in cohd.items()},
                 "cohd_days_per_g": gold_lcu_g / cohd["total"].value if cohd["total"] and gold_lcu_g else None,
+                "living": {"consumption_month": cons, "residents_per_employed": ctx["residents_per_employed"],
+                           "employees_share": ctx["employees_share"], "snapshots": sorted(set(cons_snaps) | set(ctx["snapshots"]))},
                 "wages": wages,
                 "snapshots": sorted({o.snapshot for o in [fx, ppp, cohd["total"]] if o}),
             }
@@ -1337,6 +1346,33 @@ def icp_levels(store: Store, meta: dict) -> dict:
             if o := store.get(series, code, ICP_YEAR):
                 out[iso][series.removeprefix("icp21_pli_wl_")] = o.value
     return dict(out)
+
+
+def icp_spending(store: Store, meta: dict, units: UnitGraph) -> dict:
+    """The ICP 2021 composition of household consumption, by WDI economy (living.icp_spending),
+    with WDI's 2021 consumption per resident per month where ICP's shares divide that total:
+    the revision between ICP's and WDI's 2021 figures, after any change of currency unit,
+    within ×/÷MAX_FACTOR.  Beyond it the shares are still shown, but no amounts."""
+    out = {}
+    for iso, code in sorted(icp_codes(store, meta).items()):
+        def exclude(detail, kind, a=iso):
+            units._exclude(a, living.ICP_YEAR, "living:split", detail, kind)
+
+        if store.get("icp21_cn_aic", code, living.ICP_YEAR) is None and store.get("icp21_cn_hfce", code, living.ICP_YEAR) is None:
+            continue  # ICP published no expenditure for this economy
+        split = living.icp_spending(store, code, exclude)
+        if split is None:
+            continue
+        rev, unit = living.revision(store, code, iso, split["icp_hfce"])
+        cons, snaps = living.consumption_month(store, iso, living.ICP_YEAR)
+        amounts_ok = cons is not None and rev is not None and same_unit(rev, 1.0, MAX_FACTOR)
+        if cons is not None and rev is not None and not amounts_ok:
+            exclude(M("d.liv.revised", r=rev, unit=unit if unit is not None else 1.0, bound=MAX_FACTOR), "check")
+        split.pop("icp_hfce")
+        out[iso] = {**split, "year": living.ICP_YEAR, "revision": rev, "unit_change": unit,
+                    "consumption_month": cons if amounts_ok else None,
+                    "snapshots": sorted(set(split["snapshots"]) | (set(snaps) if amounts_ok else set()))}
+    return out
 
 
 # --------------------------------------------------------------------------------------

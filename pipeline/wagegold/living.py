@@ -138,7 +138,9 @@ def icp_spending(store: Store, code: str, exclude) -> dict | None:
         "shares": {**shares, "other": other},
         "other_parts": {**known, "rest": rest},
         "net_abroad": net_abroad / hfce,
-        "net_abroad_published": na is not None,
+        # "published"; "zero": published as zero, which per ICP may mean it is allocated under
+        # other headings (so not known); "none": not published (taken as zero for the identity)
+        "net_abroad_status": "none" if na is None else "zero" if na.value == 0 else "published",
         "housing_actual": x["housing"] / hfce,
         "government": gov / hfce,
         "icp_hfce": hfce,
@@ -148,7 +150,8 @@ def icp_spending(store: Store, code: str, exclude) -> dict | None:
 
 def revision(store: Store, code: str, area: str, icp_hfce: float, bound: float) -> dict:
     """ICP's 2021 household consumption as a multiple of WDI's current 2021 figure, in
-    WDI's current currency unit: {"revision", "raw", "converted", "by", "factors", "snapshots"}.
+    WDI's current currency unit: {"revision": (low, high) or None, "converted": {measure:
+    factor} or None, "raw", "factors", "snapshots"}.
 
     Whether the two are in the same currency unit is decided as the unit checks decide it
     (a change of unit moves a figure by more than ×/÷bound), from the ratio between the
@@ -157,10 +160,11 @@ def revision(store: Store, code: str, area: str, icp_hfce: float, bound: float) 
     price level; WDI's = its GDP in local currency ÷ in dollars).  Every available ratio
     within the bound: the same unit (a PPP revised since ICP, e.g. by Eurostat-OECD,
     changes nothing), and the revision is the totals' ratio ("raw").  All beyond it and
-    agreeing with each other: a change of unit, converted at the exchange-rate ratio
-    where there is one ("converted", "by").  Otherwise - the ratios disagree, or there is
-    none and the totals are beyond the bound - the revision is unknown (None)."""
-    out: dict = {"revision": None, "raw": None, "converted": None, "by": None, "factors": {}, "snapshots": []}
+    agreeing with each other: a change of unit; neither ratio is the exact conversion
+    factor (each also carries what differs between the publishers' PPPs or rates), so the
+    revision is given under each, as a range.  No ratio at all: the totals themselves
+    within the bound are taken to be in the same unit.  Otherwise unknown (None)."""
+    out: dict = {"revision": None, "raw": None, "converted": None, "factors": {}, "snapshots": []}
     wdi = store.get("hfce_lcu", area, ICP_YEAR)
     if not wdi or wdi.value <= 0:
         return out
@@ -170,12 +174,12 @@ def revision(store: Store, code: str, area: str, icp_hfce: float, bound: float) 
     g_lcu, g_usd = store.get("gdp_lcu", area, ICP_YEAR), store.get("gdp_usd", area, ICP_YEAR)
     used = [wdi]
     factors: dict[str, float] = {}
-    if p_icp and p_wdi and p_icp.value > 0 and p_wdi.value > 0:
-        factors["ppp"] = p_icp.value / p_wdi.value
-        used += [p_icp, p_wdi]
     if p_icp and pli and pli_us and g_lcu and g_usd and min(p_icp.value, pli.value, pli_us.value, g_lcu.value, g_usd.value) > 0:
         factors["fx"] = (p_icp.value * pli_us.value / pli.value) / (g_lcu.value / g_usd.value)
         used += [p_icp, pli, pli_us, g_lcu, g_usd]
+    if p_icp and p_wdi and p_icp.value > 0 and p_wdi.value > 0:
+        factors["ppp"] = p_icp.value / p_wdi.value
+        used += [p_icp, p_wdi]
     out["factors"] = factors
     out["snapshots"] = sorted({o.snapshot for o in used})
 
@@ -184,10 +188,10 @@ def revision(store: Store, code: str, area: str, icp_hfce: float, bound: float) 
 
     if not factors:
         if within(raw):
-            out["revision"] = raw
+            out["revision"] = (raw, raw)
     elif all(within(k) for k in factors.values()):
-        out["revision"] = raw
+        out["revision"] = (raw, raw)
     elif not any(within(k) for k in factors.values()) and (len(factors) == 1 or within(factors["fx"] / factors["ppp"])):
-        by = "fx" if "fx" in factors else "ppp"
-        out["revision"], out["converted"], out["by"] = raw / factors[by], factors[by], by
+        values = [raw / k for k in factors.values()]
+        out["revision"], out["converted"] = (min(values), max(values)), dict(factors)
     return out

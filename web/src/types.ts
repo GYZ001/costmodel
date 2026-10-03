@@ -96,19 +96,20 @@ export interface IcpSpending {
   /** published parts of "other" (restaurants & hotels, alcohol & tobacco) and the rest */
   other_parts: { restaurants_hotels: number; alcohol_tobacco: number; rest: number };
   /** residents' purchases abroad less visitors' purchases here (negative: visitors spend more);
-   *  0 where ICP publishes none (net_abroad_published false) */
+   *  status "zero": published as zero, which per ICP may mean it is counted under other
+   *  headings; "none": not published (0 here) - in both cases not known */
   net_abroad: number;
-  net_abroad_published: boolean;
+  net_abroad_status: "published" | "zero" | "none";
   /** ICP's actual housing (with water, energy, repairs and government housing), as a share of household consumption */
   housing_actual: number;
   /** government individual consumption (free or subsidised services) on top, as a share of household consumption */
   government: number;
   /** ICP's household consumption ÷ WDI's current figure for the year, in WDI's current currency
-   *  unit (null: the units cannot be compared); the factor ICP's figure was divided by to get
-   *  there, and from what ("fx": the two dollar exchange rates; "ppp": the two PPPs), if any */
-  revision: number | null;
-  converted: number | null;
-  converted_by: "fx" | "ppp" | null;
+   *  unit, as [low, high] (equal unless converted under two factors; null: the units cannot be
+   *  compared); the factors ICP's figure was divided by ("fx": ratio of the two dollar
+   *  exchange rates; "ppp": of the two PPPs), where the unit changed */
+  revision: [number, number] | null;
+  converted: { fx?: number; ppp?: number } | null;
   /** WDI consumption per resident per month in that year, and its currency, where ICP's shares
    *  divide it (else null; the reason is in dataset.exclusions) */
   consumption_month: number | null;
@@ -128,6 +129,8 @@ export interface Country {
   currency: string | null;
   /** WDI's country note where it says the national accounts are kept by fiscal year (verbatim) */
   na_fiscal: string | null;
+  /** the latest year of WDI household consumption shown to be in the wages' currency unit */
+  consumption_latest: string | null;
   years: Record<string, CountryYear>;
 }
 

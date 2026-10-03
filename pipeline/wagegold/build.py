@@ -771,7 +771,7 @@ class UnitGraph:
         return next(iter(codes)) if len(codes) == 1 else None
 
     def _prove(self, values: dict[str, float], direct: dict[str, tuple[bool | None, list[Msg]]],
-               failed: Msg, link=None) -> dict[str, tuple[bool | None, list[Msg], str]]:
+               failed: Msg, carry=None) -> dict[str, tuple[bool | None, list[Msg], str]]:
         """Year-by-year verdict on whether a factor (F or P) is in L, as (verdict, detail,
         kind): that year's identity, or else an adjacent year's proof carried over when the
         value moved by less than MAX_FACTOR (first forwards, then backwards).
@@ -783,14 +783,15 @@ class UnitGraph:
         carry-over): the failure has another cause, unknown, and the year is left out as
         such (kind "identity"), not as a unit failure (kind "unit", with ``failed``).
 
-        link(y, n), if given, is a second way to carry a proof from year n to year y (it
-        returns (holds, message)); its message is added where neither way carries."""
+        carry(y, n), if given, is a second way to link year y to year n, for the carry-over
+        and for the chain alike (it returns (holds, message describing the comparison, or
+        None where it does not apply)); its message is added where neither way links."""
         out = {y: (ok, d, "unit") for y, (ok, d) in direct.items()}
         for step, order in ((1, self.years), (-1, self.years[::-1])):
             for y in order:
                 n = str(int(y) - step)
                 if y in values and out[y][0] is None and n in values and out[n][0] is True \
-                        and (same_unit(values[y], values[n]) or (link is not None and link(y, n)[0])):
+                        and (same_unit(values[y], values[n]) or (carry is not None and carry(y, n)[0])):
                     out[y] = (True, [], "")
         # Identity failures linked to a proven year by moves of less than MAX_FACTOR.
         anchor = {y: y for y, v in out.items() if v[0] is True}
@@ -800,13 +801,16 @@ class UnitGraph:
             for y, (ok, detail, _k) in sorted(out.items()):
                 if ok is not False or y in anchor:
                     continue
-                close = [n for n in (str(int(y) - 1), str(int(y) + 1)) if n in anchor and same_unit(values[y], values[n])]
+                close = [n for n in (str(int(y) - 1), str(int(y) + 1)) if n in anchor
+                         and (same_unit(values[y], values[n]) or (carry is not None and carry(y, n)[0]))]
                 if close:
                     n = close[0]
                     a = anchor[n]
-                    link = M("d.prove.link_direct", n=n) if a == n else M("d.prove.link_chain", n=n, a=a, bound=MAX_FACTOR)
-                    out[y] = (None, [M("d.prove.chain", detail=detail, n=n, vn=values[n], r=values[y] / values[n], link=link)],
-                              "identity")
+                    via = M("d.prove.link_direct", n=n) if a == n else M("d.prove.link_chain", n=n, a=a, bound=MAX_FACTOR)
+                    msg = (M("d.prove.chain", detail=detail, n=n, vn=values[n], r=values[y] / values[n], link=via)
+                           if same_unit(values[y], values[n])
+                           else M("d.prove.chain_link", detail=detail, why=carry(y, n)[1], link=via))
+                    out[y] = (None, [msg], "identity")
                     anchor[y] = a
                     changed = True
         for y, (ok, detail, kind) in list(out.items()):
@@ -817,7 +821,7 @@ class UnitGraph:
                 msgs = []
                 for n in near:
                     msgs.append(M("d.prove.no_carry", n=n, vn=values[n], r=values[y] / values[n]))
-                    if link is not None and (m := link(y, n)[1]) is not None:
+                    if carry is not None and (m := carry(y, n)[1]) is not None:
                         msgs.append(m)
                 out[y] = (None, detail + (msgs or [M("d.prove.no_neighbour")]), "unit")
         return out
@@ -870,8 +874,7 @@ class UnitGraph:
             if y not in gdp or n not in gdp:
                 return False, None
             sy, sn = hfce[y] / gdp[y], hfce[n] / gdp[n]
-            ok = same_unit(sy, sn)
-            return ok, (None if ok else M("d.hfce.share", n=n, sn=sn, sy=sy, r=sy / sn))
+            return same_unit(sy, sn), M("d.hfce.share", n=n, sn=sn, sy=sy, r=sy / sn)
         return f, self._prove(ppp, direct, M("d.ppp.failed")), self._prove(hfce, h_direct, M("d.hfce.failed"), share_link)
 
     def consumption(self, area: str, year: str) -> tuple[float | None, list[str], tuple | None]:
@@ -1245,6 +1248,8 @@ def country_years(store: Store, gold: dict, meta: dict, ilo_dic: dict, years: li
                 "currency": units.currency(area),
                 # WDI's country note where it says the national accounts are kept by fiscal year (verbatim)
                 "na_fiscal": info.get("na_fiscal"),
+                # the latest year of WDI household consumption shown to be in L (wage or not)
+                "consumption_latest": next((y for y in reversed(years) if units.consumption(area, y)[0] is not None), None),
                 "years": rec_years,
             }
     return out
@@ -1393,7 +1398,17 @@ def icp_levels(store: Store, meta: dict) -> dict:
 
 def _converted(rev: dict) -> Msg:
     """How ICP's 2021 figure was put into WDI's current currency unit (living.revision)."""
-    return M(f"d.liv.converted_{rev['by']}", k=rev["converted"]) if rev["by"] else M("d.liv.same_unit")
+    k = rev["converted"]
+    if not k:
+        return M("d.liv.same_unit")
+    if len(k) == 2:
+        return M("d.liv.converted_both", kf=k["fx"], kp=k["ppp"])
+    (by, v), = k.items()
+    return M(f"d.liv.converted_{by}", k=v)
+
+
+def _ratio(r: tuple[float, float]) -> Msg:
+    return M("d.liv.ratio", r=r[0]) if r[0] == r[1] else M("d.liv.ratio_range", lo=r[0], hi=r[1])
 
 
 def icp_spending(store: Store, meta: dict, units: UnitGraph) -> dict:
@@ -1416,17 +1431,18 @@ def icp_spending(store: Store, meta: dict, units: UnitGraph) -> dict:
         cons, snaps, cons_why = units.consumption(iso, living.ICP_YEAR)
         currency = units.currency(iso)
         r = rev["revision"]
-        amounts_ok = cons is not None and currency is not None and r is not None and same_unit(r, 1.0)
+        within = r is not None and all(same_unit(x, 1.0) for x in r)
+        amounts_ok = cons is not None and currency is not None and within
         if cons_why is not None:
             exclude(M("d.liv.cons_unconfirmed", detail=cons_why[1]), "amounts")
         elif cons is not None and r is None:
             exclude(M("d.liv.unit_unknown", r=rev["raw"], bound=MAX_FACTOR,
                       factors=[M(f"d.liv.k_{k}", k=v) for k, v in rev["factors"].items()] or [M("d.liv.k_none")]), "amounts")
-        elif cons is not None and not same_unit(r, 1.0):
-            exclude(M("d.liv.revised", r=r, bound=MAX_FACTOR, converted=_converted(rev)), "amounts")
+        elif cons is not None and not within:
+            exclude(M("d.liv.revised", ratio=_ratio(r), bound=MAX_FACTOR, converted=_converted(rev)), "amounts")
         elif cons is not None and currency is None:
             exclude(M("d.liv.no_currency"), "amounts")
-        out[iso] = {**split, "year": living.ICP_YEAR, "revision": r, "converted": rev["converted"], "converted_by": rev["by"],
+        out[iso] = {**split, "year": living.ICP_YEAR, "revision": list(r) if r else None, "converted": rev["converted"],
                     "consumption_month": cons if amounts_ok else None, "currency": currency if amounts_ok else None,
                     "na_fiscal": meta.get(iso, {}).get("na_fiscal"),
                     "snapshots": sorted(set(split["snapshots"]) | set(rev["snapshots"]) | (set(snaps) if amounts_ok else set()))}

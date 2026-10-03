@@ -30,7 +30,7 @@ import re
 
 from ..fetch import Fetcher
 from ..model import Obs
-from .common import check_json
+from .common import check_json, check_prefix
 
 API = "https://api.worldbank.org/v2"
 
@@ -196,8 +196,16 @@ def collect_wdi(f: Fetcher, first_year: int = 1990, last_year: int = 2030) -> li
     return out
 
 
+# ICP's classification document (not parsed): its definitions of "total housing" (actual
+# and imputed rentals, plus the housing of NPISHs and government) and of household
+# consumption "without housing related expenditures" are what section ④'s rent rests on;
+# archived with the data it explains.
+ICP_CLASSIFICATION = "https://thedocs.worldbank.org/en/doc/606871598905573891-0050022020/render/ICPClassificaitonwithNonH.pdf"
+
+
 def collect_icp2021(f: Fetcher) -> list[Obs]:
     out: list[Obs] = []
+    f.get("worldbank/icp2021_classification", ICP_CLASSIFICATION, ext="pdf", check=check_prefix(b"%PDF", "a PDF document"))
     reads = [(cls, prefix, ICP_CATEGORIES) for cls, prefix in ICP_MEASURES.items()] + [("CN", "icp21_cn", ICP_EXPENDITURE)]
     for cls, prefix, categories in reads:
         series = ";".join(categories)

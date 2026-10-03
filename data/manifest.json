@@ -391,34 +391,6 @@
   "status": "fresh",
   "url": "https://sdmx.oecd.org/public/rest/data/OECD.ELS.SAE,DSD_HW@DF_AVG_USL_WK_WKD,1.0/.HW.H_WK_PS._T._T.EMP.W.USUAL.ICSE93_1.FT.MEAN._Z.MAIN?startPeriod=2000&format=csvfilewithlabels"
  },
- "probe/icp/classification_nonh": {
-  "attempted_at": "2026-10-03T04:53:31+00:00",
-  "bytes": 315519,
-  "content_type": "application/pdf",
-  "error": null,
-  "key": "probe/icp/classification_nonh",
-  "method": "GET",
-  "path": "data/raw/probe/icp/classification_nonh.pdf",
-  "request_body": null,
-  "retrieved_at": "2026-10-03T04:53:31+00:00",
-  "sha256": "00f20335710290a8df0b9e816377e7041ee2d2e9048c49fa58eb4feb93a877b7",
-  "status": "fresh",
-  "url": "https://thedocs.worldbank.org/en/doc/606871598905573891-0050022020/render/ICPClassificaitonwithNonH.pdf"
- },
- "probe/icp/vc_tech_3": {
-  "attempted_at": "2026-10-03T04:53:33+00:00",
-  "bytes": 86998,
-  "content_type": "text/html;charset=utf-8",
-  "error": null,
-  "key": "probe/icp/vc_tech_3",
-  "method": "GET",
-  "path": "data/raw/probe/icp/vc_tech_3.html",
-  "request_body": null,
-  "retrieved_at": "2026-10-03T04:53:33+00:00",
-  "sha256": "4301e5ea8df2f76e4e7f64916c003203dbc9ee2505d018b40778bdab13db2501",
-  "status": "fresh",
-  "url": "https://www.worldbank.org/en/programs/icp/brief/VC_Tech_3"
- },
  "worldbank/CMO-Historical-Data-Monthly": {
   "attempted_at": "2026-10-03T04:52:20+00:00",
   "bytes": 586099,
@@ -614,6 +586,20 @@
   "sha256": "26e7fdc3299c582f9b26d62a87c53d233a13d59af8e2891e3302ea5882e3b801",
   "status": "fresh",
   "url": "https://api.worldbank.org/v2/sources/90/country/all/series/9100000;1101000;1101110;1101120;1101130;1101140;1101150;1101160;1101170;1103000;1105000;9060000;9080000;1107000;1108000;9110000;9120000;1111000/classification/PX.WL/time/YR2021?format=json&per_page=20000"
+ },
+ "worldbank/icp2021_classification": {
+  "attempted_at": "2026-10-03T04:53:31+00:00",
+  "bytes": 315519,
+  "content_type": "application/pdf",
+  "error": null,
+  "key": "worldbank/icp2021_classification",
+  "method": "GET",
+  "path": "data/raw/worldbank/icp2021_classification.pdf",
+  "request_body": null,
+  "retrieved_at": "2026-10-03T04:53:31+00:00",
+  "sha256": "00f20335710290a8df0b9e816377e7041ee2d2e9048c49fa58eb4feb93a877b7",
+  "status": "fresh",
+  "url": "https://thedocs.worldbank.org/en/doc/606871598905573891-0050022020/render/ICPClassificaitonwithNonH.pdf"
  },
  "worldbank/wdi_NE.CON.PRVT.CN": {
   "attempted_at": "2026-10-03T04:52:23+00:00",

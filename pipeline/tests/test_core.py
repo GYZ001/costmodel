@@ -412,7 +412,7 @@ def test_icp_composition_adds_up_rent_and_other():
     assert abs(sp["other_parts"]["rest"] - 25 / 80) < 1e-12 and abs(sp["housing_actual"] - 25 / 80) < 1e-12
     assert abs(sum(sp["shares"].values()) + sp["net_abroad"] - 1) < 1e-12
     assert abs(sum(sp["other_parts"].values()) - sp["shares"]["other"]) < 1e-12
-    assert abs(sp["government"] - 20 / 80) < 1e-12 and sp["net_abroad_published"]
+    assert abs(sp["government"] - 20 / 80) < 1e-12 and sp["net_abroad_status"] == "published"
 
 
 def test_icp_unpublished_net_purchases_abroad_is_zero_and_still_checked():
@@ -421,7 +421,7 @@ def test_icp_unpublished_net_purchases_abroad_is_zero_and_still_checked():
     # Not published, and the other parts add up to AIC on their own: taken as zero.
     ok = {**{k: v for k, v in ICP_OK.items() if k != "net_purchases_abroad"}, "aic": 110, "hfce": 90, "hfce_no_housing": 75}
     sp = living.icp_spending(_store(*_icp("AAA", **ok)), "AAA", lambda d, k: log.append(k))
-    assert sp and not sp["net_abroad_published"] and sp["net_abroad"] == 0 and not log
+    assert sp and sp["net_abroad_status"] == "none" and sp["net_abroad"] == 0 and not log
     # Not published, and the parts do not add up: the identity is not made to hold.
     bad = {k: v for k, v in ICP_OK.items() if k != "net_purchases_abroad"}
     assert living.icp_spending(_store(*_icp("AAA", **bad)), "AAA", lambda d, k: log.append(k)) is None
@@ -445,25 +445,45 @@ def test_icp_composition_failing_a_check_is_left_out():
 
 def test_icp_revision_decides_the_currency_unit_by_both_ratios():
     from wagegold import living
-    base = [*_icp("AAA", icp21_dummy=1), Obs("icp21_pli_wl_hfce", "USA", "2021", 150.0, "icp")]
 
     def rev(icp_ppp, wdi_ppp, icp_pli, gdp_factor, icp_hfce, wdi_hfce):
-        rows = [*base, Obs("icp21_ppp_hfce", "AAA", "2021", icp_ppp, "icp"), Obs("icp21_pli_wl_hfce", "AAA", "2021", icp_pli, "icp"),
-                Obs("hfce_lcu", "AAA", "2021", wdi_hfce, "w"), Obs("gdp_lcu", "AAA", "2021", gdp_factor * 1e6, "w"),
-                Obs("gdp_usd", "AAA", "2021", 1e6, "w")]
+        rows = [Obs("icp21_pli_wl_hfce", "USA", "2021", 150.0, "icp"), Obs("hfce_lcu", "AAA", "2021", wdi_hfce, "w")]
+        if icp_ppp:
+            rows.append(Obs("icp21_ppp_hfce", "AAA", "2021", icp_ppp, "icp"))
+        if icp_pli:
+            rows.append(Obs("icp21_pli_wl_hfce", "AAA", "2021", icp_pli, "icp"))
+        if gdp_factor:
+            rows += [Obs("gdp_lcu", "AAA", "2021", gdp_factor * 1e6, "w"), Obs("gdp_usd", "AAA", "2021", 1e6, "w")]
         if wdi_ppp:
             rows.append(Obs("ppp_hfce", "AAA", "2021", wdi_ppp, "w"))
         return living.revision(_store(*rows), "AAA", "AAA", icp_hfce, 1.4)
     # Same currency, PPP revised by 8% since ICP: the revision is the totals' ratio.
     r = rev(10.0, 10.8, 100.0, 15.0, 93.0, 100e9)  # ICP exchange rate 10 × 150 / 100 = 15 = WDI's
-    assert abs(r["revision"] - 0.93) < 1e-12 and r["converted"] is None
-    # Redenominated 1000:1 since ICP: converted at the exchange-rate ratio.
-    r = rev(10000.0, 10.3, 100.0, 15.0, 100e3, 100e9)
-    assert abs(r["converted"] - 1000) < 1e-9 and r["by"] == "fx" and abs(r["revision"] - 1.0) < 1e-12
+    assert r["revision"] == (0.93, 0.93) and r["converted"] is None
+    # Redenominated 1000:1 since ICP, the two publishers' rates 6% apart: a range under both.
+    r = rev(10000.0, 10.0, 100.0, 15.9, 100e3, 100e9)
+    assert set(r["converted"]) == {"fx", "ppp"} and abs(r["converted"]["ppp"] - 1000) < 1e-9
+    assert abs(r["revision"][0] - 1.0) < 1e-12 and abs(r["revision"][1] - 15.9 / 15) < 1e-12
+    # Only the PPP ratio available: converted by it.
+    r = rev(10000.0, 10.0, None, None, 100e3, 100e9)
+    assert r["converted"] == {"ppp": 1000.0} and r["revision"] == (1.0, 1.0)
     # The two ratios disagree (one says same unit, the other not): unknown.
     assert rev(10000.0, 9000.0, 100.0, 15.0, 100e3, 100e9)["revision"] is None
-    # No PPP of WDI: only the exchange-rate ratio decides.
-    assert rev(10.0, None, 100.0, 15.0, 120.0, 100e9)["revision"] == 1.2
+    # Both beyond the bound but far apart from each other: unknown.
+    assert rev(10000.0, 10.0, 100.0, 1.5, 100e3, 100e9)["revision"] is None
+    # No ratio at all: the totals' own ratio decides, within the bound only.
+    assert rev(None, None, None, None, 120.0, 100e9)["revision"] == (1.2, 1.2)
+    assert rev(None, None, None, None, 200.0, 100e9)["revision"] is None
+    # No WDI PPP: the exchange-rate ratio alone decides.
+    assert rev(10.0, None, 100.0, 15.0, 120.0, 100e9)["revision"] == (1.2, 1.2)
+
+
+def test_icp_net_purchases_abroad_status():
+    from wagegold import living
+    assert living.icp_spending(_store(*_icp("AAA", **ICP_OK)), "AAA", lambda d, k: None)["net_abroad_status"] == "published"
+    # Published as zero (per ICP, possibly allocated under other headings): not known.
+    zero = {**ICP_OK, "net_purchases_abroad": 0, "aic": 110, "hfce": 90, "hfce_no_housing": 75}
+    assert living.icp_spending(_store(*_icp("AAA", **zero)), "AAA", lambda d, k: None)["net_abroad_status"] == "zero"
 
 
 def test_consumption_needs_its_currency_unit_proven():
@@ -500,6 +520,36 @@ def test_consumption_carried_by_share_of_gdp():
     u = build.UnitGraph(_store(*rows), DIC, years, META)
     # ×3 in a year (beyond ×/÷1.4), but the share of GDP is 0.6 both years.
     assert u.year("AAA", "2022").linked("H") and u.consumption("AAA", "2022")[0] == 1800.0 / 10 / 12
+
+
+def test_consumption_share_link_guards():
+    # The share of GDP carries a proof only between years whose GDP the exchange rate's own
+    # identity puts in the same unit, and a change of unit in consumption alone is refused.
+    def graph(fx22, hf22, gdp22):
+        rows = []
+        for y, hf, gdp, fx in (("2021", 600.0, 1000.0, 10.0), ("2022", hf22, gdp22, fx22)):
+            rows += [Obs("hfce_lcu", "AAA", y, hf, "w"), Obs("gdp_lcu", "AAA", y, gdp, "w"), Obs("gdp_usd", "AAA", y, 100.0, "w"),
+                     Obs("fx_lcu_usd", "AAA", y, fx, "w"), Obs("population", "AAA", y, 10.0, "w")]
+        rows += [Obs("hfce_intl", "AAA", "2021", 100.0, "w"), Obs("ppp_hfce", "AAA", "2021", 6.0, "w")]
+        return build.UnitGraph(_store(*rows), DIC, ["2021", "2022"], META)
+    assert graph(30.0, 1800.0, 3000.0).year("AAA", "2022").linked("H")  # control: share 0.6 both years
+    assert not graph(300.0, 1800.0, 3000.0).year("AAA", "2022").linked("H")  # 2022 fx identity fails (×10)
+    assert not graph(30.0, 1.8, 3000.0).year("AAA", "2022").linked("H")  # consumption alone ÷1000
+
+
+def test_identity_failure_linked_by_share_is_unknown_not_unit():
+    # A year whose PPP identity fails next to a proven year, linked to it through its share of
+    # GDP (value moved beyond ×/÷1.4 under inflation), is left out as an identity failure of
+    # unknown cause, not as a change of unit.
+    rows = []
+    for y, hf, hi, ppp, gdp in (("2021", 600.0, 100.0, 6.0, 1000.0), ("2022", 1800.0, 100.0, 50.0, 3000.0)):
+        rows += [Obs("hfce_lcu", "AAA", y, hf, "w"), Obs("gdp_lcu", "AAA", y, gdp, "w"), Obs("gdp_usd", "AAA", y, 100.0, "w"),
+                 Obs("fx_lcu_usd", "AAA", y, gdp / 100.0, "w"), Obs("population", "AAA", y, 10.0, "w"),
+                 Obs("hfce_intl", "AAA", y, hi, "w"), Obs("ppp_hfce", "AAA", y, ppp, "w")]
+    u = build.UnitGraph(_store(*rows), DIC, ["2021", "2022"], META)
+    _f, _p, h = u._factors("AAA")
+    assert h["2022"][0] is None and h["2022"][2] == "identity"  # 1800/100 = 18 vs PPP 50
+    assert h["2022"][1][0]["k"] == "d.prove.chain_link"
 
 
 def test_residents_per_employed_and_bounds():

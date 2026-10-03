@@ -3,7 +3,7 @@ import type { Scope } from "../App";
 import { Chart } from "../Chart";
 import { compositionOption, linesOption, rankingHeight, ratioRankingOption } from "../charts";
 import { useI18n } from "../i18n";
-import { countryName, LIVING_GROUPS, money, primaryWage, typicalWage, useThemeVersion, wageLabel, wageNotes } from "../lib";
+import { countryName, LIVING_GROUPS, money, primaryWage, skippedYears, typicalWage, useThemeVersion, wageLabel, wageNotes, yearlyLine } from "../lib";
 import { Legend, useKV, usePickByName, useRows } from "./common";
 import { FocusPrompt } from "./Profiles";
 import type { Msg } from "../i18n/render";
@@ -22,18 +22,18 @@ function yearRanges(years: number[]): string[] {
   return out;
 }
 
-/** Narrow screens leave out side panels (their values stay in tooltips and tables). */
-function useNarrow(): boolean {
-  const q = "(max-width: 640px)";
-  const [narrow, setNarrow] = useState(() => typeof window !== "undefined" && window.matchMedia?.(q).matches);
+/** Whether a media query matches, following changes. */
+function useMedia(q: string): boolean {
+  const [on, setOn] = useState(() => typeof window !== "undefined" && !!window.matchMedia?.(q).matches);
   useEffect(() => {
     const m = window.matchMedia?.(q);
     if (!m) return;
-    const on = () => setNarrow(m.matches);
-    m.addEventListener("change", on);
-    return () => m.removeEventListener("change", on);
-  }, []);
-  return !!narrow;
+    const f = () => setOn(m.matches);
+    f();
+    m.addEventListener("change", f);
+    return () => m.removeEventListener("change", f);
+  }, [q]);
+  return on;
 }
 
 /** ④ What households consume, compared with the wage: household consumption per resident per
@@ -44,7 +44,8 @@ export function LivingCosts(scope: Scope) {
   const i = useI18n();
   const kv = useKV();
   const theme = useThemeVersion();
-  const narrow = useNarrow();
+  const narrow = useMedia("(max-width: 640px)"); // fewer axis ticks
+  const sideless = useMedia("(max-width: 900px)"); // no side panel: its values stay in tooltips and the table
   const rows = useRows(scope);
   const pick = usePickByName(rows, scope.togglePick);
   const pct = (v: number) => i.n(v, "pct0");
@@ -76,8 +77,7 @@ export function LivingCosts(scope: Scope) {
   const noCons = useMemo(() => rows.filter(({ row }) => primaryWage(row, "monthly") && row.living.consumption_month == null
     && !row.living.consumption_unconfirmed)
     .map(({ c, name }) => {
-      const latest = Object.keys(c.years).filter((y) => c.years[y].living.consumption_month != null).sort().pop();
-      return latest ? i.t("liv.missing_item", { name, year: latest }) : name;
+      return c.consumption_latest ? i.t("liv.missing_item", { name, year: c.consumption_latest }) : name;
     }), [rows, i]);
   const unconfirmed = useMemo(() => rows.filter(({ row }) => primaryWage(row, "monthly") && row.living.consumption_unconfirmed)
     .map(({ name }) => name), [rows]);
@@ -89,19 +89,33 @@ export function LivingCosts(scope: Scope) {
   const fiscal = ratio.filter((r) => r.c.na_fiscal).map((r) => r.name);
   // How much the government provides free on top, across all ICP economies (not in the consumption counted).
   const govRange = useMemo(() => {
-    const g = Object.values(ds.icp2021_spending).map((s) => s.government);
-    return g.length ? { gmin: Math.min(...g), gmax: Math.max(...g) } : null;
-  }, [ds]);
+    const g = Object.entries(ds.icp2021_spending).sort(([, a], [, b]) => a.government - b.government);
+    if (!g.length) return null;
+    const nameOf = (iso: string) => countryName(i, ds.countries[iso] ?? ds.economies[iso]);
+    const [lo, hi] = [g[0], g[g.length - 1]];
+    return { gmin: lo[1].government, emin: nameOf(lo[0]), gmax: hi[1].government, emax: nameOf(hi[0]) };
+  }, [ds, i]);
   const switched = ratio.filter((r) => r.wage.mrole_switch?.kind === "source").map((r) => r.name);
   const ovs = ds.oecd_vs_survey;
 
   const rOpt = useMemo(() => ratioRankingOption({
     items: ratio, valueName: i.t("liv.ratio_value"), otherName: i.t("liv.other_name"),
-    sideName: narrow ? undefined : i.t("liv.side"), splitNumber: narrow ? 3 : undefined, ref: { value: 1, label: i.t("liv.ref") },
+    sideName: sideless ? undefined : i.t("liv.side"), sideWidth: 200, splitNumber: narrow ? 3 : undefined, ref: { value: 1, label: i.t("liv.ref") },
     format: pct, sideFormat: pct, kv,
-  }), [ratio, narrow, theme, i]);
+  }), [ratio, narrow, sideless, theme, i]);
 
   // ---- Card 2: the ICP benchmark composition
+  const revisionLine = (sp: (typeof ds.icp2021_spending)[string]) => {
+    const [lo, hi] = sp.revision!;
+    const k = sp.converted;
+    if (!k) return i.t("liv.tip_revision", { year: sp.year, r: lo });
+    if (k.fx != null && k.ppp != null) {
+      return i.n(lo, "pct1") === i.n(hi, "pct1")
+        ? i.t("liv.tip_revision_both", { year: sp.year, r: lo, kf: k.fx, kp: k.ppp })
+        : i.t("liv.tip_revision_range", { year: sp.year, lo, hi, kf: k.fx, kp: k.ppp });
+    }
+    return i.t(k.fx != null ? "liv.tip_revision_fx" : "liv.tip_revision_ppp", { year: sp.year, r: lo, k: k.fx ?? k.ppp });
+  };
   const spendYears = useMemo(() => [...new Set(Object.values(ds.icp2021_spending).map((s) => s.year))].sort(), [ds]);
   const inView = (iso: string) => (scope.group === "all" ? picks.includes(iso) : !!ds.countries[iso]?.g20 || picks.includes(iso));
   const comp = useMemo(() => Object.entries(ds.icp2021_spending)
@@ -115,27 +129,26 @@ export function LivingCosts(scope: Scope) {
       const w = primaryWage(row, "monthly");
       const scale = mode === "wage" ? (sp.consumption_month != null && w?.monthly_lcu ? sp.consumption_month / w.monthly_lcu : null) : 1;
       if (scale == null) return [];
-      const amount = (s: number) => (sp.consumption_month != null ? money(i, s * sp.consumption_month, sp.currency) : null);
-      // Net spending abroad: stated only where ICP publishes it and it does not round to zero here.
-      const net = sp.net_abroad_published && i.n(Math.abs(sp.net_abroad), "pct1") !== i.n(0, "pct1") ? sp.net_abroad : 0;
-      const gov = amount(sp.government);
+      const amount = (s: number) => (sp.consumption_month != null ? i.t("liv.amount", { v: money(i, s * sp.consumption_month, sp.currency) }) : null);
+      // Net spending abroad: stated only where ICP publishes it as non-zero and it does not round to zero as shown.
+      const shown = (v: number) => i.n(Math.abs(v), "pct1") !== i.n(0, "pct1");
+      const net = sp.net_abroad_status === "published" && shown(sp.net_abroad) ? sp.net_abroad : 0;
       const tip = [
-        ...LIVING_GROUPS.flatMap((g) => { const a = amount(sp.shares[g]); return a ? [i.t("liv.tip_amount", { group: i.t(`liv.g.${g}`), v: a })] : []; }),
         i.t("liv.tip_other", { rh: sp.other_parts.restaurants_hotels, at: sp.other_parts.alcohol_tobacco, rest: sp.other_parts.rest }),
         ...(net < 0 ? [i.t("liv.tip_abroad_neg", { v: -net })] : net > 0 ? [i.t("liv.tip_abroad_pos", { v: net })] : []),
+        ...(sp.net_abroad_status !== "published" ? [i.t(`liv.tip_abroad_${sp.net_abroad_status}`)] : []),
         i.t("liv.tip_housing_actual", { v: sp.housing_actual }),
-        gov ? i.t("liv.tip_gov", { v: gov, p: sp.government }) : i.t("liv.tip_gov_share", { p: sp.government }),
-        ...(sp.revision != null
-          ? [i.t(sp.converted_by ? `liv.tip_revision_${sp.converted_by}` : "liv.tip_revision", { year: sp.year, r: sp.revision, k: sp.converted })]
-          : []),
+        i.t("liv.tip_gov_share", { p: sp.government }),
+        ...(sp.revision != null ? [revisionLine(sp)] : []),
         ...(sp.na_fiscal ? [i.t("liv.tip_fiscal", { note: sp.na_fiscal })] : []),
-        ...(mode === "wage" && w && c ? wageNotes(i, w, "monthly", c, 160) : []),
+        ...(mode === "wage" && w && c ? wageNotes(i, w, "monthly", c).slice(0, 1) : []), // the wage; its source and notes are in the ranking's tooltip
         ...(sp.consumption_month != null ? [i.t("liv.tip_basis", { year: sp.year })] : []),
       ];
       const parts = LIVING_GROUPS.map((g) => sp.shares[g] * scale);
+      const extra = shown(net * scale) ? net * scale : 0;
       return [{
-        iso, name, parts, total: scale, extra: net * scale,
-        highlight: picks.includes(iso), tip,
+        iso, name, parts, partNotes: LIVING_GROUPS.map((g) => amount(sp.shares[g])), total: scale, extra,
+        known: sp.net_abroad_status === "published", highlight: picks.includes(iso), tip,
       }];
     }), [ds, scope.group, picks, mode, i]);
   // Shares are shown for every economy with a composition; amounts and wage shares only where the
@@ -161,6 +174,10 @@ export function LivingCosts(scope: Scope) {
   // Wage view of the composition: economies where employees are under half of the employed that year.
   const compMinority = useMemo(() => comp.filter((r) => (ds.countries[r.iso]?.years[spendYears[spendYears.length - 1] ?? ""]?.living.employees_share ?? 1) < 0.5)
     .map((r) => r.name), [comp, ds, spendYears]);
+  // Wage view: economies in view with a composition but not drawn (no amounts or no wage that year).
+  const notInView = useMemo(() => (mode !== "wage" ? [] : Object.keys(ds.icp2021_spending)
+    .filter((iso) => inView(iso) && !comp.some((r) => r.iso === iso))
+    .map((iso) => countryName(i, ds.countries[iso] ?? ds.economies[iso]))), [mode, comp, ds, scope.group, picks, i]);
   // In view but without an ICP composition (not published, or not passing the checks).
   const noComp = useMemo(() => Object.keys(ds.countries).filter((iso) => inView(iso) && !ds.icp2021_spending[iso])
     .map((iso) => countryName(i, ds.countries[iso])), [ds, scope.group, picks, i]);
@@ -180,18 +197,23 @@ export function LivingCosts(scope: Scope) {
   // ---- Card 3: over time, on each focus economy's one continuous wage series (breaks kept)
   const series = useMemo(() => picks.filter((iso) => ds.wage_gold_history[iso]).map((iso) => {
     const c = ds.countries[iso];
+    const h = ds.wage_gold_history[iso];
     const gaps: number[] = []; // years of the series without World Bank consumption
-    const pts = ds.wage_gold_history[iso].points.flatMap(([y, wage, , , brk]) => {
-      const cons = c.years[y]?.living.consumption_month;
-      const v = cons != null && wage ? cons / wage : null;
-      if (v == null) gaps.push(Number(y));
-      return brk ? [[`${Number(y) - 1}-07`, null], [`${y}`, v]] : [[`${y}`, v]];
-    }) as [string, number | null][];
-    return { iso, name: countryName(i, c), points: pts, colorIndex: slotOf[iso], gaps, label: i.r(ds.wage_gold_history[iso].label) };
+    const unconfirmed: number[] = []; // ... with consumption that does not pass the currency-unit checks
+    const points = yearlyLine(h.points.map(([y, wage, , , brk]) => {
+      const L = c.years[y]?.living;
+      const cons = L?.consumption_month;
+      if (cons == null) (L?.consumption_unconfirmed ? unconfirmed : gaps).push(Number(y));
+      return { y, v: cons != null && wage ? cons / wage : null, brk: !!brk };
+    }));
+    return { iso, name: countryName(i, c), points, colorIndex: slotOf[iso], gaps, unconfirmed,
+      skipped: skippedYears(h.points.map((p) => p[0])), label: i.r(h.label) };
   }), [ds, picks, slotOf, i]);
   const trend = series.filter((s) => s.points.some(([, v]) => v != null));
   const trendNoCons = series.filter((s) => !s.points.some(([, v]) => v != null)).map((s) => s.name);
-  const trendGaps = trend.filter((s) => s.gaps.length > 0).map((s) => i.t("liv.trend_gap_item", { name: s.name, years: i.j(yearRanges(s.gaps), "comma") }));
+  const gapList = (key: "gaps" | "unconfirmed" | "skipped") => trend.filter((s) => s[key].length > 0)
+    .map((s) => i.t("liv.trend_gap_item", { name: s.name, years: i.j(yearRanges(s[key]), "comma") }));
+  const trendGaps = gapList("gaps"), trendUnconfirmed = gapList("unconfirmed"), trendSkipped = gapList("skipped");
   const noTrend = picks.filter((iso) => !ds.wage_gold_history[iso]).map((iso) => countryName(i, ds.countries[iso]));
   const tOpt = useMemo(() => linesOption({ series: trend, yName: i.t("liv.trend_axis"), format: pct }), [trend, theme, i]);
 
@@ -205,7 +227,7 @@ export function LivingCosts(scope: Scope) {
         <Legend anyFocus={ratio.some((x) => x.highlight)} focus={i.t("legend.focus")} others={i.t("legend.others")} all={i.t("legend.all")}
           extra={<>
             <span><span className="sw" style={{ background: "var(--surface)", border: "1.5px solid var(--ink-2)", borderRadius: "50%" }} />{i.t("liv.other_name")}</span>
-            {!narrow && <span><span className="sw" style={{ background: "var(--deemph)" }} />{i.t("liv.side")}</span>}
+            {!sideless && <span><span className="sw" style={{ background: "var(--deemph)" }} />{i.t("liv.side")}</span>}
           </>} />
         {ratio.length > 0
           ? <Chart option={rOpt} height={rankingHeight(ratio.length) + 16} ariaLabel={i.t("liv.ratio_title", { year })} onPick={pick} />
@@ -271,6 +293,7 @@ export function LivingCosts(scope: Scope) {
             ...noAmounts.map(([k, list]) => i.t(k, { list: i.j(list, "enum"), year: spendYear, b: ds.constants.max_factor })),
             mode === "wage" && compMinority.length > 0 ? i.t("liv.note_minority", { list: i.j(compMinority, "enum") }) : "",
             mode === "wage" && compWageless.length > 0 ? i.t("liv.where_no_wage", { list: i.j(compWageless, "enum"), year: spendYear }) : "",
+            notInView.length > 0 ? i.t("liv.where_not_in_view", { list: i.j(notInView, "enum"), mode: i.t("liv.mode_cons") }) : "",
             noComp.length > 0 ? i.t("liv.where_missing", { list: i.j(noComp, "enum") }) : "",
           ], "sentence")}
         </p>
@@ -281,7 +304,7 @@ export function LivingCosts(scope: Scope) {
               <thead><tr><th>{i.t("col.economy")}</th><th>{i.t(mode === "wage" ? "liv.total_wage" : "liv.total_cons")}</th>{groupNames.map((g) => <th key={g}>{g}</th>)}<th>{i.t("liv.g.abroad")}</th></tr></thead>
               <tbody>
                 {[...comp].sort((a, b) => b.total - a.total || b.parts[0] - a.parts[0]).map((r) => (
-                  <tr key={r.iso}><td>{r.name}</td><td>{i.n(r.total, "pct0")}</td>{r.parts.map((v, k) => <td key={k}>{i.n(v, "pct1")}</td>)}<td>{i.n(r.extra, "pct1")}</td></tr>
+                  <tr key={r.iso}><td>{r.name}</td><td>{i.n(r.total, "pct0")}</td>{r.parts.map((v, k) => <td key={k}>{i.n(v, "pct1")}</td>)}<td>{r.known ? i.n(r.extra, "pct1") : "—"}</td></tr>
                 ))}
               </tbody>
             </table>
@@ -302,7 +325,9 @@ export function LivingCosts(scope: Scope) {
             {i.j([
               i.t("liv.trend_note"),
               trend.length > 0 ? i.t("liv.trend_series", { list: i.j(trend.map((s) => i.t("liv.trend_series_item", { name: s.name, series: s.label })), "list") }) : "",
+              trendSkipped.length > 0 ? i.t("liv.trend_skipped", { list: i.j(trendSkipped, "list") }) : "",
               trendGaps.length > 0 ? i.t("liv.trend_gaps", { list: i.j(trendGaps, "list") }) : "",
+              trendUnconfirmed.length > 0 ? i.t("liv.trend_unconfirmed", { list: i.j(trendUnconfirmed, "list") }) : "",
               trendNoCons.length > 0 ? i.t("liv.trend_no_cons", { list: i.j(trendNoCons, "enum") }) : "",
               noTrend.length > 0 ? i.t("liv.trend_none", { list: i.j(noTrend, "enum") }) : "",
             ], "sentence")}

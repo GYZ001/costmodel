@@ -54,7 +54,8 @@ function tooltipBox(p: ReturnType<typeof palette>) {
     borderWidth: 1,
     padding: [8, 10],
     textStyle: { color: p.ink, fontSize: 12.5 },
-    extraCssText: "box-shadow: 0 4px 16px rgba(0,0,0,.12); border-radius: 8px; max-width: 360px; white-space: normal;",
+    extraCssText: "box-shadow: 0 4px 16px rgba(0,0,0,.12); border-radius: 8px; max-width: 400px; white-space: normal;",
+    confine: true, // kept inside the chart, never off-screen
   };
 }
 
@@ -384,6 +385,7 @@ export function ratioRankingOption(opts: {
   valueName: string;
   otherName: string;
   sideName?: string; // omit to leave the side panel out (narrow screens)
+  sideWidth?: number; // px available for the side panel's title
   splitNumber?: number; // fewer value-axis ticks on narrow screens
   ref: { value: number; label: string };
   format: (v: number) => string;
@@ -421,7 +423,8 @@ export function ratioRankingOption(opts: {
       }] : []),
     ],
     // The side panel's title sits in the top margin, where the main panel has the reference label.
-    graphic: side ? [{ type: "text", left: "77%", top: 4, silent: true, style: { text: opts.sideName, fill: p.ink2, fontSize: 11, fontFamily: font() } }] : [],
+    graphic: side ? [{ type: "text", left: "77%", top: 4, silent: true,
+      style: { text: opts.sideName, fill: p.ink2, fontSize: 11, fontFamily: font(), width: opts.sideWidth, overflow: "truncate" } }] : [],
     yAxis: [
       { ...yBase, gridIndex: 0 },
       ...(side ? [{ ...yBase, gridIndex: 1, axisLabel: { show: false }, axisLine: { lineStyle: { color: p.axis } } }] : []),
@@ -501,7 +504,7 @@ export function ratioRankingOption(opts: {
  *  with a signed extra: a hatched segment where it is positive, a tick at the row's total
  *  where it is negative (the parts then add up to more than the total). Optional reference line. */
 export function compositionOption(opts: {
-  rows: { name: string; parts: number[]; total: number; extra: number; highlight: boolean; tip: string[] }[];
+  rows: { name: string; parts: number[]; partNotes?: (string | null)[]; total: number; extra: number; highlight: boolean; tip: string[] }[];
   partNames: string[];
   extraName: string;
   totalName: string;
@@ -537,7 +540,10 @@ export function compositionOption(opts: {
         const r = byName.get(params[0]?.name);
         if (!r) return "";
         const sw = (c: string) => `<span style="display:inline-block;width:14px;height:2px;background:${c};vertical-align:4px;margin-inline-end:6px"></span>`;
-        const lines = opts.partNames.map((pn, k) => `<div>${sw(colorOf(k))}${escapeHtml(opts.kv(pn, opts.format(r.parts[k])))}</div>`).join("");
+        const lines = opts.partNames.map((pn, k) => {
+          const note = r.partNotes?.[k];
+          return `<div>${sw(colorOf(k))}${escapeHtml(opts.kv(pn, opts.format(r.parts[k]) + (note ? ` · ${note}` : "")))}</div>`;
+        }).join("");
         const extra = r.extra !== 0 ? `<div>${sw(p.axis)}${escapeHtml(opts.kv(opts.extraName, (r.extra < 0 ? "−" : "") + opts.format(Math.abs(r.extra))))}</div>` : "";
         return `<div style="font-weight:600;margin-bottom:2px">${escapeHtml(r.name)}</div><div><b>${escapeHtml(opts.kv(opts.totalName, opts.format(r.total)))}</b></div>${lines}${extra}` +
           r.tip.map((t) => `<div style="color:${p.ink2}">${escapeHtml(t)}</div>`).join("");

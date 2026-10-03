@@ -3,7 +3,7 @@ import type { Scope } from "../App";
 import { Chart } from "../Chart";
 import { linesOption } from "../charts";
 import { useI18n } from "../i18n";
-import { countryName, levelBoundsText, useThemeVersion } from "../lib";
+import { countryName, levelBoundsText, useThemeVersion, yearlyLine } from "../lib";
 import { FocusPrompt } from "./Profiles";
 
 export function GoldRuler(scope: Scope) {
@@ -48,9 +48,8 @@ export function GoldRuler(scope: Scope) {
     .map((iso) => ({
       iso,
       name: countryName(i, ds.countries[iso]),
-      // A null point before a series break stops the line from bridging two different concepts.
-      points: ds.wage_gold_history[iso].points.flatMap(([y, , g, , brk]) =>
-        brk ? [[`${Number(y) - 1}-07`, null], [`${y}`, g]] : [[`${y}`, g]]) as [string, number | null][],
+      // Null points before a series break and in skipped years: the line bridges neither.
+      points: yearlyLine(ds.wage_gold_history[iso].points.map(([y, , g, , brk]) => ({ y, v: g, brk: !!brk }))),
       colorIndex: slotOf[iso],
     })), [ds, picks, slotOf, i]);
   const noHistory = picks.filter((iso) => !ds.wage_gold_history[iso]).map((iso) => countryName(i, ds.countries[iso]));

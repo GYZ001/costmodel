@@ -237,3 +237,27 @@ export function palette() {
 export function escapeHtml(s: string): string {
   return s.replace(/[&<>"']/g, (ch) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[ch]!);
 }
+
+/** Points of a yearly history for a time-axis line: a null point before a flagged break and
+ *  in each year the history skips, so the line never bridges either. */
+export function yearlyLine(rows: { y: string; v: number | null; brk?: boolean }[]): [string, number | null][] {
+  const out: [string, number | null][] = [];
+  let prev: number | null = null;
+  for (const { y, v, brk } of rows) {
+    const n = Number(y);
+    if (prev != null && n - prev > 1) out.push([`${prev + 1}`, null]);
+    else if (brk) out.push([`${n - 1}-07`, null]);
+    out.push([y, v]);
+    prev = n;
+  }
+  return out;
+}
+
+/** The years a yearly history skips between its first and last year. */
+export function skippedYears(years: string[]): number[] {
+  const ns = years.map(Number).sort((a, b) => a - b);
+  const out: number[] = [];
+  for (let k = 1; k < ns.length; k++) for (let y = ns[k - 1] + 1; y < ns[k]; y++) out.push(y);
+  return out;
+}
+

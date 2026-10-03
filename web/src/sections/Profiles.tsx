@@ -95,14 +95,12 @@ function Profile({ scope, iso, c }: { scope: Scope; iso: string; c: Country }) {
                   group: i.t(`liv.g.${g}`), share: sp.shares[g],
                   amount: sp.consumption_month != null ? money(i, sp.shares[g] * sp.consumption_month, sp.currency) : "",
                 })),
-                // net spending abroad, where ICP publishes it and it does not round to zero (the groups then add up to 100%)
-                ...(sp.net_abroad_published && i.n(Math.abs(sp.net_abroad), "pct1") !== i.n(0, "pct1")
+                // net spending abroad, where ICP publishes it as non-zero and it does not round to zero (the groups then add up to 100%)
+                ...(sp.net_abroad_status === "published" && i.n(Math.abs(sp.net_abroad), "pct1") !== i.n(0, "pct1")
                   ? [i.t("prof.liv_part", { group: i.t("liv.g.abroad"), share: sp.net_abroad })] : []),
               ], "enum"),
             }) : "",
-            sp ? (sp.consumption_month != null
-              ? i.t("prof.liv_gov", { year: sp.year, share: sp.government, amount: money(i, sp.government * sp.consumption_month, sp.currency) })
-              : i.t("prof.liv_gov_share", { share: sp.government })) : "",
+            sp ? i.t("prof.liv_gov_share", { share: sp.government }) : "",
             c.na_fiscal ? i.t("prof.liv_fiscal", { note: c.na_fiscal }) : "",
           ], "sentence")}
         </p>

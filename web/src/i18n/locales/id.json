@@ -161,7 +161,7 @@
  "d.mag.below_consumption": "{p} lebih kecil daripada konsumsi rumah tangga per kapita satu minggu ({floor:num}); upah sebulan yang kurang dari konsumsi per kapita seminggu dianggap sebagai tanda satuan waktu atau skala yang salah",
  "d.mag.survey_hour": "{reason}; oleh karena itu angka per jam survei ini untuk tahun tersebut (rata-rata dan median) tidak digunakan",
  "d.mag.survey_month": "{reason}; oleh karena itu angka bulanan survei ini untuk tahun tersebut (rata-rata dan median) tidak digunakan",
- "d.method.ilo_derived": "Upah bulanan ÷ (jam kerja mingguan dari survei yang sama × 52/12)",
+ "d.method.ilo_derived": "Upah bulanan ÷ (jam kerja aktual mingguan dari survei yang sama × 52/12)",
  "d.method.ilo_hourly": "Upah per jam yang diterbitkan oleh ILOSTAT",
  "d.method.ilo_monthly_only": "ILOSTAT menerbitkan upah per jam survei ini secara langsung, sehingga tidak ada angka per jam yang diturunkan dari angka bulanan",
  "d.method.ilo_no_hours": "Survei yang sama tidak memiliki data jam kerja yang dapat digunakan, sehingga tidak ada angka per jam yang diturunkan",

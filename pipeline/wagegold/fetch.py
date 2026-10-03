@@ -153,9 +153,11 @@ class Fetcher:
         return removed
 
     def committed(self, prefix: str) -> list[Snapshot]:
-        """Previously committed snapshots whose key starts with ``prefix``."""
+        """Every archived snapshot whose key starts with ``prefix``: those fetched in this
+        run and those committed before.  After an online run, the same set the offline
+        rebuild reads."""
         out = []
-        for key in sorted(self.manifest):
+        for key in sorted(set(self.manifest) | set(self.used)):
             if key.startswith(prefix):
                 snap = self.used.get(key) or self._previous(key)
                 if snap is not None:

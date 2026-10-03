@@ -173,7 +173,7 @@
  "d.mag.below_consumption": "{p} es inferior al consumo de los hogares per cápita de una semana ({floor:num}); un salario mensual inferior al consumo semanal per cápita se toma como indicio de una unidad de tiempo o una escala erróneas",
  "d.mag.survey_hour": "{reason}; por lo tanto, no se usan las cifras por hora de esta encuesta para el año (media y mediana)",
  "d.mag.survey_month": "{reason}; por lo tanto, no se usan las cifras mensuales de esta encuesta para el año (media y mediana)",
- "d.method.ilo_derived": "Salario mensual ÷ (horas semanales según la misma encuesta × 52/12)",
+ "d.method.ilo_derived": "Salario mensual ÷ (horas semanales efectivamente trabajadas según la misma encuesta × 52/12)",
  "d.method.ilo_hourly": "Salario por hora publicado por ILOSTAT",
  "d.method.ilo_monthly_only": "ILOSTAT publica directamente el salario por hora de esta encuesta, por lo que no se deriva ninguna cifra por hora a partir de la mensual",
  "d.method.ilo_no_hours": "La misma encuesta no tiene horas utilizables, por lo que no se deriva ninguna cifra por hora",

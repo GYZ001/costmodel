@@ -36,6 +36,12 @@ def check_prefix(prefix: bytes, what: str):
     return _check
 
 
+def warn(message: str) -> None:
+    """A problem that leaves the archived data in use (e.g. a release listing that could
+    not be read): logged, and shown as an annotation of the data-refresh run."""
+    print(f"::warning::{message}", flush=True)
+
+
 # Excel workbooks: Office Open XML (a zip) or the older binary format (an OLE2 file).
 EXCEL_MAGIC = {b"PK\x03\x04": "xlsx", b"\xd0\xcf\x11\xe0\xa1\xb1\x1a\xe1": "xls"}
 

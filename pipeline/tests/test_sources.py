@@ -53,3 +53,37 @@ def test_nbs_release_gives_year_previous_year_and_coverage_change():
     assert nbs.parse_release(html, "2031年城镇单位就业人员年平均工资情况", "s") == (2031, 10500, 10000, True)
     html = "<p>全国城镇私营单位就业人员年平均工资为9800元，比上年减少 200 元，名义下降2.0%。</p>"
     assert nbs.parse_release(html, "2030年城镇私营单位就业人员年平均工资9800元", "s") == (2030, 9800, 10000, False)
+
+
+class _ListingDown:
+    """A Fetcher online whose release listings cannot be read: it has only the archive."""
+    offline = False
+
+    def __init__(self):
+        from wagegold.fetch import Fetcher
+        self.archive = Fetcher(offline=True)
+
+    def get_transient(self, url):
+        from wagegold.fetch import FetchError
+        raise FetchError(f"{url}: unreachable")
+
+    def committed(self, prefix):
+        return self.archive.committed(prefix)
+
+
+def test_listing_failure_leaves_the_archive_in_use_as_offline():
+    from wagegold.fetch import Fetcher
+    for reader in (nbs, mhlw):
+        online, offline = reader.collect(_ListingDown()), reader.collect(Fetcher(offline=True))
+        assert online and sorted(map(repr, online)) == sorted(map(repr, offline))
+
+
+def test_unreadable_release_is_rejected_at_download():
+    # parse is the download check: a page or table that cannot be read is never archived.
+    for bad in (b"<html><title>2031\xe5\xb9\xb4</title></html>", b"PK\x03\x04 not a workbook"):
+        for check in (lambda b: nbs.parse_page(b.decode("utf-8", "replace"), "x"), lambda b: mhlw.parse(b, "x")):
+            try:
+                check(bad)
+            except Exception:  # noqa: BLE001 - any error makes the Fetcher keep the previous snapshot
+                continue
+            raise AssertionError("an unreadable file passed the download check")

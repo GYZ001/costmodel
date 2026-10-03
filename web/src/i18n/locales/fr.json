@@ -173,7 +173,7 @@
  "d.mag.below_consumption": "{p} est inférieur à une semaine de consommation des ménages par habitant ({floor:num}) ; une paie mensuelle inférieure à la consommation d’une semaine par habitant est considérée comme le signe d’une unité de temps ou d’une échelle erronée",
  "d.mag.survey_hour": "{reason} ; les chiffres horaires de cette enquête pour l’année (moyenne et médiane) ne sont donc pas utilisés",
  "d.mag.survey_month": "{reason} ; les chiffres mensuels de cette enquête pour l’année (moyenne et médiane) ne sont donc pas utilisés",
- "d.method.ilo_derived": "Salaire mensuel ÷ (heures hebdomadaires selon la même enquête × 52/12)",
+ "d.method.ilo_derived": "Salaire mensuel ÷ (heures hebdomadaires effectivement travaillées selon la même enquête × 52/12)",
  "d.method.ilo_hourly": "Salaire horaire publié par ILOSTAT",
  "d.method.ilo_monthly_only": "ILOSTAT publie directement le salaire horaire de cette enquête : aucun chiffre horaire n’est donc calculé à partir du chiffre mensuel",
  "d.method.ilo_no_hours": "La même enquête ne fournit pas d’heures utilisables : aucun chiffre horaire n’est donc calculé",

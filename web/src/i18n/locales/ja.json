@@ -161,7 +161,7 @@
  "d.mag.below_consumption": "{p}は1週間分の1人当たり家計消費（{floor:num}）を下回る；1か月の賃金が1人当たりの1週間分の消費を下回ることは、時間単位または桁の誤りの兆候とみなす",
  "d.mag.survey_hour": "{reason}；このため、この調査の同年の時間当たりの数値（平均と中央値）は使用しない",
  "d.mag.survey_month": "{reason}；このため、この調査の同年の月額の数値（平均と中央値）は使用しない",
- "d.method.ilo_derived": "月額賃金 ÷（同一調査の週労働時間 × 52/12）",
+ "d.method.ilo_derived": "月額賃金 ÷（同一調査の週実労働時間 × 52/12）",
  "d.method.ilo_hourly": "ILOSTATが公表する時間当たり賃金",
  "d.method.ilo_monthly_only": "ILOSTATはこの調査の時間当たり賃金を直接公表しているため、月額の数値から時間当たりの数値は算出しない",
  "d.method.ilo_no_hours": "同一調査に利用可能な労働時間がないため、時間当たりの数値は算出しない",

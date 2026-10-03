@@ -173,7 +173,7 @@
  "d.mag.below_consumption": "{p} é inferior ao consumo das famílias per capita de uma semana ({floor:num}); uma remuneração mensal abaixo do consumo per capita de uma semana é tomada como sinal de unidade de tempo ou escala errada",
  "d.mag.survey_hour": "{reason}; por isso, os valores por hora desta pesquisa para o ano (média e mediana) não são usados",
  "d.mag.survey_month": "{reason}; por isso, os valores mensais desta pesquisa para o ano (média e mediana) não são usados",
- "d.method.ilo_derived": "Salário mensal ÷ (horas semanais da mesma pesquisa × 52/12)",
+ "d.method.ilo_derived": "Salário mensal ÷ (horas semanais efetivamente trabalhadas da mesma pesquisa × 52/12)",
  "d.method.ilo_hourly": "Salário por hora publicado pelo ILOSTAT",
  "d.method.ilo_monthly_only": "O ILOSTAT publica diretamente o salário por hora desta pesquisa, por isso nenhum valor por hora é derivado do valor mensal",
  "d.method.ilo_no_hours": "A mesma pesquisa não tem horas utilizáveis, por isso nenhum valor por hora é derivado",

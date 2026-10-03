@@ -167,7 +167,7 @@
  "d.mag.below_consumption": "{p} ist niedriger als der Konsum der privaten Haushalte pro Kopf in einer Woche ({floor:num}); ein Monatslohn unter dem Konsum pro Kopf in einer Woche wird als Hinweis auf eine falsche Zeiteinheit oder Skalierung gewertet",
  "d.mag.survey_hour": "{reason}; daher werden die Stundenwerte dieser Erhebung für das Jahr (Durchschnitt und Median) nicht verwendet",
  "d.mag.survey_month": "{reason}; daher werden die Monatswerte dieser Erhebung für das Jahr (Durchschnitt und Median) nicht verwendet",
- "d.method.ilo_derived": "Monatslohn ÷ (wöchentliche Arbeitsstunden derselben Erhebung × 52/12)",
+ "d.method.ilo_derived": "Monatslohn ÷ (tatsächlich geleistete wöchentliche Arbeitsstunden derselben Erhebung × 52/12)",
  "d.method.ilo_hourly": "Von ILOSTAT veröffentlichter Stundenlohn",
  "d.method.ilo_monthly_only": "ILOSTAT veröffentlicht den Stundenlohn dieser Erhebung direkt, daher wird kein Stundenwert aus dem Monatswert abgeleitet",
  "d.method.ilo_no_hours": "Dieselbe Erhebung hat keine verwendbaren Arbeitsstunden, daher wird kein Stundenwert abgeleitet",

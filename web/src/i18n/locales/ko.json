@@ -161,7 +161,7 @@
  "d.mag.below_consumption": "{p}: 1인당 1주일 가계소비({floor:num})보다 적음; 한 달 임금이 1인당 1주일 소비보다 적으면 시간 단위나 자릿수가 잘못되었다는 신호로 간주함",
  "d.mag.survey_hour": "{reason}; 따라서 이 조사의 해당 연도 시간당 수치(평균 및 중위값)는 사용하지 않음",
  "d.mag.survey_month": "{reason}; 따라서 이 조사의 해당 연도 월 수치(평균 및 중위값)는 사용하지 않음",
- "d.method.ilo_derived": "월 임금 ÷ (같은 조사의 주당 근로시간 × 52/12)",
+ "d.method.ilo_derived": "월 임금 ÷ (같은 조사의 주당 실제 근로시간 × 52/12)",
  "d.method.ilo_hourly": "ILOSTAT에서 발표한 시간당 임금",
  "d.method.ilo_monthly_only": "ILOSTAT에서 이 조사의 시간당 임금을 직접 발표하므로 월 수치에서 시간당 수치를 산출하지 않음",
  "d.method.ilo_no_hours": "같은 조사에 사용 가능한 근로시간이 없어 시간당 수치를 산출하지 않음",

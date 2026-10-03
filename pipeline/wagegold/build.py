@@ -493,14 +493,16 @@ class UnitGraph:
         years ILOSTAT has not republished continue the ILOSTAT series - the same rule for
         every economy and survey.  They are used only if, for every year both have, the
         two agree within EXTENSION_TOL (the evidence that it is the same series); a
-        continued year takes the notes of the series' latest ILOSTAT year (same survey,
-        same concept) and is then checked like any other record."""
+        continued year is described by what the series measures - the notes of its latest
+        ILOSTAT year that define the concept (CONCEPT_NOTES), its currency and time unit,
+        not the notes about that year itself (a break in series, remarks, repository
+        notes): a break in the publisher's series comes from the publisher ("__break") -
+        and is then checked like any other record."""
         src = self.ilo_area(area)
         for ext in self.store.series_names(area, "ext_ilo_"):
+            if ext.endswith("__break"):
+                continue  # read with the series it marks, below
             series = ext[len("ext_"):]
-            base = series.split("@", 1)[0]
-            if base == "ilo_weekly_hours" or ext.endswith("__break"):
-                continue  # hours: see _hours; breaks: below
             theirs = {y: o for y, o in self.store.series(ext, area).items()}
             ours = {y: r for y, recs in out.items() for r in recs if r.series == series}
             common = sorted(set(theirs) & set(ours))
@@ -518,13 +520,13 @@ class UnitGraph:
                 continue
             last = max(ours)
             template = ours[last]
+            concept = " ".join(c for c in ilostat.codes(template.obs) if c.split(":", 1)[0] in (*CONCEPT_NOTES, "T30", "T7"))
             gap = max(abs(theirs[y].value / ours[y].obs.value - 1) for y in common)
             match = M("d.ext.match", publisher=M(f"src.{publisher}.publisher"), years=common, worst=gap)
             for y, o in sorted(theirs.items()):
                 if y in ours or y < last:
                     continue
-                # The notes travel with the observation (template.obs.note): same survey, same concept.
-                rec = ilo_record(self.store, series, Obs(series, src, y, o.value, o.snapshot, template.obs.note), self.ilo_dic)
+                rec = ilo_record(self.store, series, Obs(series, src, y, o.value, o.snapshot, concept), self.ilo_dic)
                 rec.publisher, rec.match = publisher, match
                 if self.store.get(ext + "__break", area, y):
                     rec.break_in_series = True
@@ -545,22 +547,6 @@ class UnitGraph:
         src = self.ilo_area(area)
         ilo = {s.split("@", 1)[1]: self.store.series(s, src) for s in self.store.series_names(src, "ilo_weekly_hours@")}
         name = lambda s: ilo_source_name(s, self.ilo_dic)  # noqa: E731
-        # The survey's hours as its publisher releases them (UnitGraph._extend): they continue
-        # ILOSTAT's hours series if they agree with it on every year both have; where ILOSTAT
-        # republishes no hours for that survey, they are the survey's own hours and go
-        # through the same checks as any other.
-        for ext in self.store.series_names(area, "ext_ilo_weekly_hours@"):
-            s = ext.split("@", 1)[1]
-            theirs, ours = self.store.series(ext, area), ilo.get(s, {})
-            common = sorted(set(theirs) & set(ours))
-            bad_year = next((y for y in common if not (1 / (1 + EXTENSION_TOL) <= theirs[y].value / ours[y].value <= 1 + EXTENSION_TOL)), None)
-            publisher = M(f"src.{next(iter(theirs.values())).note}.publisher")
-            if bad_year:
-                self._exclude(area, "*", "hours", M("d.ext.disagree", publisher=publisher, year=bad_year, theirs=theirs[bad_year].value,
-                                                     ilo=ours[bad_year].value, tol=EXTENSION_TOL), "check")
-                continue
-            last = max(ours) if ours else ""
-            ilo[s] = {**ours, **{y: o for y, o in theirs.items() if y > last}}
         oecd = {y: o.value for y, o in self.store.series("oecd_usual_weekly_hours_ft", area).items()}
         out: dict[str, dict[str, float]] = defaultdict(dict)
         bad: list[tuple[str, Msg]] = []
@@ -1077,7 +1063,9 @@ def ilo_variants(store: Store, units: UnitGraph, area: str, year: str, ilo_dic: 
         mean = chosen.get(("mean", r.unit))
         if r.concept == "median" and mean is not None and mean.source == r.source and r.obs.value > mean.obs.value:
             out.append(M("d.cav.median_above_mean", median=r.obs.value, mean=mean.obs.value))
-        return out + ([r.break_note] if r.break_note else []) + ([r.match] if r.match else []) + ilo_notes(r, ilo_dic)
+        # What the figure measures first (charts show the start of this list), where it comes
+        # from last.
+        return out + ([r.break_note] if r.break_note else []) + ilo_notes(r, ilo_dic) + ([r.match] if r.match else [])
 
     def ids(r: IloRecord) -> dict:
         return {"source_id": f"ILOSTAT {r.source}", "series_key": f"ILOSTAT {r.series}",
@@ -1105,8 +1093,7 @@ def ilo_variants(store: Store, units: UnitGraph, area: str, year: str, ilo_dic: 
             same_survey_hourly = any(r.unit == "hour" and r.concept == concept and r.source == monthly.source
                                      for r in usable.get(year, []))
             hours = hours_by_source.get(monthly.source)
-            hours_obs = (store.get(f"ilo_weekly_hours@{monthly.source}", units.ilo_area(area), year)
-                         or store.get(f"ext_ilo_weekly_hours@{monthly.source}", area, year)) if hours else None
+            hours_obs = store.get(f"ilo_weekly_hours@{monthly.source}", units.ilo_area(area), year) if hours else None
             derive = hours is not None and not same_survey_hourly
             label = M(f"w.ilo_{concept}_monthly")
             out.append(WageVariant(

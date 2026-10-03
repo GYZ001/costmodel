@@ -17,14 +17,19 @@ N元"), so it also gives the previous year's figure; a year's own release is pre
 Where the sentence also gives growth "按可比口径" (on a comparable basis), NBS flags a
 change in the units covered that year (e.g. 2024: small and micro enterprises brought in
 by the fifth economic census): the year is marked as a break in the series.
+
+The listing only decides which pages to fetch; a page is archived only if it reads as a
+wage release by its own <title> (parse_page is the download check), and the archived
+pages are what is read - the same set an offline rebuild reads.
 """
 from __future__ import annotations
 
 import re
 from dataclasses import dataclass
 
-from ..fetch import Fetcher, Snapshot
+from ..fetch import Fetcher, FetchError
 from ..model import Obs
+from .common import warn
 
 PUBLISHER = "nbs"  # catalog keys src.nbs.*
 SERIES = "ext_ilo_monthly_mean@FX:216"  # continues ILOSTAT's ilo_monthly_mean@FX:216 for CHN
@@ -38,6 +43,7 @@ PRIVATE_RE = re.compile(r"全国城镇私营单位就业人员年平均工资\s*
 # Invisible formatting characters NBS pages sometimes carry inside numbers.
 INVISIBLE_RE = re.compile("[­​-‍⁠﻿]|&shy;")
 PAGES = 12  # listing pages scanned for new releases; older ones stay in the archive
+PREFIX = "nbs/release/"
 
 
 @dataclass
@@ -59,39 +65,58 @@ def page_text(html: str) -> str:
 
 
 def discover(f: Fetcher) -> list[Release]:
+    """Wage releases on the first PAGES listing pages.  The first page must list releases
+    (else its markup is no longer understood); a later page that cannot be read ends the
+    scan."""
     seen: dict[str, Release] = {}
     for p in range(PAGES):
         url = LIST_URL + ("" if p == 0 else f"index_{p}.html")
-        html = f.get_transient(url).decode("utf-8", "replace")
-        for ym, tid, _day, title in LINK_RE.findall(html):
-            title = title.strip()
-            if tid not in seen and is_wage_release(title):
-                seen[tid] = Release(f"{LIST_URL}{ym}/{tid}.html", f"nbs/release/{ym}/{tid}", title)
+        try:
+            links = LINK_RE.findall(f.get_transient(url).decode("utf-8", "replace"))
+        except FetchError:
+            if p == 0:
+                raise
+            break
+        if not links:
+            if p == 0:
+                raise ValueError(f"no release links found on {url}")
+            break
+        for ym, tid, _day, title in links:
+            if tid not in seen and is_wage_release(title.strip()):
+                seen[tid] = Release(f"{LIST_URL}{ym}/{tid}.html", f"{PREFIX}{ym}/{tid}", title.strip())
     return list(seen.values())
 
 
 def collect(f: Fetcher) -> list[Obs]:
-    snaps: list[tuple[Snapshot, str]] = []
     if not f.offline:
-        for rel in discover(f):
-            # A published release does not change: an existing snapshot is reused as is.
-            snaps.append((f.get(rel.key, rel.url, ext="html", check=_check_release(rel.title), immutable=True), rel.title))
-    seen = {snap.key for snap, _t in snaps}
-    # Releases no longer on the listing pages scanned stay in the archive and are used.
-    snaps += [(snap, _title_of(snap)) for snap in f.committed("nbs/release/") if snap.key not in seen]
+        try:
+            releases = discover(f)
+        except (FetchError, ValueError) as exc:
+            warn(f"nbs: release listing not read, archived releases used: {exc}")
+            releases = []
+        for rel in releases:
+            try:
+                # A published release does not change: an archived snapshot is reused as is.
+                f.get(rel.key, rel.url, ext="html", check=lambda body: parse_page(body.decode("utf-8", "replace"), rel.url),
+                      immutable=True)
+            except FetchError as exc:
+                warn(f"nbs {rel.title}: {exc}")
     direct: dict[str, Obs] = {}
     implied: dict[str, Obs] = {}
     breaks: list[Obs] = []
-    for snap, title in snaps:
-        if not is_wage_release(title):
-            continue
-        year, value, prev, coverage_change = parse_release(snap.read().decode("utf-8", "replace"), title, snap.key)
+    for snap in f.committed(PREFIX):
+        year, value, prev, coverage_change = parse_page(snap.read().decode("utf-8", "replace"), snap.key)
         direct[str(year)] = Obs(SERIES, "CHN", str(year), value / 12, snap.key, PUBLISHER)
         implied[str(year - 1)] = Obs(SERIES, "CHN", str(year - 1), prev / 12, snap.key, PUBLISHER)
         if coverage_change:
             breaks.append(Obs(SERIES + "__break", "CHN", str(year), 1.0, snap.key, PUBLISHER))
     # A year's own release first; the next year's statement of it only where there is none.
     return list({**implied, **direct}.values()) + breaks
+
+
+def parse_page(html: str, where: str) -> tuple[int, int, int, bool]:
+    """parse_release of a release page, by its own <title>."""
+    return parse_release(html, _title_of(html), where)
 
 
 def parse_release(html: str, title: str, snapshot: str) -> tuple[int, int, int, bool]:
@@ -107,14 +132,6 @@ def parse_release(html: str, title: str, snapshot: str) -> tuple[int, int, int, 
     return int(m.group(1)), value, value - change if up == "增加" else value + change, "可比口径" in hit.group(4)
 
 
-def _title_of(snap: Snapshot) -> str:
-    m = re.search(r"<title>\s*([^<]*?)\s*(?:-\s*国家统计局)?\s*</title>", snap.read().decode("utf-8", "replace"))
+def _title_of(html: str) -> str:
+    m = re.search(r"<title>\s*([^<]*?)\s*(?:-\s*国家统计局)?\s*</title>", html)
     return m.group(1).strip() if m else ""
-
-
-def _check_release(title: str):
-    def check(body: bytes) -> None:
-        if title not in body.decode("utf-8", "replace"):
-            raise ValueError(f"release page does not contain its title {title!r}")
-
-    return check

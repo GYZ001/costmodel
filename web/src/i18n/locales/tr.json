@@ -167,7 +167,7 @@
  "d.mag.below_consumption": "{p}, bir haftalık kişi başı hanehalkı tüketiminden ({floor:num}) azdır; bir haftalık kişi başı tüketimin altındaki bir aylık ücret, yanlış bir zaman birimi veya ölçeğin işareti olarak kabul edilir",
  "d.mag.survey_hour": "{reason}; bu nedenle bu anketin o yıla ait saatlik değerleri (ortalama ve medyan) kullanılmıyor",
  "d.mag.survey_month": "{reason}; bu nedenle bu anketin o yıla ait aylık değerleri (ortalama ve medyan) kullanılmıyor",
- "d.method.ilo_derived": "Aylık ücret ÷ (aynı anketin haftalık çalışma saatleri × 52/12)",
+ "d.method.ilo_derived": "Aylık ücret ÷ (aynı anketin haftalık fiilen çalışılan saatleri × 52/12)",
  "d.method.ilo_hourly": "ILOSTAT’ın yayımladığı saatlik ücret",
  "d.method.ilo_monthly_only": "ILOSTAT bu anketin saatlik ücretini doğrudan yayımlıyor; bu nedenle aylık ücretten saatlik değer türetilmiyor",
  "d.method.ilo_no_hours": "Aynı ankette kullanılabilir çalışma saati yok; bu nedenle saatlik değer türetilmiyor",

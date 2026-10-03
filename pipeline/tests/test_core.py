@@ -376,6 +376,15 @@ def test_series_continued_with_its_publishers_release():
     assert u.year("AAA", "2022").linked("ilo:ilo_monthly_mean@X:1")  # carried from 2021 (×1.045)
     assert not u.year("AAA", "2023").linked("ilo:ilo_monthly_mean@X:1")  # ×4.3 from 2022: unit not carried
     assert all(r.publisher is None for r in recs["2021"])  # ILOSTAT's own years stay ILOSTAT's
+    # Continued years are described by the series' concept notes, not by notes about
+    # ILOSTAT's latest year itself (here a break in series and a remark on 2021).
+    noted = [Obs(o.series, o.area, o.period, o.value, o.snapshot, o.note + (" I11:264 I13:280" if o.period == "2021" and "@" in o.series and "_usd" not in o.series else ""))
+             for o in rows]
+    u3 = build.UnitGraph(_store(*wdi, *noted, *ext), DIC, years, META)
+    r22 = next(r for r in u3.area("AAA")["ilo"]["2022"] if r.series == "ilo_monthly_mean@X:1")
+    r21 = next(r for r in u3.area("AAA")["ilo"]["2021"] if r.series == "ilo_monthly_mean@X:1")
+    assert r21.break_in_series and not r22.break_in_series
+    assert "I13:280" not in r22.obs.note and "T8:127" in r22.obs.note and r22.signature == r21.signature
     # A release that disagrees with ILOSTAT on a common year continues nothing.
     bad = [Obs("ext_ilo_monthly_mean@X:1", "AAA", y, v, "p", "pub") for y, v in (("2021", 1200.0), ("2022", 1250.0))]
     u2 = build.UnitGraph(_store(*wdi, *rows, *bad), DIC, years, META)

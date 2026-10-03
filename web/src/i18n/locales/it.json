@@ -173,7 +173,7 @@
  "d.mag.below_consumption": "{p} è inferiore ai consumi delle famiglie pro capite di una settimana ({floor:num}); una paga mensile inferiore ai consumi pro capite di una settimana è considerata segno di un’unità di tempo o di una scala errata",
  "d.mag.survey_hour": "{reason}; pertanto i dati orari di questa indagine per l’anno (media e mediana) non vengono utilizzati",
  "d.mag.survey_month": "{reason}; pertanto i dati mensili di questa indagine per l’anno (media e mediana) non vengono utilizzati",
- "d.method.ilo_derived": "Salario mensile ÷ (ore settimanali secondo la stessa indagine × 52/12)",
+ "d.method.ilo_derived": "Salario mensile ÷ (ore settimanali effettivamente lavorate secondo la stessa indagine × 52/12)",
  "d.method.ilo_hourly": "Salario orario pubblicato da ILOSTAT",
  "d.method.ilo_monthly_only": "ILOSTAT pubblica direttamente il salario orario di questa indagine, quindi non si ricava alcun dato orario da quello mensile",
  "d.method.ilo_no_hours": "La stessa indagine non ha ore utilizzabili, quindi non si ricava alcun dato orario",

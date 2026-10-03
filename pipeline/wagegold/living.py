@@ -20,6 +20,8 @@ The same rules for every economy; an input that fails a check is left out with i
 """
 from __future__ import annotations
 
+from math import fsum  # exactly rounded: the same result on every Python version
+
 from .model import Obs, Store
 from .msg import M
 
@@ -115,7 +117,7 @@ def icp_spending(store: Store, code: str, exclude) -> dict | None:
         return None
     na = get(NET_ABROAD)
     net_abroad = na.value if na else 0.0
-    total = sum(x.values()) + net_abroad
+    total = fsum([*x.values(), net_abroad])
     if abs(total / aic - 1) > ICP_TOL or abs((hfce + gov) / aic - 1) > ICP_TOL:
         exclude(M("d.liv.icp_identity", parts=total, hfce=hfce, gov=gov, aic=aic, tol=ICP_TOL,
                   abroad=M("d.liv.icp_abroad_published" if na else "d.liv.icp_abroad_zero")), "icp")
@@ -126,11 +128,11 @@ def icp_spending(store: Store, code: str, exclude) -> dict | None:
         return None
     shares = {g: (x[k] if k else rent) / hfce for g, k in GROUPS.items()}
     # Domestic household consumption without rent, less the named groups.
-    other = (no_housing - net_abroad - sum(x[k] for k in GROUPS.values() if k)) / hfce
+    other = fsum([no_housing, -net_abroad, *(-x[k] for k in GROUPS.values() if k)]) / hfce
     known = {k: x[k] / hfce for k in OTHER_PARTS}
-    rest = other - sum(known.values())
+    rest = fsum([other, *(-v for v in known.values())])
     if other < -ICP_TOL or rest < -ICP_TOL:
-        exclude(M("d.liv.icp_other_negative", other=other, known=sum(known.values()), tol=ICP_TOL), "icp")
+        exclude(M("d.liv.icp_other_negative", other=other, known=fsum(known.values()), tol=ICP_TOL), "icp")
         return None
     return {
         "shares": {**shares, "other": other},

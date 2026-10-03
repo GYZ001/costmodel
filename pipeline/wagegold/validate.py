@@ -6,6 +6,8 @@ that disagrees with its cross-reference is never published.
 """
 from __future__ import annotations
 
+import math
+
 from dataclasses import asdict, dataclass
 
 from .config import GRAMS_PER_TROY_OUNCE
@@ -83,8 +85,8 @@ def living_arithmetic(dataset: dict) -> Check:
                     worst = max(worst, _rel(w["living_ratio"] * w["monthly_lcu"], cons))
     for sp in dataset.get("icp2021_spending", {}).values():
         n += 1
-        worst = max(worst, abs(sum(sp["shares"].values()) + sp["net_abroad"] - 1),
-                    abs(sum(sp["other_parts"].values()) - sp["shares"]["other"]))
+        worst = max(worst, abs(math.fsum([*sp["shares"].values(), sp["net_abroad"]]) - 1),
+                    abs(math.fsum(sp["other_parts"].values()) - sp["shares"]["other"]))
     return Check("living_arith", "pass" if worst < 1e-9 else "fail", M("c.identity", n=n, worst=worst))
 
 

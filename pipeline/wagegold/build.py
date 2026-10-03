@@ -194,6 +194,7 @@ class IloRecord:
     # the publisher's source id (catalog src.<id>) and how the series was matched.
     publisher: str | None = None
     match: Msg | None = None
+    scope: Msg | None = None  # the publisher's own description of the figure (a continued year)
     break_note: Msg | None = None  # the publisher's own statement of a break in the series that year
 
     @property
@@ -528,6 +529,9 @@ class UnitGraph:
                     continue
                 rec = ilo_record(self.store, series, Obs(series, src, y, o.value, o.snapshot, concept), self.ilo_dic)
                 rec.publisher, rec.match = publisher, match
+                # What the publisher says the figure is, next to ILOSTAT's notes on the series
+                # (which describe ILOSTAT's figures and may word the coverage differently).
+                rec.scope = M("d.ext.scope", publisher=M(f"src.{publisher}.publisher"), scope=M(f"src.{publisher}.series"))
                 if self.store.get(ext + "__break", area, y):
                     rec.break_in_series = True
                     rec.break_note = M("d.ext.break", publisher=M(f"src.{publisher}.publisher"))
@@ -1065,7 +1069,7 @@ def ilo_variants(store: Store, units: UnitGraph, area: str, year: str, ilo_dic: 
             out.append(M("d.cav.median_above_mean", median=r.obs.value, mean=mean.obs.value))
         # What the figure measures first (charts show the start of this list), where it comes
         # from last.
-        return out + ([r.break_note] if r.break_note else []) + ilo_notes(r, ilo_dic) + ([r.match] if r.match else [])
+        return out + [m for m in (r.break_note, r.scope) if m] + ilo_notes(r, ilo_dic) + ([r.match] if r.match else [])
 
     def ids(r: IloRecord) -> dict:
         return {"source_id": f"ILOSTAT {r.source}", "series_key": f"ILOSTAT {r.series}",

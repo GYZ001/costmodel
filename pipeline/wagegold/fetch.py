@@ -12,6 +12,7 @@ look like the expected data, the previous snapshot is kept and flagged as
 from __future__ import annotations
 
 import hashlib
+import http.client
 import json
 import time
 import urllib.error
@@ -212,7 +213,9 @@ class Fetcher:
                 last, network_error = exc, False
                 if exc.code < 500 and exc.code != 429:
                     break  # a 4xx other than rate limiting will not fix itself
-            except (urllib.error.URLError, TimeoutError, ConnectionError, OSError) as exc:
+            # A connection that fails, or a response cut off or malformed (IncompleteRead,
+            # BadStatusLine, …), is a failed download like any other.
+            except (urllib.error.URLError, TimeoutError, ConnectionError, OSError, http.client.HTTPException) as exc:
                 last, network_error = exc, True
             time.sleep(2 * 2**attempt)
         if network_error:

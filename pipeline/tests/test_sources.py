@@ -87,3 +87,24 @@ def test_unreadable_release_is_rejected_at_download():
             except Exception:  # noqa: BLE001 - any error makes the Fetcher keep the previous snapshot
                 continue
             raise AssertionError("an unreadable file passed the download check")
+
+
+def test_cut_off_response_is_a_failed_download(monkeypatch):
+    # A response cut off or malformed is a FetchError like any other failed download, so
+    # the readers' fallback to the archive covers it.
+    import http.client
+    import urllib.request
+
+    from wagegold.fetch import Fetcher, FetchError
+
+    def cut_off(*_a, **_k):
+        raise http.client.IncompleteRead(b"partial", 100)
+
+    monkeypatch.setattr(urllib.request, "urlopen", cut_off)
+    monkeypatch.setattr("time.sleep", lambda _s: None)
+    try:
+        Fetcher(offline=False, retries=1).get_transient("https://example.org/listing")
+    except FetchError:
+        pass
+    else:
+        raise AssertionError("a cut-off response was not reported as a failed download")

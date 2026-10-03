@@ -19,7 +19,7 @@ from .config import GRAMS_PER_TROY_OUNCE, SITE_DATA_DIR
 from .fetch import Fetcher, FetchError
 from .model import Store
 from .msg import M, canonical
-from .sources import ilostat, imf, mhlw, nbs, oecd, pinksheet, probe, worldbank
+from .sources import ilostat, imf, mhlw, nbs, oecd, pinksheet, worldbank
 from .sources_meta import describe
 
 
@@ -51,6 +51,10 @@ def main(argv=None) -> int:
             return None
 
     meta = run("worldbank countries", lambda: worldbank.collect_countries(f), into_store=False) or {}
+    # Where WDI's country notes say the national accounts are kept by fiscal year (shown with ④).
+    for iso, note in (run("worldbank country notes", lambda: worldbank.collect_country_notes(f), False, into_store=False) or {}).items():
+        if iso in meta:
+            meta[iso]["na_fiscal"] = note
     for name, fn, required in (
         ("worldbank pink sheet gold", lambda: pinksheet.collect(f), True),
         ("imf pcps gold", lambda: imf.collect(f), False),
@@ -61,7 +65,6 @@ def main(argv=None) -> int:
         # Survey publishers' own releases of series ILOSTAT republishes (build.UnitGraph._extend).
         ("nbs (china) urban private-unit wages", lambda: nbs.collect(f), False),
         ("mhlw (japan) basic survey on wage structure", lambda: mhlw.collect(f), False),
-        ("probe (temporary)", lambda: probe.collect(f), False),
     ):
         run(name, fn, required)
     ilo = run("ilostat", lambda: ilostat.collect(f), into_store=False)

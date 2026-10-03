@@ -133,7 +133,7 @@ export function foodGroupYears(ds: Dataset): string[] {
 }
 
 /** Groups of household consumption in display order (catalog keys liv.g.<key>); "other" last. */
-export const LIVING_GROUPS: LivingGroup[] = ["food", "housing", "furnishings", "clothing", "transport", "communication", "other"];
+export const LIVING_GROUPS: LivingGroup[] = ["food", "rent", "furnishings", "clothing", "transport", "communication", "other"];
 
 export function primaryWage(row: CountryYear | undefined, view: View = "hourly"): Wage | undefined {
   return row?.wages.find((w) => (view === "hourly" ? w.role : w.mrole) === "primary");

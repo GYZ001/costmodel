@@ -39,8 +39,8 @@ export interface Wage {
   minutes_per_cohd_day: number | null;
   monthly_ppp: number | null;
   cohd_days_per_month: number | null;
-  /** Household consumption per resident per month ÷ this monthly wage (same year, the same
-   *  currency unit): what the average resident consumes in a month, as a share of the wage. */
+  /** Household consumption per resident per month ÷ this monthly wage (the same year as the
+   *  publishers date them, the same currency unit), as a share of the wage. */
   living_ratio: number | null;
 }
 
@@ -72,33 +72,49 @@ export interface CountryYear {
   gold_usdeq_g: number | null;
   cohd: Record<CohdKey, number | null>;
   cohd_days_per_g: number | null;
-  /** Household final consumption per resident per month (WDI, LCU), and context: residents
-   *  per employed person and employees' share of the employed (ILO modelled estimates). */
-  living: { consumption_month: number | null; residents_per_employed: number | null; employees_share: number | null };
+  /** Household final consumption per resident per month (WDI, LCU), where it is shown to be in
+   *  the wages' currency unit (consumption_unconfirmed: published but not shown to be), and
+   *  context: residents per employed person (ILO employment ratio, World Bank population) and
+   *  employees' share of the employed (ILO modelled estimate). */
+  living: {
+    consumption_month: number | null; consumption_unconfirmed: boolean;
+    residents_per_employed: number | null; employees_share: number | null;
+  };
   wages: Wage[];
   snapshots: string[];
 }
 
 /** Groups of household consumption (catalog keys liv.g.<key>), in display order. */
-export type LivingGroup = "food" | "housing" | "furnishings" | "clothing" | "transport" | "communication" | "other";
+export type LivingGroup = "food" | "rent" | "furnishings" | "clothing" | "transport" | "communication" | "other";
 
 /** The ICP benchmark composition of an economy's household consumption: shares of household
- *  consumption (households and NPISHs); "other" is the rest of domestic consumption. */
+ *  consumption (households and NPISHs); rent = household consumption − ICP's consumption
+ *  without housing; "other" is the rest of domestic consumption. */
 export interface IcpSpending {
   year: string;
   shares: Record<LivingGroup, number>;
   /** published parts of "other" (restaurants & hotels, alcohol & tobacco) and the rest */
-  other_parts: { restaurants_hotels: number; alcohol_tobacco: number; rest: number } | null;
-  /** residents' purchases abroad less visitors' purchases here (negative: visitors spend more) */
+  other_parts: { restaurants_hotels: number; alcohol_tobacco: number; rest: number };
+  /** residents' purchases abroad less visitors' purchases here (negative: visitors spend more);
+   *  0 where ICP publishes none (net_abroad_published false) */
   net_abroad: number;
   net_abroad_published: boolean;
+  /** ICP's actual housing (with water, energy, repairs and government housing), as a share of household consumption */
+  housing_actual: number;
   /** government individual consumption (free or subsidised services) on top, as a share of household consumption */
   government: number;
-  /** ICP's household consumption ÷ WDI's current figure for the year, after any currency-unit change; and that change */
+  /** ICP's household consumption ÷ WDI's current figure for the year, in WDI's current currency
+   *  unit (null: the units cannot be compared); the factor ICP's figure was divided by to get
+   *  there, and from what ("fx": the two dollar exchange rates; "ppp": the two PPPs), if any */
   revision: number | null;
-  unit_change: number | null;
-  /** WDI consumption per resident per month in that year, where ICP's shares divide it (else null) */
+  converted: number | null;
+  converted_by: "fx" | "ppp" | null;
+  /** WDI consumption per resident per month in that year, and its currency, where ICP's shares
+   *  divide it (else null; the reason is in dataset.exclusions) */
   consumption_month: number | null;
+  currency: string | null;
+  /** WDI's country note where it says the national accounts are kept by fiscal year (verbatim) */
+  na_fiscal: string | null;
   snapshots: string[];
 }
 
@@ -110,6 +126,8 @@ export interface Country {
   g20: boolean;
   /** Currency of the World Bank's local-currency series, as proven by the records joined to it. */
   currency: string | null;
+  /** WDI's country note where it says the national accounts are kept by fiscal year (verbatim) */
+  na_fiscal: string | null;
   years: Record<string, CountryYear>;
 }
 

@@ -70,8 +70,9 @@ def identities(dataset: dict) -> Check:
 
 def living_arithmetic(dataset: dict) -> Check:
     """Arithmetic self-test of the living-cost figures: each wage's ratio × the wage =
-    consumption per resident; each ICP composition's shares + net purchases abroad = 1.
-    Both come from the same inputs, so this tests this site's arithmetic, not the data."""
+    consumption per resident; each ICP composition's shares + net purchases abroad = 1, and
+    the parts of "other" add up to it.  All come from the same inputs (published without
+    any rounding moved between parts), so this tests this site's arithmetic, not the data."""
     worst, n = 0.0, 0
     for c in dataset["countries"].values():
         for row in c["years"].values():
@@ -82,13 +83,14 @@ def living_arithmetic(dataset: dict) -> Check:
                     worst = max(worst, _rel(w["living_ratio"] * w["monthly_lcu"], cons))
     for sp in dataset.get("icp2021_spending", {}).values():
         n += 1
-        worst = max(worst, abs(sum(sp["shares"].values()) + sp["net_abroad"] - 1))
+        worst = max(worst, abs(sum(sp["shares"].values()) + sp["net_abroad"] - 1),
+                    abs(sum(sp["other_parts"].values()) - sp["shares"]["other"]))
     return Check("living_arith", "pass" if worst < 1e-9 else "fail", M("c.identity", n=n, worst=worst))
 
 
 def exclusions_summary(dataset: dict) -> Check:
     """What was left out and why, by kind of reason (an overview, not a pass/fail check)."""
-    order = ["unit", "identity", "missing", "notes", "check", "area", "chosen"]  # names: catalog keys kind.<kind>
+    order = ["unit", "identity", "missing", "notes", "check", "icp", "amounts", "range", "area", "chosen"]  # names: catalog keys kind.<kind>
     by_kind: dict[str, set] = {}
     for e in dataset.get("exclusions", []):
         by_kind.setdefault(e.get("kind", "unit"), set()).add(e["area"])

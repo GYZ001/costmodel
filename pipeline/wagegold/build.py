@@ -771,7 +771,7 @@ class UnitGraph:
         return next(iter(codes)) if len(codes) == 1 else None
 
     def _prove(self, values: dict[str, float], direct: dict[str, tuple[bool | None, list[Msg]]],
-               failed: Msg) -> dict[str, tuple[bool | None, list[Msg], str]]:
+               failed: Msg, link=None) -> dict[str, tuple[bool | None, list[Msg], str]]:
         """Year-by-year verdict on whether a factor (F or P) is in L, as (verdict, detail,
         kind): that year's identity, or else an adjacent year's proof carried over when the
         value moved by less than MAX_FACTOR (first forwards, then backwards).
@@ -781,13 +781,16 @@ class UnitGraph:
         A year whose identity fails although its value is linked to a proven year by
         year-to-year moves within MAX_FACTOR cannot be in another unit (the premise of the
         carry-over): the failure has another cause, unknown, and the year is left out as
-        such (kind "identity"), not as a unit failure (kind "unit", with ``failed``)."""
+        such (kind "identity"), not as a unit failure (kind "unit", with ``failed``).
+
+        link(y, n), if given, is a second way to carry a proof from year n to year y (it
+        returns (holds, message)); its message is added where neither way carries."""
         out = {y: (ok, d, "unit") for y, (ok, d) in direct.items()}
         for step, order in ((1, self.years), (-1, self.years[::-1])):
             for y in order:
                 n = str(int(y) - step)
                 if y in values and out[y][0] is None and n in values and out[n][0] is True \
-                        and same_unit(values[y], values[n]):
+                        and (same_unit(values[y], values[n]) or (link is not None and link(y, n)[0])):
                     out[y] = (True, [], "")
         # Identity failures linked to a proven year by moves of less than MAX_FACTOR.
         anchor = {y: y for y, v in out.items() if v[0] is True}
@@ -811,12 +814,25 @@ class UnitGraph:
                 out[y] = (False, [M("d.prove.failed", detail=detail, bound=MAX_FACTOR, failed=failed)], "unit")
             elif ok is None and kind == "unit":
                 near = [n for n in (str(int(y) - 1), str(int(y) + 1)) if n in values and out[n][0] is True]
-                out[y] = (None, detail + ([M("d.prove.no_carry", n=n, vn=values[n], r=values[y] / values[n]) for n in near]
-                                          or [M("d.prove.no_neighbour")]), "unit")
+                msgs = []
+                for n in near:
+                    msgs.append(M("d.prove.no_carry", n=n, vn=values[n], r=values[y] / values[n]))
+                    if link is not None and (m := link(y, n)[1]) is not None:
+                        msgs.append(m)
+                out[y] = (None, detail + (msgs or [M("d.prove.no_neighbour")]), "unit")
         return out
 
-    def _factors(self, area: str) -> tuple[dict, dict]:
-        """Verdicts for F and P by year: (True = in L, False = cannot be in L, None = unknown; detail; kind)."""
+    def _factors(self, area: str) -> tuple[dict, dict, dict]:
+        """Verdicts for F, P and H by year: (True = in L, False = cannot be in L, None = unknown; detail; kind).
+
+        H is WDI's household consumption in local currency.  It is in L where it divides
+        into WDI's international-dollar figure as the PPP does (the PPP's own identity),
+        and is carried over between years like F and P - by its own value, or by its share
+        of GDP in local currency between two years in which that GDP is itself shown to be
+        in L by the exchange rate's identity (a change of unit in consumption alone would
+        move the share by more than MAX_FACTOR; under high inflation the value itself moves
+        that much while the share does not).  An ICP price level that proves the PPP says
+        nothing about H."""
         s = self.store
         fx = {y: o.value for y in self.years if (o := s.get("fx_lcu_usd", area, y))}
         ppp = {y: o.value for y in self.years if (o := s.get("ppp_hfce", area, y))}
@@ -827,11 +843,13 @@ class UnitGraph:
                 return same_unit(val, implied), [M(what, v=val, i=implied, r=val / implied)]
             return None, [M(missing)]
 
-        f = self._prove(fx, {y: identity(v, s.get("gdp_lcu", area, y), s.get("gdp_usd", area, y), "d.fx.identity", "d.fx.missing_gdp")
-                             for y, v in fx.items()}, M("d.fx.failed"))
-        direct = {}
+        f_direct = {y: identity(v, s.get("gdp_lcu", area, y), s.get("gdp_usd", area, y), "d.fx.identity", "d.fx.missing_gdp")
+                    for y, v in fx.items()}
+        f = self._prove(fx, f_direct, M("d.fx.failed"))
+        direct, h_direct = {}, {}
         for y, v in ppp.items():
             ok, detail = identity(v, s.get("hfce_lcu", area, y), s.get("hfce_intl", area, y), "d.ppp.identity", "d.ppp.missing_hfce")
+            h_direct[y] = (ok, list(detail))
             if ok is None and y == ICP_YEAR:
                 lvl = self.icp_price_level(area)
                 if lvl is None:
@@ -843,7 +861,27 @@ class UnitGraph:
                     ok = same_unit(v, implied)
                     detail = [M("d.ppp.icp", v=v, icp=ICP_YEAR, lvl=lvl, fx=fx[y], i=implied, r=v / implied)]
             direct[y] = (ok, detail)
-        return f, self._prove(ppp, direct, M("d.ppp.failed"))
+        hfce = {y: o.value for y in self.years if (o := s.get("hfce_lcu", area, y)) and o.value > 0}
+        h_direct = {y: h_direct.get(y, (None, [M("d.hfce.no_ppp")])) for y in hfce}
+        # GDP in local currency is in L in the years the exchange rate's own identity holds.
+        gdp = {y: o.value for y in hfce if f_direct.get(y, (None,))[0] is True and (o := s.get("gdp_lcu", area, y)) and o.value > 0}
+
+        def share_link(y: str, n: str) -> tuple[bool, Msg | None]:
+            if y not in gdp or n not in gdp:
+                return False, None
+            sy, sn = hfce[y] / gdp[y], hfce[n] / gdp[n]
+            ok = same_unit(sy, sn)
+            return ok, (None if ok else M("d.hfce.share", n=n, sn=sn, sy=sy, r=sy / sn))
+        return f, self._prove(ppp, direct, M("d.ppp.failed")), self._prove(hfce, h_direct, M("d.hfce.failed"), share_link)
+
+    def consumption(self, area: str, year: str) -> tuple[float | None, list[str], tuple | None]:
+        """Household consumption per resident per month in L (living.consumption_month), its
+        snapshots, and - where WDI publishes the year's figure but it is not shown to be in L
+        - the verdict that says why (verdict, detail, kind)."""
+        cons, snaps = living.consumption_month(self.store, area, year)
+        if cons is None or self.year(area, year).linked("H"):
+            return cons, snaps, None
+        return None, [], self.area(area)["checks"].get(year, {}).get("H", (None, [M("d.hfce.no_ppp")], "unit"))
 
     def icp_price_level(self, area: str) -> float | None:
         """ICP 2021 household-consumption price level relative to the United States."""
@@ -856,7 +894,7 @@ class UnitGraph:
         s = self.store
         ilo = self.ilo_records(area)
         oecd_ppp = self._oecd_ppp_identity(area)
-        f_ok, p_ok = self._factors(area)
+        f_ok, p_ok, h_ok = self._factors(area)
         graphs: dict[str, _UnionFind] = {}
         checks: dict[str, dict] = {}
         ambiguous: dict[tuple[str, str], Msg] = {}
@@ -866,7 +904,7 @@ class UnitGraph:
             g = _UnionFind()
             c: dict = {}
             fx, ppp = s.get("fx_lcu_usd", area, y), s.get("ppp_hfce", area, y)
-            for node, verdicts in (("F", f_ok), ("P", p_ok)):
+            for node, verdicts in (("F", f_ok), ("P", p_ok), ("H", h_ok)):
                 if y in verdicts:
                     c[node] = verdicts[y]  # (verdict, detail, kind)
                     if verdicts[y][0]:
@@ -973,6 +1011,9 @@ class UnitGraph:
             ok, detail, kind = c.get(k, (True, [], ""))
             if not g.linked(k) and ok is not True and detail:
                 self._exclude(area, year, scope, detail, kind)
+        if "H" in c and not g.linked("H"):
+            ok, detail, kind = c["H"]
+            self._exclude(area, year, "living:consumption", detail, kind)
         if "C" in c and not g.linked("C"):
             ok, detail = c["C"]
             if ok is True:  # the diet cost matches the PPP, but the PPP itself is not proven
@@ -1164,10 +1205,10 @@ def country_years(store: Store, gold: dict, meta: dict, ilo_dic: dict, years: li
             wages = [wage_metrics(v, gold_lcu_g, fx.value if fx else None, ppp.value if ppp else None,
                                   cohd["total"].value if cohd["total"] else None) for v in variants]
             mark_roles(wages)
-            # Living costs: household consumption per resident per month (WDI LCU, the unit L
-            # every wage here is attached to), and each monthly wage's ratio to it.
-            cons, cons_snaps = living.consumption_month(store, area, y)
-            ctx = living.context(store, area, y, lambda yy, why, a=area: units._exclude(a, yy, "living:context", why, "check"))
+            # Living costs: household consumption per resident per month, where it is in L (the
+            # unit every wage here is attached to), and each monthly wage's ratio to it.
+            cons, cons_snaps, cons_why = units.consumption(area, y)
+            ctx = living.context(store, area, y, lambda yy, why, a=area: units._exclude(a, yy, "living:context", why, "range"))
             for w in wages:
                 w["living_ratio"] = cons / w["monthly_lcu"] if cons and w["monthly_lcu"] else None
             gdp_lcu, gdp_usd = store.get("gdp_lcu", area, y), store.get("gdp_usd", area, y)
@@ -1186,8 +1227,8 @@ def country_years(store: Store, gold: dict, meta: dict, ilo_dic: dict, years: li
                 "gold_usdeq_g": g["usd_g"] / pli if pli else None,
                 "cohd": {k: _v(o) for k, o in cohd.items()},
                 "cohd_days_per_g": gold_lcu_g / cohd["total"].value if cohd["total"] and gold_lcu_g else None,
-                "living": {"consumption_month": cons, "residents_per_employed": ctx["residents_per_employed"],
-                           "employees_share": ctx["employees_share"]},
+                "living": {"consumption_month": cons, "consumption_unconfirmed": cons_why is not None,
+                           "residents_per_employed": ctx["residents_per_employed"], "employees_share": ctx["employees_share"]},
                 "wages": wages,
                 "snapshots": sorted({o.snapshot for o in [fx, ppp, cohd["total"]] if o} | set(cons_snaps) | set(ctx["snapshots"])),
             }
@@ -1202,6 +1243,8 @@ def country_years(store: Store, gold: dict, meta: dict, ilo_dic: dict, years: li
                 "iso2": info["iso2"],
                 "g20": area in G20,
                 "currency": units.currency(area),
+                # WDI's country note where it says the national accounts are kept by fiscal year (verbatim)
+                "na_fiscal": info.get("na_fiscal"),
                 "years": rec_years,
             }
     return out
@@ -1348,11 +1391,17 @@ def icp_levels(store: Store, meta: dict) -> dict:
     return dict(out)
 
 
+def _converted(rev: dict) -> Msg:
+    """How ICP's 2021 figure was put into WDI's current currency unit (living.revision)."""
+    return M(f"d.liv.converted_{rev['by']}", k=rev["converted"]) if rev["by"] else M("d.liv.same_unit")
+
+
 def icp_spending(store: Store, meta: dict, units: UnitGraph) -> dict:
     """The ICP 2021 composition of household consumption, by WDI economy (living.icp_spending),
     with WDI's 2021 consumption per resident per month where ICP's shares divide that total:
-    the revision between ICP's and WDI's 2021 figures, after any change of currency unit,
-    within ×/÷MAX_FACTOR.  Beyond it the shares are still shown, but no amounts."""
+    WDI's figure in L (UnitGraph.consumption), and ICP's and WDI's 2021 figures within
+    ×/÷MAX_FACTOR of each other in the same currency unit (living.revision).  Otherwise the
+    shares are still shown, but no amounts, with the reason logged (kind "amounts")."""
     out = {}
     for iso, code in sorted(icp_codes(store, meta).items()):
         def exclude(detail, kind, a=iso):
@@ -1363,15 +1412,24 @@ def icp_spending(store: Store, meta: dict, units: UnitGraph) -> dict:
         split = living.icp_spending(store, code, exclude)
         if split is None:
             continue
-        rev, unit = living.revision(store, code, iso, split["icp_hfce"])
-        cons, snaps = living.consumption_month(store, iso, living.ICP_YEAR)
-        amounts_ok = cons is not None and rev is not None and same_unit(rev, 1.0, MAX_FACTOR)
-        if cons is not None and rev is not None and not amounts_ok:
-            exclude(M("d.liv.revised", r=rev, unit=unit if unit is not None else 1.0, bound=MAX_FACTOR), "check")
-        split.pop("icp_hfce")
-        out[iso] = {**split, "year": living.ICP_YEAR, "revision": rev, "unit_change": unit,
-                    "consumption_month": cons if amounts_ok else None,
-                    "snapshots": sorted(set(split["snapshots"]) | (set(snaps) if amounts_ok else set()))}
+        rev = living.revision(store, code, iso, split.pop("icp_hfce"), MAX_FACTOR)
+        cons, snaps, cons_why = units.consumption(iso, living.ICP_YEAR)
+        currency = units.currency(iso)
+        r = rev["revision"]
+        amounts_ok = cons is not None and currency is not None and r is not None and same_unit(r, 1.0)
+        if cons_why is not None:
+            exclude(M("d.liv.cons_unconfirmed", detail=cons_why[1]), "amounts")
+        elif cons is not None and r is None:
+            exclude(M("d.liv.unit_unknown", r=rev["raw"], bound=MAX_FACTOR,
+                      factors=[M(f"d.liv.k_{k}", k=v) for k, v in rev["factors"].items()] or [M("d.liv.k_none")]), "amounts")
+        elif cons is not None and not same_unit(r, 1.0):
+            exclude(M("d.liv.revised", r=r, bound=MAX_FACTOR, converted=_converted(rev)), "amounts")
+        elif cons is not None and currency is None:
+            exclude(M("d.liv.no_currency"), "amounts")
+        out[iso] = {**split, "year": living.ICP_YEAR, "revision": r, "converted": rev["converted"], "converted_by": rev["by"],
+                    "consumption_month": cons if amounts_ok else None, "currency": currency if amounts_ok else None,
+                    "na_fiscal": meta.get(iso, {}).get("na_fiscal"),
+                    "snapshots": sorted(set(split["snapshots"]) | set(rev["snapshots"]) | (set(snaps) if amounts_ok else set()))}
     return out
 
 

@@ -154,6 +154,7 @@ footer { color: var(--muted); font-size: 13px; padding: 40px 0 60px; }
 .chip .sw { width: 9px; height: 9px; margin-inline-end: 0; }
 .legend .ln { display: inline-block; width: 16px; height: 2px; margin-inline-end: 6px; vertical-align: 4px; }
 .legend .sw.hatch { background: repeating-linear-gradient(45deg, var(--axis) 0 1.5px, var(--surface) 1.5px 4px); border: 1px solid var(--axis); }
+.legend .sw.tick { width: 2px; height: 14px; border-radius: 0; background: var(--ink); vertical-align: -2px; margin-inline: 5px 11px; }
 .card .seg { margin: 0 0 8px; }
 
 select { max-width: 100%; }

@@ -19,6 +19,7 @@ const SCOPE_KEYS: Record<string, string> = {
   "wage:ilo_hourly_median": "scope.ilo_hourly_median",
   "living:split": "scope.living_split",
   "living:context": "scope.living_context",
+  "living:consumption": "scope.living_consumption",
 };
 
 export function scopeLabel(i: I18n, scope: string): string {

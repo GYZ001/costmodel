@@ -323,7 +323,7 @@ def test_prove_identity_failure_next_to_a_proven_year_is_unknown():
                ("hfce_intl", "AAA", "2005", 500.0, "s"), ("ppp_hfce", "AAA", "2006", 99.15, "s"),
                ("hfce_lcu", "AAA", "2006", 99.15 * 500, "s"), ("hfce_intl", "AAA", "2006", 500.0, "s"))
     u = build.UnitGraph(s, DIC, years, META)
-    _f, p = u._factors("AAA")
+    _f, p, _h = u._factors("AAA")
     assert p["2006"][0] is True and p["2005"][0] is None and p["2005"][2] == "identity"
     assert "d.prove.chain" in _keys(p["2005"][1]) and "d.ppp.failed" not in _keys(p["2005"][1])
 
@@ -398,33 +398,108 @@ def _icp(code: str, **cn) -> list:
 
 ICP_OK = dict(food_nonalc=20, alcohol_tobacco=3, clothing=5, housing=25, furnishings=5, health=12, transport=10,
               communication=3, recreation=6, education=8, restaurants_hotels=4, misc=9, net_purchases_abroad=-10,
-              hfce=80, gov_individual=20, aic=100)
+              hfce=80, hfce_no_housing=65, gov_individual=20, aic=100)
 
 
-def test_icp_composition_adds_up_and_derives_other():
+def test_icp_composition_adds_up_rent_and_other():
     from wagegold import living
     log = []
     sp = living.icp_spending(_store(*_icp("AAA", **ICP_OK)), "AAA", lambda d, k: log.append((d, k)))
     assert not log
-    # Domestic consumption = 80 - (-10) = 90; the six groups 68, so other = 22 (of 80).
-    assert abs(sp["shares"]["other"] - 22 / 80) < 1e-12 and abs(sp["net_abroad"] + 10 / 80) < 1e-12
+    # Rent = 80 - 65 = 15; domestic consumption without rent = 65 - (-10) = 75; the five
+    # other named groups 43, so other = 32 (of 80), of which 7 itemised.
+    assert abs(sp["shares"]["rent"] - 15 / 80) < 1e-12 and abs(sp["shares"]["other"] - 32 / 80) < 1e-12
+    assert abs(sp["other_parts"]["rest"] - 25 / 80) < 1e-12 and abs(sp["housing_actual"] - 25 / 80) < 1e-12
     assert abs(sum(sp["shares"].values()) + sp["net_abroad"] - 1) < 1e-12
-    assert abs(sp["government"] - 20 / 80) < 1e-12
-    # Net purchases abroad not published: the identity gives it.
-    sp2 = living.icp_spending(_store(*_icp("AAA", **{k: v for k, v in ICP_OK.items() if k != "net_purchases_abroad"})), "AAA", lambda d, k: log.append(k))
-    assert sp2 and not sp2["net_abroad_published"] and abs(sp2["net_abroad"] + 10 / 80) < 1e-12
+    assert abs(sum(sp["other_parts"].values()) - sp["shares"]["other"]) < 1e-12
+    assert abs(sp["government"] - 20 / 80) < 1e-12 and sp["net_abroad_published"]
 
 
-def test_icp_composition_failing_an_identity_is_left_out():
+def test_icp_unpublished_net_purchases_abroad_is_zero_and_still_checked():
     from wagegold import living
     log = []
-    bad = {**ICP_OK, "gov_individual": 30}  # 80 + 30 != 100
+    # Not published, and the other parts add up to AIC on their own: taken as zero.
+    ok = {**{k: v for k, v in ICP_OK.items() if k != "net_purchases_abroad"}, "aic": 110, "hfce": 90, "hfce_no_housing": 75}
+    sp = living.icp_spending(_store(*_icp("AAA", **ok)), "AAA", lambda d, k: log.append(k))
+    assert sp and not sp["net_abroad_published"] and sp["net_abroad"] == 0 and not log
+    # Not published, and the parts do not add up: the identity is not made to hold.
+    bad = {k: v for k, v in ICP_OK.items() if k != "net_purchases_abroad"}
     assert living.icp_spending(_store(*_icp("AAA", **bad)), "AAA", lambda d, k: log.append(k)) is None
-    assert log == ["identity"]
-    log.clear()
-    missing = {k: v for k, v in ICP_OK.items() if k != "housing"}
-    assert living.icp_spending(_store(*_icp("AAA", **missing)), "AAA", lambda d, k: log.append(k)) is None
-    assert log == ["missing"]
+    assert log == ["icp"]
+
+
+def test_icp_composition_failing_a_check_is_left_out():
+    from wagegold import living
+    cases = {
+        "identity": {**ICP_OK, "gov_individual": 30},  # 80 + 30 != 100
+        "rent beyond actual housing": {**ICP_OK, "hfce_no_housing": 50},  # rent 30 > housing 25
+        # restaurants 30 + alcohol 3 > other 32 (health, recreation and education moved to restaurants)
+        "itemised parts beyond other": {**ICP_OK, "restaurants_hotels": 30, "health": 0, "recreation": 0, "education": 0},
+        "missing": {k: v for k, v in ICP_OK.items() if k != "hfce_no_housing"},
+    }
+    for name, cn in cases.items():
+        log = []
+        assert living.icp_spending(_store(*_icp("AAA", **cn)), "AAA", lambda d, k: log.append(k)) is None, name
+        assert log == (["missing"] if name == "missing" else ["icp"]), (name, log)
+
+
+def test_icp_revision_decides_the_currency_unit_by_both_ratios():
+    from wagegold import living
+    base = [*_icp("AAA", icp21_dummy=1), Obs("icp21_pli_wl_hfce", "USA", "2021", 150.0, "icp")]
+
+    def rev(icp_ppp, wdi_ppp, icp_pli, gdp_factor, icp_hfce, wdi_hfce):
+        rows = [*base, Obs("icp21_ppp_hfce", "AAA", "2021", icp_ppp, "icp"), Obs("icp21_pli_wl_hfce", "AAA", "2021", icp_pli, "icp"),
+                Obs("hfce_lcu", "AAA", "2021", wdi_hfce, "w"), Obs("gdp_lcu", "AAA", "2021", gdp_factor * 1e6, "w"),
+                Obs("gdp_usd", "AAA", "2021", 1e6, "w")]
+        if wdi_ppp:
+            rows.append(Obs("ppp_hfce", "AAA", "2021", wdi_ppp, "w"))
+        return living.revision(_store(*rows), "AAA", "AAA", icp_hfce, 1.4)
+    # Same currency, PPP revised by 8% since ICP: the revision is the totals' ratio.
+    r = rev(10.0, 10.8, 100.0, 15.0, 93.0, 100e9)  # ICP exchange rate 10 × 150 / 100 = 15 = WDI's
+    assert abs(r["revision"] - 0.93) < 1e-12 and r["converted"] is None
+    # Redenominated 1000:1 since ICP: converted at the exchange-rate ratio.
+    r = rev(10000.0, 10.3, 100.0, 15.0, 100e3, 100e9)
+    assert abs(r["converted"] - 1000) < 1e-9 and r["by"] == "fx" and abs(r["revision"] - 1.0) < 1e-12
+    # The two ratios disagree (one says same unit, the other not): unknown.
+    assert rev(10000.0, 9000.0, 100.0, 15.0, 100e3, 100e9)["revision"] is None
+    # No PPP of WDI: only the exchange-rate ratio decides.
+    assert rev(10.0, None, 100.0, 15.0, 120.0, 100e9)["revision"] == 1.2
+
+
+def test_consumption_needs_its_currency_unit_proven():
+    # The PPP identity proves household consumption (H); a year whose identity fails is
+    # left out; under high inflation H is carried by its share of GDP when the exchange
+    # rate's identity puts GDP in the same unit both years.
+    years = ["2020", "2021", "2022"]
+    rows = []
+    for y, hf, hi, ppp, gdp, fx in (("2020", 600.0, 100.0, 6.0, 1000.0, 10.0), ("2021", 1200.0, 100.0, 30.0, 2000.0, 20.0),
+                                    ("2022", 2400.0, None, None, 4000.0, 40.0)):
+        rows += [Obs("hfce_lcu", "AAA", y, hf, "w"), Obs("gdp_lcu", "AAA", y, gdp, "w"), Obs("gdp_usd", "AAA", y, 100.0, "w"),
+                 Obs("fx_lcu_usd", "AAA", y, fx, "w"), Obs("population", "AAA", y, 10.0, "w")]
+        if hi:
+            rows.append(Obs("hfce_intl", "AAA", y, hi, "w"))
+        if ppp:
+            rows.append(Obs("ppp_hfce", "AAA", y, ppp, "w"))
+    u = build.UnitGraph(_store(*rows), DIC, years, META)
+    assert u.year("AAA", "2020").linked("H")  # 600 / 100 = 6 = PPP
+    assert not u.year("AAA", "2021").linked("H")  # 1200 / 100 = 12 vs PPP 30: beyond ×/÷1.4
+    cons, _s, why = u.consumption("AAA", "2021")
+    assert cons is None and why is not None
+    # 2022: no PPP; its value doubled from 2021 (not proven anyway) - nothing to carry from.
+    assert not u.year("AAA", "2022").linked("H")
+
+
+def test_consumption_carried_by_share_of_gdp():
+    years = ["2021", "2022"]
+    rows = []
+    for y, hf, hi, ppp, gdp in (("2021", 600.0, 100.0, 6.0, 1000.0), ("2022", 1800.0, None, None, 3000.0)):
+        rows += [Obs("hfce_lcu", "AAA", y, hf, "w"), Obs("gdp_lcu", "AAA", y, gdp, "w"), Obs("gdp_usd", "AAA", y, 100.0, "w"),
+                 Obs("fx_lcu_usd", "AAA", y, gdp / 100.0, "w"), Obs("population", "AAA", y, 10.0, "w")]
+        if hi:
+            rows += [Obs("hfce_intl", "AAA", y, hi, "w"), Obs("ppp_hfce", "AAA", y, ppp, "w")]
+    u = build.UnitGraph(_store(*rows), DIC, years, META)
+    # ×3 in a year (beyond ×/÷1.4), but the share of GDP is 0.6 both years.
+    assert u.year("AAA", "2022").linked("H") and u.consumption("AAA", "2022")[0] == 1800.0 / 10 / 12
 
 
 def test_residents_per_employed_and_bounds():
@@ -436,4 +511,9 @@ def test_residents_per_employed_and_bounds():
     assert abs(c["residents_per_employed"] - 1000 / 400) < 1e-12 and c["employees_share"] == 0.8 and not log
     s2 = _store(Obs("population", "AAA", "2021", 1000, "p"), Obs("population_0_14", "AAA", "2021", 200, "p"),
                 Obs("emp_to_pop_15plus", "AAA", "2021", 150, "e"))
-    assert living.context(s2, "AAA", "2021", lambda y, d: log.append(d))["residents_per_employed"] is None and log
+    assert living.context(s2, "AAA", "2021", lambda y, d: log.append(d))["residents_per_employed"] is None
+    assert log[-1]["k"] == "d.liv.ctx_emp"
+    s3 = _store(Obs("population", "AAA", "2021", 1000, "p"), Obs("population_0_14", "AAA", "2021", 1000, "p"),
+                Obs("emp_to_pop_15plus", "AAA", "2021", 50, "e"))
+    assert living.context(s3, "AAA", "2021", lambda y, d: log.append(d))["residents_per_employed"] is None
+    assert log[-1]["k"] == "d.liv.ctx_pop"

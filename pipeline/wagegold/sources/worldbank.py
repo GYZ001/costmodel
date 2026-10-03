@@ -26,6 +26,7 @@ are quality-matched, unlike comparing same-named supermarket items.
 from __future__ import annotations
 
 import json
+import re
 
 from ..fetch import Fetcher
 from ..model import Obs
@@ -82,6 +83,7 @@ ICP_MEASURES = {"PX.WL": "icp21_pli_wl", "PPPGlob": "icp21_ppp"}
 ICP_EXPENDITURE = {
     "9020000": "aic",
     "9100000": "hfce",
+    "9260000": "hfce_no_housing",  # households' and NPISHs' consumption without housing (rent)
     "1300000": "gov_individual",
     "1101000": "food_nonalc",
     "1102000": "alcohol_tobacco",
@@ -133,6 +135,40 @@ def collect_countries(f: Fetcher) -> dict[str, dict]:
         }
         for r in rows
     }
+
+
+def fiscal_sentence(notes: str) -> str | None:
+    """The sentence(s) of a WDI country note that say the national accounts are kept by
+    fiscal year, verbatim (e.g. "For this country, it is fiscal year-based (fiscal
+    year-end: June 30)."), or None."""
+    sentences = re.split(r"(?<=\.)\s+(?=[A-Z])", notes.strip())
+    found = [x.strip() for x in sentences if "fiscal year-based" in x]
+    return " ".join(found) or None
+
+
+def collect_country_notes(f: Fetcher) -> dict[str, str]:
+    """Economy -> what WDI's country notes (Special Notes) say about a fiscal-year reporting
+    period of its national accounts, verbatim; economies whose notes say nothing of it are
+    not listed.  The metadata are paged; every page is archived."""
+    out: dict[str, str] = {}
+    page, pages = 1, 1
+    while page <= pages:
+        snap = f.get(
+            f"worldbank/wdi_country_notes_p{page}",
+            f"{API}/sources/2/country/all/metadata?format=json&per_page=1000&page={page}",
+            ext="json",
+            check=check_json(lambda d: d.get("source"), "WDI country metadata empty"),
+        )
+        payload = json.loads(snap.read())
+        pages = int(payload.get("pages", 1))
+        for src in payload["source"]:
+            for concept in src.get("concept", []):
+                for var in concept.get("variable", []):
+                    for mt in var.get("metatype", []):
+                        if mt.get("id") == "SpecialNotes" and (sentence := fiscal_sentence(mt.get("value") or "")):
+                            out[var["id"]] = sentence
+        page += 1
+    return out
 
 
 def collect_wdi(f: Fetcher, first_year: int = 1990, last_year: int = 2030) -> list[Obs]:

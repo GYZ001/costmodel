@@ -13,15 +13,6 @@ from ..model import Obs
 
 # (key, url, ext, follow: regex of links to fetch too (group 1 = href), at most n)
 PROBES: list[tuple[str, str, str, str | None, int]] = [
-    # Japan, MHLW Basic Survey on Wage Structure (ILOSTAT DA:260)
-    ("probe/jpn/mhlw_en_ordinary2020", "https://www.mhlw.go.jp/english/database/db-l/ordinary2020.html", "html",
-     r'href="([^"]+\.(?:xlsx|xls|csv))"', 12),
-    ("probe/jpn/estat_list", "https://www.e-stat.go.jp/stat-search/files?page=1&toukei=00450091&tstat=000001011429", "html", None, 0),
-    ("probe/jpn/estat_2025_ippan_sangyo",
-     "https://www.e-stat.go.jp/stat-search/files?page=1&layout=datalist&toukei=00450091&tstat=000001011429&cycle=0"
-     "&tclass1=000001229845&tclass2=000001229849&tclass3=000001229868&tclass4val=0", "html",
-     r'href="([^"]*file-download\?[^"]*statInfId=\d+[^"]*fileKind=0[^"]*)"', 4),
-    ("probe/jpn/mhlw_z2025", "https://www.mhlw.go.jp/toukei/itiran/roudou/chingin/kouzou/z2025/index.html", "html", None, 0),
 ]
 
 

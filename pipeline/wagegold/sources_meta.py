@@ -14,6 +14,7 @@ SOURCES = [
     {"prefix": "oecd/", "id": "oecd", "landing": "https://data-explorer.oecd.org/"},
     # Survey publishers whose own releases continue a series ILOSTAT republishes ("extends").
     {"prefix": "nbs/", "id": "nbs", "landing": "https://www.stats.gov.cn/sj/zxfb/", "extends": True},
+    {"prefix": "mhlw/", "id": "mhlw", "landing": "https://www.e-stat.go.jp/stat-search/files?page=1&toukei=00450091&tstat=000001011429", "extends": True},
 ]
 
 

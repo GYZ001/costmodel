@@ -14,7 +14,8 @@ WDI (source 2):
   PPP are in the same currency unit as WDI's LCU series (see build.UnitGraph).
 
 ICP 2021 (source 90): price level indices (World = 100) and PPPs (US$ = 1) for
-expenditure categories, from the 2021 benchmark comparison.  Products priced in
+expenditure categories, from the 2021 benchmark comparison, and expenditure (local
+currency) on the parts of actual individual consumption.  Products priced in
 the ICP follow common specifications across countries, so category price levels
 are quality-matched, unlike comparing same-named supermarket items.
 """
@@ -61,6 +62,32 @@ ICP_CATEGORIES = {
     "1111000": "restaurants_hotels",
 }
 ICP_MEASURES = {"PX.WL": "icp21_pli_wl", "PPPGlob": "icp21_ppp"}
+
+# ICP 2021 expenditure (classification CN: local currency units, billions) of the parts
+# of actual individual consumption (AIC: what households consume, whether they pay for
+# it or the government or NPISHs provide it).  The parts add up to AIC: household
+# spending on food, alcohol & tobacco, clothing, furnishings, transport, communication,
+# restaurants & hotels and net purchases abroad, and the "actual" (household + provided)
+# housing, health, recreation, education and miscellaneous.  AIC = households' and
+# NPISHs' consumption + government individual consumption, checked in build.
+ICP_EXPENDITURE = {
+    "9020000": "aic",
+    "9100000": "hfce",
+    "1300000": "gov_individual",
+    "1101000": "food_nonalc",
+    "1102000": "alcohol_tobacco",
+    "1103000": "clothing",
+    "9060000": "housing",
+    "1105000": "furnishings",
+    "9080000": "health",
+    "1107000": "transport",
+    "1108000": "communication",
+    "9110000": "recreation",
+    "9120000": "education",
+    "1111000": "restaurants_hotels",
+    "9140000": "misc",
+    "1113000": "net_purchases_abroad",
+}
 
 # Food Prices for Nutrition (source 88): least-cost healthy diet per person per day,
 # total and by food group, in local currency at each year's prices.
@@ -120,8 +147,9 @@ def collect_wdi(f: Fetcher, first_year: int = 1990, last_year: int = 2030) -> li
 
 def collect_icp2021(f: Fetcher) -> list[Obs]:
     out: list[Obs] = []
-    series = ";".join(ICP_CATEGORIES)
-    for cls, prefix in ICP_MEASURES.items():
+    reads = [(cls, prefix, ICP_CATEGORIES) for cls, prefix in ICP_MEASURES.items()] + [("CN", "icp21_cn", ICP_EXPENDITURE)]
+    for cls, prefix, categories in reads:
+        series = ";".join(categories)
         snap = f.get(
             f"worldbank/icp2021_{cls}",
             f"{API}/sources/90/country/all/series/{series}/classification/{cls}/time/YR2021?format=json&per_page=20000",
@@ -136,7 +164,7 @@ def collect_icp2021(f: Fetcher) -> list[Obs]:
                 continue
             var = {v["concept"]: v["id"] for v in row["variable"]}
             name = next(v.get("value", "") for v in row["variable"] if v["concept"] == "Country")
-            cat = ICP_CATEGORIES[var["Series"]]
+            cat = categories[var["Series"]]
             # ICP's own economy codes mostly equal ISO3 but not always; the name is kept so
             # build.icp_levels can match them to WDI economies (and drop ICP's aggregates).
             out.append(Obs(f"{prefix}_{cat}", var["Country"], "2021", float(row["value"]), snap.key, note=name))

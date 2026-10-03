@@ -137,12 +137,18 @@ def collect_countries(f: Fetcher) -> dict[str, dict]:
     }
 
 
+# WDI's country notes state a fiscal-year reporting period of the national accounts in two
+# wordings: "For this country, it is fiscal year-based (fiscal year-end: June 30)." and
+# "Fiscal year end: June 30; reporting period for national accounts data: FY." (": CY" is a
+# calendar year).
+FISCAL = re.compile(r"\bfiscal year-based\b|\breporting period for national accounts data:\s*FY\b")
+
+
 def fiscal_sentence(notes: str) -> str | None:
     """The sentence(s) of a WDI country note that say the national accounts are kept by
-    fiscal year, verbatim (e.g. "For this country, it is fiscal year-based (fiscal
-    year-end: June 30)."), or None."""
+    fiscal year, verbatim, or None."""
     sentences = re.split(r"(?<=\.)\s+(?=[A-Z])", notes.strip())
-    found = [x.strip() for x in sentences if "fiscal year-based" in x]
+    found = [x.strip() for x in sentences if FISCAL.search(x)]
     return " ".join(found) or None
 
 

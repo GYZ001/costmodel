@@ -108,3 +108,15 @@ def test_cut_off_response_is_a_failed_download(monkeypatch):
         pass
     else:
         raise AssertionError("a cut-off response was not reported as a failed download")
+
+
+def test_fiscal_year_notes_in_both_wdi_wordings():
+    from wagegold.sources.worldbank import fiscal_sentence
+    lead = "The reporting period for national accounts data is designated as either calendar year basis (CY) or fiscal year basis (FY). "
+    assert fiscal_sentence(lead + "For this country, it is fiscal year-based (fiscal year-end: June 30).") \
+        == "For this country, it is fiscal year-based (fiscal year-end: June 30)."
+    assert fiscal_sentence("Fiscal year end: June 30; reporting period for national accounts data: FY.") \
+        == "Fiscal year end: June 30; reporting period for national accounts data: FY."
+    # Calendar-year national accounts, whatever the government's fiscal year.
+    assert fiscal_sentence("Fiscal year end: March 31; reporting period for national accounts data: CY.") is None
+    assert fiscal_sentence(lead + "For this country, it is calendar year-based.") is None

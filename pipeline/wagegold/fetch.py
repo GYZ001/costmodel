@@ -76,7 +76,7 @@ class Fetcher:
         key: str,
         url: str,
         *,
-        ext: str,
+        ext: str | Callable[[bytes], str],
         json_body: object | None = None,
         record_body: object | None = None,
         headers: dict[str, str] | None = None,
@@ -88,7 +88,9 @@ class Fetcher:
         """Fetch ``url`` (POSTing ``json_body`` if given) and snapshot the response.
 
         ``record_body`` is what the manifest stores as the request body; pass it
-        when ``json_body`` carries a credential that must not be committed.
+        when ``json_body`` carries a credential that must not be committed.  ``ext``
+        may be a function of the body, for a publisher that serves one file in either
+        of several formats.
         """
         if key in self.used:
             return self.used[key]
@@ -120,7 +122,7 @@ class Fetcher:
             self._record(prev)
             return prev
 
-        rel = Path("data/raw") / f"{key}.{ext}"
+        rel = Path("data/raw") / f"{key}.{ext(body) if callable(ext) else ext}"
         (REPO_ROOT / rel).parent.mkdir(parents=True, exist_ok=True)
         (REPO_ROOT / rel).write_bytes(body)
         snap = Snapshot(

@@ -3,7 +3,7 @@ name = "wagegold"
 version = "0.1.0"
 description = "Labor → gold → goods: official-data pipeline for cross-country hourly-wage purchasing power"
 requires-python = ">=3.11"
-dependencies = ["openpyxl>=3.1"]
+dependencies = ["openpyxl>=3.1", "xlrd>=2.0"]
 
 [project.optional-dependencies]
 test = ["pytest>=8"]

@@ -18,7 +18,6 @@ starts with the 2020 survey (FIRST_YEAR).
 """
 from __future__ import annotations
 
-import io
 import re
 import unicodedata
 from dataclasses import dataclass
@@ -26,7 +25,7 @@ from urllib.parse import urljoin
 
 from ..fetch import Fetcher, Snapshot
 from ..model import Obs
-from .common import check_prefix
+from .common import excel_format, excel_rows
 
 PUBLISHER = "mhlw"  # catalog keys src.mhlw.*
 SERIES = "ext_ilo_monthly_mean@DA:260"  # continues ILOSTAT's ilo_monthly_mean@DA:260 for JPN
@@ -117,7 +116,7 @@ def collect(f: Fetcher) -> list[Obs]:
     snaps: list[tuple[Snapshot, int]] = []
     if not f.offline:
         for t in discover(f):
-            snaps.append((f.get(t.key, t.url, ext="xlsx", check=check_prefix(b"PK", "an xlsx workbook")), t.year))
+            snaps.append((f.get(t.key, t.url, ext=excel_format, check=excel_format), t.year))
     seen = {s.key for s, _y in snaps}
     snaps += [(s, int(s.key.rsplit("/", 1)[1][:4])) for s in f.committed("mhlw/bsws/") if s.key not in seen]
     out = []
@@ -128,17 +127,58 @@ def collect(f: Fetcher) -> list[Obs]:
     return out
 
 
-def parse(xlsx: bytes, snapshot: str) -> tuple[float, float]:
-    """(所定内給与額 in yen, 所定内実労働時間数 in hours a month) of 男女計, 学歴計 (all
-    ages), 企業規模計(10人以上), 産業計."""
-    import openpyxl
+def _cell(c: object) -> str:
+    return "" if c is None else re.sub(r"\s+", "", unicodedata.normalize("NFKC", str(c)))
 
-    wb = openpyxl.load_workbook(io.BytesIO(xlsx), read_only=True, data_only=True)
-    lines = []
-    for ws in wb.worksheets[:3]:
-        lines.append(f"sheet {ws.title!r}")
-        for i, r in enumerate(ws.iter_rows(values_only=True)):
-            if i >= 25:
-                break
-            lines.append(" | ".join("" if c is None else str(c) for c in r)[:300])
-    raise ValueError(f"{snapshot}: layout not yet known; sheets {wb.sheetnames[:10]}\n" + "\n".join(lines))
+
+HEADER_ROWS = 15  # the table's column headings are within its first rows
+
+
+def parse(body: bytes, snapshot: str) -> tuple[float, float]:
+    """(所定内給与額 in yen, 所定内実労働時間数 in hours in June) of 男女計 (both sexes),
+    学歴計 (all levels of education and ages), 企業規模計(10人以上), 産業計."""
+    sheets = excel_rows(body)
+    for name, rows in sheets.items():
+        hit = _parse_sheet(name, [[_cell(c) for c in r] for r in rows], rows)
+        if hit is not None:
+            return hit
+    dump = []
+    for name, rows in list(sheets.items())[:2]:
+        dump.append(f"sheet {name!r}")
+        dump += [" | ".join(_cell(c) for c in r)[:240] for r in rows[:30]]
+    raise ValueError(f"{snapshot}: no 産業計 / 男女計 / 学歴計 row found; sheets {list(sheets)[:8]}\n" + "\n".join(dump))
+
+
+def _parse_sheet(name: str, cells: list[list[str]], raw: list[list[object]]) -> tuple[float, float] | None:
+    head = cells[:HEADER_ROWS]
+    if not any("産業計" in c for r in head for c in r) and "産業計" not in _cell(name):
+        return None
+    # The first (leftmost) block of columns is 企業規模計(10人以上); the labels of the two
+    # columns read are exact.
+    def first_col(label: str) -> int | None:
+        cols = [j for r in head for j, c in enumerate(r) if c == label]
+        return min(cols) if cols else None
+
+    wage, hours = first_col("所定内給与額"), first_col("所定内実労働時間数")
+    size = [j for r in head for j, c in enumerate(r) if c.startswith("企業規模計")]
+    if wage is None or hours is None or not size or min(size) > min(wage, hours):
+        return None
+    if not any("千円" in c for r in head for c in r):
+        raise ValueError(f"sheet {name!r}: earnings are not stated in thousand yen")
+    # 男女計 (both sexes): the sheet's own heading, or a block heading in the table; its
+    # 学歴計 row (all levels of education, all ages) is the first after it.
+    label_cols = range(min(hours, wage))
+    both = next((i for i, r in enumerate(cells) if any(r[j] == "男女計" for j in label_cols if j < len(r))), None)
+    if both is None and "男女計" not in _cell(name):
+        return None
+    for i in range(both or 0, len(cells)):
+        r = cells[i]
+        if any(r[j] == "学歴計" for j in label_cols if j < len(r)):
+            w, h = raw[i][wage], raw[i][hours]
+            if not isinstance(w, (int, float)) or not isinstance(h, (int, float)):
+                raise ValueError(f"sheet {name!r}, row {i + 1}: non-numeric 所定内給与額 {w!r} or 所定内実労働時間数 {h!r}")
+            yen = float(w) * 1000
+            if not (50_000 <= yen <= 2_000_000 and 50 <= h <= 300):
+                raise ValueError(f"sheet {name!r}, row {i + 1}: implausible {yen} yen / {h} hours a month")
+            return yen, float(h)
+    return None

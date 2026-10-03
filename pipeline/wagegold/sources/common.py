@@ -36,6 +36,31 @@ def check_prefix(prefix: bytes, what: str):
     return _check
 
 
+# Excel workbooks: Office Open XML (a zip) or the older binary format (an OLE2 file).
+EXCEL_MAGIC = {b"PK\x03\x04": "xlsx", b"\xd0\xcf\x11\xe0\xa1\xb1\x1a\xe1": "xls"}
+
+
+def excel_format(body: bytes) -> str:
+    """"xlsx" or "xls" by the file's signature; ValueError for anything else."""
+    for magic, fmt in EXCEL_MAGIC.items():
+        if body.startswith(magic):
+            return fmt
+    raise ValueError(f"not an Excel workbook: starts with {body[:16]!r}")
+
+
+def excel_rows(body: bytes) -> dict[str, list[list[object]]]:
+    """Every sheet of an Excel workbook (either format) as rows of cell values."""
+    if excel_format(body) == "xlsx":
+        import openpyxl
+
+        wb = openpyxl.load_workbook(io.BytesIO(body), read_only=True, data_only=True)
+        return {ws.title: [list(r) for r in ws.iter_rows(values_only=True)] for ws in wb.worksheets}
+    import xlrd
+
+    wb = xlrd.open_workbook(file_contents=body)
+    return {sh.name: [sh.row_values(i) for i in range(sh.nrows)] for sh in wb.sheets()}
+
+
 def to_float(text: str | None) -> float | None:
     if text is None:
         return None

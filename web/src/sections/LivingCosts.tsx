@@ -6,6 +6,7 @@ import { useI18n } from "../i18n";
 import { countryName, LIVING_GROUPS, money, primaryWage, typicalWage, useThemeVersion, wageLabel, wageNotes } from "../lib";
 import { Legend, useKV, usePickByName, useRows } from "./common";
 import { FocusPrompt } from "./Profiles";
+import type { Msg } from "../i18n/render";
 
 const NAMED = 6; // the groups before "other"
 
@@ -86,6 +87,11 @@ export function LivingCosts(scope: Scope) {
     .map(([, c]) => countryName(i, c)), [ds, scope.group, picks, year, i]);
   const minority = ratio.filter((r) => r.side != null && r.side < 0.5).map((r) => r.name);
   const fiscal = ratio.filter((r) => r.c.na_fiscal).map((r) => r.name);
+  // How much the government provides free on top, across all ICP economies (not in the consumption counted).
+  const govRange = useMemo(() => {
+    const g = Object.values(ds.icp2021_spending).map((s) => s.government);
+    return g.length ? { gmin: Math.min(...g), gmax: Math.max(...g) } : null;
+  }, [ds]);
   const switched = ratio.filter((r) => r.wage.mrole_switch?.kind === "source").map((r) => r.name);
   const ovs = ds.oecd_vs_survey;
 
@@ -134,12 +140,27 @@ export function LivingCosts(scope: Scope) {
     }), [ds, scope.group, picks, mode, i]);
   // Shares are shown for every economy with a composition; amounts and wage shares only where the
   // World Bank's total is the one ICP's shares divide, and where the year's wage is known.
-  const noAmounts = useMemo(() => Object.entries(ds.icp2021_spending)
-    .filter(([iso, sp]) => inView(iso) && sp.consumption_month == null)
-    .map(([iso]) => countryName(i, ds.countries[iso] ?? ds.economies[iso])), [ds, scope.group, picks, i]);
+  // Economies in view without amounts, by reason (the exclusion the pipeline logged; none: no World Bank total).
+  const noAmounts = useMemo(() => {
+    const reason: Record<string, string> = {
+      "d.liv.revised": "liv.amounts_revised", "d.liv.unit_unknown": "liv.amounts_unit",
+      "d.liv.no_currency": "liv.amounts_currency", "d.liv.cons_unconfirmed": "liv.amounts_unconfirmed",
+    };
+    const by: Record<string, string[]> = {};
+    for (const [iso, sp] of Object.entries(ds.icp2021_spending)) {
+      if (!inView(iso) || sp.consumption_month != null) continue;
+      const e = ds.exclusions.find((x) => x.area === iso && x.scope === "living:split" && x.kind === "amounts");
+      const k = (e && reason[(e.detail as Msg).k]) || "liv.amounts_missing";
+      (by[k] ??= []).push(countryName(i, ds.countries[iso] ?? ds.economies[iso]));
+    }
+    return Object.entries(by).sort(([a], [b]) => a.localeCompare(b));
+  }, [ds, scope.group, picks, i]);
   const compWageless = useMemo(() => Object.entries(ds.icp2021_spending)
     .filter(([iso, sp]) => inView(iso) && sp.consumption_month != null && !primaryWage(ds.countries[iso]?.years[sp.year], "monthly"))
     .map(([iso]) => countryName(i, ds.countries[iso] ?? ds.economies[iso])), [ds, scope.group, picks, i]);
+  // Wage view of the composition: economies where employees are under half of the employed that year.
+  const compMinority = useMemo(() => comp.filter((r) => (ds.countries[r.iso]?.years[spendYears[spendYears.length - 1] ?? ""]?.living.employees_share ?? 1) < 0.5)
+    .map((r) => r.name), [comp, ds, spendYears]);
   // In view but without an ICP composition (not published, or not passing the checks).
   const noComp = useMemo(() => Object.keys(ds.countries).filter((iso) => inView(iso) && !ds.icp2021_spending[iso])
     .map((iso) => countryName(i, ds.countries[iso])), [ds, scope.group, picks, i]);
@@ -166,7 +187,7 @@ export function LivingCosts(scope: Scope) {
       if (v == null) gaps.push(Number(y));
       return brk ? [[`${Number(y) - 1}-07`, null], [`${y}`, v]] : [[`${y}`, v]];
     }) as [string, number | null][];
-    return { iso, name: countryName(i, c), points: pts, colorIndex: slotOf[iso], gaps };
+    return { iso, name: countryName(i, c), points: pts, colorIndex: slotOf[iso], gaps, label: i.r(ds.wage_gold_history[iso].label) };
   }), [ds, picks, slotOf, i]);
   const trend = series.filter((s) => s.points.some(([, v]) => v != null));
   const trendNoCons = series.filter((s) => !s.points.some(([, v]) => v != null)).map((s) => s.name);
@@ -193,6 +214,7 @@ export function LivingCosts(scope: Scope) {
           {i.j([
             i.t("liv.note_100"),
             i.t("liv.note_not"),
+            govRange ? i.t("liv.note_gov", govRange) : "",
             ovs ? i.t("liv.note_sensitivity", { min: ovs.min, max: ovs.max, median: ovs.median, n: ovs.n, rlo: 1 / ovs.max, rhi: 1 / ovs.min }) : "",
             minority.length > 0 ? i.t("liv.note_minority", { list: i.j(minority, "enum") }) : "",
             switched.length > 0 ? i.t("liv.note_switch", { list: i.j(switched, "enum") }) : "",
@@ -246,7 +268,8 @@ export function LivingCosts(scope: Scope) {
           {i.j([
             i.t(mode === "wage" ? "liv.where_note_wage" : "liv.where_note_cons", { year: spendYear }),
             i.t("liv.where_note"),
-            noAmounts.length > 0 ? i.t("liv.where_no_amounts", { list: i.j(noAmounts, "enum"), year: spendYear, b: ds.constants.max_factor }) : "",
+            ...noAmounts.map(([k, list]) => i.t(k, { list: i.j(list, "enum"), year: spendYear, b: ds.constants.max_factor })),
+            mode === "wage" && compMinority.length > 0 ? i.t("liv.note_minority", { list: i.j(compMinority, "enum") }) : "",
             mode === "wage" && compWageless.length > 0 ? i.t("liv.where_no_wage", { list: i.j(compWageless, "enum"), year: spendYear }) : "",
             noComp.length > 0 ? i.t("liv.where_missing", { list: i.j(noComp, "enum") }) : "",
           ], "sentence")}
@@ -278,6 +301,7 @@ export function LivingCosts(scope: Scope) {
           <p className="note">
             {i.j([
               i.t("liv.trend_note"),
+              trend.length > 0 ? i.t("liv.trend_series", { list: i.j(trend.map((s) => i.t("liv.trend_series_item", { name: s.name, series: s.label })), "list") }) : "",
               trendGaps.length > 0 ? i.t("liv.trend_gaps", { list: i.j(trendGaps, "list") }) : "",
               trendNoCons.length > 0 ? i.t("liv.trend_no_cons", { list: i.j(trendNoCons, "enum") }) : "",
               noTrend.length > 0 ? i.t("liv.trend_none", { list: i.j(noTrend, "enum") }) : "",

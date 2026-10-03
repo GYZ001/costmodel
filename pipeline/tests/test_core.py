@@ -567,3 +567,24 @@ def test_residents_per_employed_and_bounds():
                 Obs("emp_to_pop_15plus", "AAA", "2021", 50, "e"))
     assert living.context(s3, "AAA", "2021", lambda y, d: log.append(d))["residents_per_employed"] is None
     assert log[-1]["k"] == "d.liv.ctx_pop"
+
+
+def test_identity_chain_through_a_share_step_says_so():
+    # 2022 proven; 2021's identity fails and it is linked to 2022 only by its share of GDP
+    # (value ×3); 2020's identity fails and its value is close to 2021's.  2020's message must
+    # not say the chain to 2022 is made of value changes within ×/÷1.4.
+    rows = []
+    for y, hf, ppp, gdp in (("2020", 550.0, 50.0, 900.0), ("2021", 600.0, 50.0, 1000.0), ("2022", 1800.0, 18.0, 3000.0)):
+        rows += [Obs("hfce_lcu", "AAA", y, hf, "w"), Obs("gdp_lcu", "AAA", y, gdp, "w"), Obs("gdp_usd", "AAA", y, 100.0, "w"),
+                 Obs("fx_lcu_usd", "AAA", y, gdp / 100.0, "w"), Obs("population", "AAA", y, 10.0, "w"),
+                 Obs("hfce_intl", "AAA", y, 100.0, "w"), Obs("ppp_hfce", "AAA", y, ppp, "w")]
+    u = build.UnitGraph(_store(*rows), DIC, ["2020", "2021", "2022"], META)
+    _f, _p, h = u._factors("AAA")
+    assert h["2022"][0] is True and h["2021"][2] == "identity" and h["2020"][2] == "identity"
+    m20 = h["2020"][1][0]
+    assert m20["k"] == "d.prove.chain" and m20["p"]["link"]["k"] == "d.prove.link_chain_share"
+    # A chain made of value steps only keeps the plain wording.
+    rows2 = [o for o in rows if not (o.series == "hfce_lcu" and o.period == "2022")] + [Obs("hfce_lcu", "AAA", "2022", 650.0, "w")]
+    rows2 = [o if not (o.series == "ppp_hfce" and o.period == "2022") else Obs("ppp_hfce", "AAA", "2022", 6.5, "w") for o in rows2]
+    _f, _p, h2 = build.UnitGraph(_store(*rows2), DIC, ["2020", "2021", "2022"], META)._factors("AAA")
+    assert h2["2020"][1][0]["p"]["link"]["k"] == "d.prove.link_chain"

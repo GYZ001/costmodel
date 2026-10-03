@@ -110,6 +110,8 @@ export interface IcpSpending {
    *  exchange rates; "ppp": of the two PPPs), where the unit changed */
   revision: [number, number] | null;
   converted: { fx?: number; ppp?: number } | null;
+  /** the revision under each conversion, where the unit changed */
+  revision_by: { fx?: number; ppp?: number } | null;
   /** WDI consumption per resident per month in that year, and its currency, where ICP's shares
    *  divide it (else null; the reason is in dataset.exclusions) */
   consumption_month: number | null;

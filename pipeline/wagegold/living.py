@@ -151,7 +151,8 @@ def icp_spending(store: Store, code: str, exclude) -> dict | None:
 def revision(store: Store, code: str, area: str, icp_hfce: float, bound: float) -> dict:
     """ICP's 2021 household consumption as a multiple of WDI's current 2021 figure, in
     WDI's current currency unit: {"revision": (low, high) or None, "converted": {measure:
-    factor} or None, "raw", "factors", "snapshots"}.
+    factor} or None, "by": {measure: the revision converted at that factor} or None, "raw",
+    "factors", "snapshots"}.
 
     Whether the two are in the same currency unit is decided as the unit checks decide it
     (a change of unit moves a figure by more than ×/÷bound), from the ratio between the
@@ -164,7 +165,7 @@ def revision(store: Store, code: str, area: str, icp_hfce: float, bound: float) 
     factor (each also carries what differs between the publishers' PPPs or rates), so the
     revision is given under each, as a range.  No ratio at all: the totals themselves
     within the bound are taken to be in the same unit.  Otherwise unknown (None)."""
-    out: dict = {"revision": None, "raw": None, "converted": None, "factors": {}, "snapshots": []}
+    out: dict = {"revision": None, "raw": None, "converted": None, "by": None, "factors": {}, "snapshots": []}
     wdi = store.get("hfce_lcu", area, ICP_YEAR)
     if not wdi or wdi.value <= 0:
         return out
@@ -192,6 +193,6 @@ def revision(store: Store, code: str, area: str, icp_hfce: float, bound: float) 
     elif all(within(k) for k in factors.values()):
         out["revision"] = (raw, raw)
     elif not any(within(k) for k in factors.values()) and (len(factors) == 1 or within(factors["fx"] / factors["ppp"])):
-        values = [raw / k for k in factors.values()]
-        out["revision"], out["converted"] = (min(values), max(values)), dict(factors)
+        by = {m: raw / k for m, k in factors.items()}
+        out["revision"], out["converted"], out["by"] = (min(by.values()), max(by.values())), dict(factors), by
     return out

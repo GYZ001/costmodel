@@ -261,3 +261,15 @@ export function skippedYears(years: string[]): number[] {
   return out;
 }
 
+/** "2016–2020, 2022": consecutive years as ranges. */
+export function yearRanges(years: number[]): string[] {
+  const out: string[] = [];
+  for (let k = 0; k < years.length; k++) {
+    let j = k;
+    while (j + 1 < years.length && years[j + 1] === years[j] + 1) j++;
+    out.push(j > k ? `${years[k]}–${years[j]}` : `${years[k]}`);
+    k = j;
+  }
+  return out;
+}
+

@@ -793,8 +793,10 @@ class UnitGraph:
                 if y in values and out[y][0] is None and n in values and out[n][0] is True \
                         and (same_unit(values[y], values[n]) or (carry is not None and carry(y, n)[0])):
                     out[y] = (True, [], "")
-        # Identity failures linked to a proven year by moves of less than MAX_FACTOR.
-        anchor = {y: y for y, v in out.items() if v[0] is True}
+        # Identity failures linked to a proven year by moves of less than MAX_FACTOR.  Each
+        # linked year records its proven year and whether any step on the way used carry
+        # (so the message names what the steps compared).
+        anchor = {y: (y, False) for y, v in out.items() if v[0] is True}
         changed = True
         while changed:
             changed = False
@@ -805,13 +807,15 @@ class UnitGraph:
                          and (same_unit(values[y], values[n]) or (carry is not None and carry(y, n)[0]))]
                 if close:
                     n = close[0]
-                    a = anchor[n]
-                    via = M("d.prove.link_direct", n=n) if a == n else M("d.prove.link_chain", n=n, a=a, bound=MAX_FACTOR)
+                    a, carried = anchor[n]
+                    via = (M("d.prove.link_direct", n=n) if a == n
+                           else M("d.prove.link_chain_share" if carried else "d.prove.link_chain", n=n, a=a, bound=MAX_FACTOR))
+                    by_value = same_unit(values[y], values[n])
                     msg = (M("d.prove.chain", detail=detail, n=n, vn=values[n], r=values[y] / values[n], link=via)
-                           if same_unit(values[y], values[n])
+                           if by_value
                            else M("d.prove.chain_link", detail=detail, why=carry(y, n)[1], link=via))
                     out[y] = (None, [msg], "identity")
-                    anchor[y] = a
+                    anchor[y] = (a, carried or not by_value)
                     changed = True
         for y, (ok, detail, kind) in list(out.items()):
             if ok is False:
@@ -1396,19 +1400,16 @@ def icp_levels(store: Store, meta: dict) -> dict:
     return dict(out)
 
 
-def _converted(rev: dict) -> Msg:
-    """How ICP's 2021 figure was put into WDI's current currency unit (living.revision)."""
-    k = rev["converted"]
+def _ratio(rev: dict) -> Msg:
+    """ICP's 2021 total ÷ WDI's, and how ICP's figure was put into WDI's current currency
+    unit (living.revision): each conversion with its own result."""
+    k, by = rev["converted"], rev["by"]
     if not k:
-        return M("d.liv.same_unit")
+        return M("d.liv.ratio_same", r=rev["raw"])
     if len(k) == 2:
-        return M("d.liv.converted_both", kf=k["fx"], kp=k["ppp"])
-    (by, v), = k.items()
-    return M(f"d.liv.converted_{by}", k=v)
-
-
-def _ratio(r: tuple[float, float]) -> Msg:
-    return M("d.liv.ratio", r=r[0]) if r[0] == r[1] else M("d.liv.ratio_range", lo=r[0], hi=r[1])
+        return M("d.liv.ratio_both", rf=by["fx"], kf=k["fx"], rp=by["ppp"], kp=k["ppp"])
+    (m, v), = k.items()
+    return M(f"d.liv.ratio_{m}", r=by[m], k=v)
 
 
 def icp_spending(store: Store, meta: dict, units: UnitGraph) -> dict:
@@ -1439,10 +1440,11 @@ def icp_spending(store: Store, meta: dict, units: UnitGraph) -> dict:
             exclude(M("d.liv.unit_unknown", r=rev["raw"], bound=MAX_FACTOR,
                       factors=[M(f"d.liv.k_{k}", k=v) for k, v in rev["factors"].items()] or [M("d.liv.k_none")]), "amounts")
         elif cons is not None and not within:
-            exclude(M("d.liv.revised", ratio=_ratio(r), bound=MAX_FACTOR, converted=_converted(rev)), "amounts")
+            exclude(M("d.liv.revised", ratio=_ratio(rev), bound=MAX_FACTOR), "amounts")
         elif cons is not None and currency is None:
             exclude(M("d.liv.no_currency"), "amounts")
         out[iso] = {**split, "year": living.ICP_YEAR, "revision": list(r) if r else None, "converted": rev["converted"],
+                    "revision_by": rev["by"],
                     "consumption_month": cons if amounts_ok else None, "currency": currency if amounts_ok else None,
                     "na_fiscal": meta.get(iso, {}).get("na_fiscal"),
                     "snapshots": sorted(set(split["snapshots"]) | set(rev["snapshots"]) | (set(snaps) if amounts_ok else set()))}

@@ -3,24 +3,12 @@ import type { Scope } from "../App";
 import { Chart } from "../Chart";
 import { compositionOption, linesOption, rankingHeight, ratioRankingOption } from "../charts";
 import { useI18n } from "../i18n";
-import { countryName, LIVING_GROUPS, money, primaryWage, skippedYears, typicalWage, useThemeVersion, wageLabel, wageNotes, yearlyLine } from "../lib";
+import { countryName, LIVING_GROUPS, money, primaryWage, skippedYears, typicalWage, useThemeVersion, wageLabel, wageNotes, yearlyLine, yearRanges } from "../lib";
 import { Legend, useKV, usePickByName, useRows } from "./common";
 import { FocusPrompt } from "./Profiles";
 import type { Msg } from "../i18n/render";
 
 const NAMED = 6; // the groups before "other"
-
-/** "2016–2020, 2022": consecutive years as ranges. */
-function yearRanges(years: number[]): string[] {
-  const out: string[] = [];
-  for (let k = 0; k < years.length; k++) {
-    let j = k;
-    while (j + 1 < years.length && years[j + 1] === years[j] + 1) j++;
-    out.push(j > k ? `${years[k]}–${years[j]}` : `${years[k]}`);
-    k = j;
-  }
-  return out;
-}
 
 /** Whether a media query matches, following changes. */
 function useMedia(q: string): boolean {
@@ -109,12 +97,13 @@ export function LivingCosts(scope: Scope) {
     const [lo, hi] = sp.revision!;
     const k = sp.converted;
     if (!k) return i.t("liv.tip_revision", { year: sp.year, r: lo });
+    const by = sp.revision_by!;
     if (k.fx != null && k.ppp != null) {
       return i.n(lo, "pct1") === i.n(hi, "pct1")
         ? i.t("liv.tip_revision_both", { year: sp.year, r: lo, kf: k.fx, kp: k.ppp })
-        : i.t("liv.tip_revision_range", { year: sp.year, lo, hi, kf: k.fx, kp: k.ppp });
+        : i.t("liv.tip_revision_range", { year: sp.year, rf: by.fx, kf: k.fx, rp: by.ppp, kp: k.ppp });
     }
-    return i.t(k.fx != null ? "liv.tip_revision_fx" : "liv.tip_revision_ppp", { year: sp.year, r: lo, k: k.fx ?? k.ppp });
+    return i.t(k.fx != null ? "liv.tip_revision_fx" : "liv.tip_revision_ppp", { year: sp.year, r: by.fx ?? by.ppp, k: k.fx ?? k.ppp });
   };
   const spendYears = useMemo(() => [...new Set(Object.values(ds.icp2021_spending).map((s) => s.year))].sort(), [ds]);
   const inView = (iso: string) => (scope.group === "all" ? picks.includes(iso) : !!ds.countries[iso]?.g20 || picks.includes(iso));
@@ -141,7 +130,7 @@ export function LivingCosts(scope: Scope) {
         i.t("liv.tip_gov_share", { p: sp.government }),
         ...(sp.revision != null ? [revisionLine(sp)] : []),
         ...(sp.na_fiscal ? [i.t("liv.tip_fiscal", { note: sp.na_fiscal })] : []),
-        ...(mode === "wage" && w && c ? wageNotes(i, w, "monthly", c).slice(0, 1) : []), // the wage; its source and notes are in the ranking's tooltip
+        ...(mode === "wage" && w && c ? wageNotes(i, w, "monthly", c).slice(0, 2) : []), // the wage and its source (its notes are in the table and profile)
         ...(sp.consumption_month != null ? [i.t("liv.tip_basis", { year: sp.year })] : []),
       ];
       const parts = LIVING_GROUPS.map((g) => sp.shares[g] * scale);
@@ -284,7 +273,7 @@ export function LivingCosts(scope: Scope) {
           <span><span className="sw tick" />{i.t("liv.tick")}</span>
         </div>
         {comp.length > 0
-          ? <Chart option={cOpt} height={rankingHeight(comp.length) + 16} ariaLabel={i.t("liv.where_title", { year: spendYear })} onPick={pick} />
+          ? <Chart option={cOpt} height={Math.max(rankingHeight(comp.length) + 16, 420)} ariaLabel={i.t("liv.where_title", { year: spendYear })} onPick={pick} />
           : <p className="muted">{i.t("liv.where_none")}</p>}
         <p className="note">
           {i.j([

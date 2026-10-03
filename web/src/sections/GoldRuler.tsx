@@ -3,7 +3,7 @@ import type { Scope } from "../App";
 import { Chart } from "../Chart";
 import { linesOption } from "../charts";
 import { useI18n } from "../i18n";
-import { countryName, levelBoundsText, useThemeVersion, yearlyLine } from "../lib";
+import { countryName, levelBoundsText, skippedYears, useThemeVersion, yearlyLine, yearRanges } from "../lib";
 import { FocusPrompt } from "./Profiles";
 
 export function GoldRuler(scope: Scope) {
@@ -53,6 +53,11 @@ export function GoldRuler(scope: Scope) {
       colorIndex: slotOf[iso],
     })), [ds, picks, slotOf, i]);
   const noHistory = picks.filter((iso) => !ds.wage_gold_history[iso]).map((iso) => countryName(i, ds.countries[iso]));
+  // Years a focus economy's series has no figure: the line is broken there too.
+  const skipped = picks.filter((iso) => ds.wage_gold_history[iso]).flatMap((iso) => {
+    const ys = skippedYears(ds.wage_gold_history[iso].points.map((p) => p[0]));
+    return ys.length ? [i.t("ruler.skipped_item", { name: countryName(i, ds.countries[iso]), years: i.j(yearRanges(ys), "comma") })] : [];
+  });
   const breaks = picks
     .filter((iso) => ds.wage_gold_history[iso])
     .flatMap((iso) => ds.wage_gold_history[iso].points.filter((p) => p[4])
@@ -103,6 +108,7 @@ export function GoldRuler(scope: Scope) {
                 i.t("ruler.hist_breaks", { bounds: levelBoundsText(i, ds, "hfce") }),
                 i.t("ruler.isolated"),
                 breaks.length > 0 ? i.t("ruler.breaks", { list: i.j(breaks) }) : "",
+                skipped.length > 0 ? i.t("ruler.skipped", { list: i.j(skipped) }) : "",
                 noHistory.length > 0 ? i.t("ruler.no_history", { n: ds.constants.history_min_years, list: i.j(noHistory, "enum") }) : "",
               ], "sentence")}
             </p>

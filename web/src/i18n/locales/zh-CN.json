@@ -401,7 +401,7 @@
  "liv.tip_employees": "雇员占就业者的 {q:pct0}（ILO 模型估计）",
  "liv.tip_fiscal": "世界银行：“{note}”",
  "liv.tip_gov_share": "不在条内：政府免费或低价提供的服务，相当于居民消费的 {p:pct0}",
- "liv.tip_housing_actual": "ICP 的住房加水电燃气、维修和政府住房：占居民消费的 {v:pct1}",
+ "liv.tip_housing_actual": "ICP 的“实际住房、水电燃气”（房租加上水电燃气、维修和政府提供的住房）：占居民消费的 {v:pct1}",
  "liv.tip_median": "按同一调查的中位数工资：{r:pct0}",
  "liv.tip_other": "其他一切中：外出就餐和住宿 {rh:pct1}；烟酒及麻醉品 {at:pct1}（占居民消费）",
  "liv.tip_residents": "每名就业者对应 {n:d1} 位居民，包括孩子、老人和没有工作的成年人（由 ILO 模型估计的就业人口比率和世界银行的人口算出）",

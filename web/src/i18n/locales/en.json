@@ -412,7 +412,7 @@
  "liv.tip_employees": "Employees are {q:pct0} of the employed (ILO modelled estimate)",
  "liv.tip_fiscal": "World Bank: “{note}”",
  "liv.tip_gov_share": "Not in the bar: services the government provides free or below cost, {p:pct0} of household consumption",
- "liv.tip_housing_actual": "ICP’s housing with water, energy, repairs and government housing: {v:pct1} of household consumption",
+ "liv.tip_housing_actual": "ICP’s “actual housing, water, electricity, gas and other fuels” (rent plus water, energy, repairs and the housing the government provides): {v:pct1} of household consumption",
  "liv.tip_median": "With the same survey’s median wage: {r:pct0}",
  "liv.tip_other": "Of everything else: restaurants and hotels {rh:pct1}; alcohol, tobacco and narcotics {at:pct1} (of household consumption)",
  "liv.tip_residents": "{n:d1} residents per employed person, counting children, older people and adults without work (from the ILO’s modelled employment-to-population ratio and the World Bank’s population)",

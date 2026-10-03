@@ -13,18 +13,13 @@ from ..model import Obs
 
 # (key, url, ext, follow: regex of links to fetch too (group 1 = href), at most n)
 PROBES: list[tuple[str, str, str, str | None, int]] = [
-    # Korea, MOEL Survey on Labor Conditions by Employment Type (ILOSTAT DA:224)
-    ("probe/kor/laborstat_lss108", "https://laborstat.moel.go.kr/lsm/bbs/selectBbsList.do?bbsId=LSS108&leftMenuId=0010001100116"
-     "&menuId=0010001100116115&pageIndex=1&searchCtgryCode=004&subCtgryCode=004", "html", None, 0),
-    ("probe/kor/datagokr_3038238", "https://www.data.go.kr/data/3038238/fileData.do", "html", None, 0),
-    ("probe/kor/kosis_pay0004", "https://kosis.kr/statHtml/statHtml.do?orgId=118&tblId=DT_118N_PAY0004", "html", None, 0),
-    # Russia, Rosstat October survey of wages by occupation (ILOSTAT DA:122)
-    ("probe/rus/rosstat_labour_costs", "https://rosstat.gov.ru/labour_costs", "html", None, 0),
-    ("probe/rus/rosstat_salaries", "https://rosstat.gov.ru/labor_market_employment_salaries", "html", None, 0),
-    ("probe/rus/rosstat_compendium_60671", "https://rosstat.gov.ru/compendium/document/60671", "html", None, 0),
-    # Saudi Arabia, GASTAT Labour Force Survey (ILOSTAT BA:627)
-    ("probe/sau/gastat_home", "https://www.stats.gov.sa/en", "html", None, 0),
-    ("probe/sau/gastat_814", "https://www.stats.gov.sa/en/814", "html", None, 0),
+    # Korea: the attachments of MOEL's survey reports (2025 and 2022 editions)
+    ("probe/kor/report2025_files", "https://laborstat.moel.go.kr/cmm/fms/selectFileInfs2.do?param_atchFileId=FILE_000000000058663", "html", None, 0),
+    ("probe/kor/report2022_files", "https://laborstat.moel.go.kr/cmm/fms/selectFileInfs2.do?param_atchFileId=FILE_000000000047181", "html", None, 0),
+    # Saudi Arabia: GASTAT labour market statistics (LFS) pages and their files
+    ("probe/sau/gastat_lfs_q2_2026", "https://www.stats.gov.sa/en/statistics-tabs?tab=436312&category=417515", "html",
+     r'href="([^"]+\.(?:xlsx|xls|csv|pdf)[^"]*)"', 6),
+    ("probe/sau/gastat_labour_index", "https://www.stats.gov.sa/en/statistics?index=119025&subindex=123704", "html", None, 0),
 ]
 
 

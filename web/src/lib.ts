@@ -148,15 +148,28 @@ export function wageYears(c: Country, view: View = "hourly"): string[] {
     .reverse();
 }
 
+/** Number of G20 member countries with a wage figure for the view, by year. */
+function g20Coverage(ds: Dataset, view: View): Record<string, number> {
+  const counts: Record<string, number> = {};
+  for (const c of Object.values(ds.countries).filter((c) => c.g20)) for (const y of wageYears(c, view)) counts[y] = (counts[y] ?? 0) + 1;
+  return counts;
+}
+
 /** Default reference year: the most recent year in which at least two thirds of the
  *  G20 member countries have a wage figure for the view. */
 export function bestYear(ds: Dataset, view: View): string {
-  const counts: Record<string, number> = {};
-  const members = Object.values(ds.countries).filter((c) => c.g20);
-  for (const c of members) for (const y of wageYears(c, view)) counts[y] = (counts[y] ?? 0) + 1;
-  const need = Math.ceil((members.length * 2) / 3);
+  const counts = g20Coverage(ds, view);
+  const need = Math.ceil((Object.values(ds.countries).filter((c) => c.g20).length * 2) / 3);
   const years = Object.keys(counts).sort().reverse();
   return years.find((y) => counts[y] >= need) ?? years[0];
+}
+
+/** Default view: the one in which more G20 member countries have a wage figure in its
+ *  default year (hourly when both cover as many), so that the first page shows as many
+ *  members as the data allow. */
+export function defaultView(ds: Dataset): View {
+  const n = (v: View) => g20Coverage(ds, v)[bestYear(ds, v)] ?? 0;
+  return n("monthly") > n("hourly") ? "monthly" : "hourly";
 }
 
 /** Median of a list of numbers. */

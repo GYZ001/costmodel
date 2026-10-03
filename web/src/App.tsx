@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import type { Dataset } from "./types";
 import { useI18n } from "./i18n";
-import { bestYear, byName, countryName, wageYears, type View } from "./lib";
+import { bestYear, byName, countryName, defaultView, wageYears, type View } from "./lib";
 import { HowItWorks } from "./sections/HowItWorks";
 import { GoldPerHour } from "./sections/GoldPerHour";
 import { GoldBuys } from "./sections/GoldBuys";
@@ -45,7 +45,7 @@ function picksFromUrl(ds: Dataset): Pick[] {
 
 export default function App({ ds }: { ds: Dataset }) {
   const i = useI18n();
-  const [view, setView] = useState<View>("hourly");
+  const [view, setView] = useState<View>(() => defaultView(ds));
   const best = useMemo(() => bestYear(ds, view), [ds, view]);
   const [yearPick, setYearPick] = useState<string | null>(null);
   const year = yearPick ?? best;

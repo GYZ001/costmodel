@@ -133,7 +133,7 @@
  "d.ext.break": "{publisher} notes a change in the series’ coverage or method this year, so this year is not directly comparable with earlier years",
  "d.ext.carried": "there is no ILOSTAT conversion to check its currency unit against; compared with the same series in {year} ({prev:num}) it moved {r:factor}, beyond ×/÷{bound:d1}, so the unit is not carried over",
  "d.ext.disagree": "{publisher}’s own release of this series differs from ILOSTAT’s in {year} ({theirs:num} against {ilo:num}, more than {tol:pct0}), so it is not taken to be the same series and does not continue it",
- "d.ext.match": "Years after ILOSTAT’s latest come from {publisher}’s own release of this series, which equals ILOSTAT’s figures for {years:enum} (largest difference {worst:pct2})",
+ "d.ext.match": "Years after ILOSTAT’s latest come from {publisher}’s own release of this series, which agrees with ILOSTAT’s figures for {years:enum} (largest difference {worst:pct2})",
  "d.ext.no_overlap": "{publisher}’s release of series {series} has no year in common with ILOSTAT’s, so it cannot be checked to be the same series and is not used",
  "d.ext.not_carried": "there is no ILOSTAT conversion to check its currency unit against, and no earlier year of the same series passed the check",
  "d.fx.failed": "The official exchange rate cannot be shown to be in the same currency unit as the World Bank's local-currency series (the unit may differ, or the World Bank may not have used the official rate to convert that year's dollar figures)",

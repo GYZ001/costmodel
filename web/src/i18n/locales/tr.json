@@ -133,7 +133,7 @@
  "d.ext.break": "{publisher}, serinin kapsamında veya yönteminde bu yıl bir değişiklik olduğunu belirtiyor; bu nedenle bu yıl önceki yıllarla doğrudan karşılaştırılamaz",
  "d.ext.carried": "para birimini denetlemek için bir ILOSTAT dönüşümü yok; aynı serinin {year} yılındaki değerine ({prev:num}) göre {r:factor} değişmiş, yani ×/÷{bound:d1} sınırının ötesinde; bu nedenle para birimi aktarılmıyor",
  "d.ext.disagree": "{publisher} kurumunun bu seriye ilişkin kendi yayını, {year} yılında ILOSTAT’ınkinden farklı (yayıncıda {theirs:num}, ILOSTAT’ta {ilo:num}; fark {tol:pct0} oranını aşıyor); bu nedenle aynı seri olarak kabul edilmiyor ve ILOSTAT’ın serisini sürdürmüyor",
- "d.ext.match": "ILOSTAT’ın en son yılından sonraki yıllar, {publisher} kurumunun bu seriye ilişkin kendi yayınından gelir; bu yayın {years:enum} için ILOSTAT’ın değerlerine eşittir (en büyük fark {worst:pct2})",
+ "d.ext.match": "ILOSTAT’ın en son yılından sonraki yıllar, {publisher} kurumunun bu seriye ilişkin kendi yayınından gelir; bu yayın {years:enum} için ILOSTAT’ın değerleriyle örtüşür (en büyük fark {worst:pct2})",
  "d.ext.no_overlap": "{publisher} kurumunun {series} serisine ilişkin yayınının ILOSTAT’ınkiyle ortak hiçbir yılı yok; bu nedenle aynı seri olup olmadığı denetlenemiyor ve kullanılmıyor",
  "d.ext.not_carried": "para birimini denetlemek için bir ILOSTAT dönüşümü yok ve aynı serinin daha önceki hiçbir yılı denetimi geçmedi",
  "d.fx.failed": "Resmi döviz kurunun Dünya Bankası’nın yerel para birimi serisiyle aynı para birimi cinsinden olduğu gösterilemiyor (birim farklı olabilir veya Dünya Bankası o yılın dolar cinsinden değerlerini dönüştürmek için resmi kuru kullanmamış olabilir)",

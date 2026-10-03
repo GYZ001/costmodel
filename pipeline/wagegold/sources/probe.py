@@ -13,13 +13,11 @@ from ..model import Obs
 
 # (key, url, ext, follow: regex of links to fetch too (group 1 = href), at most n)
 PROBES: list[tuple[str, str, str, str | None, int]] = [
-    # Korea: the attachments of MOEL's survey reports (2025 and 2022 editions)
-    ("probe/kor/report2025_files", "https://laborstat.moel.go.kr/cmm/fms/selectFileInfs2.do?param_atchFileId=FILE_000000000058663", "html", None, 0),
-    ("probe/kor/report2022_files", "https://laborstat.moel.go.kr/cmm/fms/selectFileInfs2.do?param_atchFileId=FILE_000000000047181", "html", None, 0),
-    # Saudi Arabia: GASTAT labour market statistics (LFS) pages and their files
-    ("probe/sau/gastat_lfs_q2_2026", "https://www.stats.gov.sa/en/statistics-tabs?tab=436312&category=417515", "html",
-     r'href="([^"]+\.(?:xlsx|xls|csv|pdf)[^"]*)"', 6),
-    ("probe/sau/gastat_labour_index", "https://www.stats.gov.sa/en/statistics?index=119025&subindex=123704", "html", None, 0),
+    # Saudi Arabia: GASTAT labour market statistics, fourth-quarter tables
+    ("probe/sau/q4_2025", "https://www.stats.gov.sa/documents/20117/2435273/Labor_Market_Statistics_Q4_2025_EN_%281%29.xlsx_fixed_13014566/e0ebf178-e440-3e12-3db6-01a7bd902dae?t=1774932638196", "xlsx", None, 0),
+    ("probe/sau/q4_2024", "https://www.stats.gov.sa/documents/20117/2435273/Labor_Market_Statistics_Q4_2024_-__EN_%281%29.xlsx_fixed_3685174/fddd476e-2227-cfa8-00db-dc215427a816?t=1756667905812", "xlsx", None, 0),
+    ("probe/sau/q4_2023", "https://www.stats.gov.sa/documents/20117/2435273/LM_tables_Q4_2023_EN%28%25%29_0.xlsx_fixed_2499279/8fd76bfe-26a6-7b67-bdfb-528b26657782?t=1735232107331", "xlsx", None, 0),
+    ("probe/sau/q4_2022", "https://www.stats.gov.sa/documents/20117/2435273/LM_tables_Q4_2022_EN_0_%28%25%29.xlsx_fixed_2499393/5e35d086-48cd-719c-9984-6c45e931a5d2?t=1735232855019", "xlsx", None, 0),
 ]
 
 

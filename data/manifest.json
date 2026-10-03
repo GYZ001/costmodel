@@ -1,6 +1,6 @@
 {
  "ilostat/EAR_EHRA_SEX_CUR_NB_A": {
-  "attempted_at": "2026-10-03T00:32:52+00:00",
+  "attempted_at": "2026-10-03T00:36:54+00:00",
   "bytes": 340311,
   "content_type": "application/octet-stream",
   "error": null,
@@ -8,7 +8,7 @@
   "method": "GET",
   "path": "data/raw/ilostat/EAR_EHRA_SEX_CUR_NB_A.csv",
   "request_body": null,
-  "retrieved_at": "2026-10-03T00:32:52+00:00",
+  "retrieved_at": "2026-10-03T00:36:54+00:00",
   "sha256": "629355ab190897b3fb0b4549a35fc941efa4634ff2029a7e39c2d0b51adfbf0d",
   "status": "fresh",
   "url": "https://rplumber.ilo.org/data/indicator/?id=EAR_EHRA_SEX_CUR_NB_A&sex=SEX_T&timefrom=2000&format=.csv"
@@ -28,7 +28,7 @@
   "url": "https://rplumber.ilo.org/data/indicator/?id=EAR_EHRA_SEX_NB_A&sex=SEX_T&timefrom=2000&format=.csv"
  },
  "ilostat/EAR_EHRM_SEX_CUR_NB_A": {
-  "attempted_at": "2026-10-03T00:32:53+00:00",
+  "attempted_at": "2026-10-03T00:36:55+00:00",
   "bytes": 250403,
   "content_type": "application/octet-stream",
   "error": null,
@@ -36,7 +36,7 @@
   "method": "GET",
   "path": "data/raw/ilostat/EAR_EHRM_SEX_CUR_NB_A.csv",
   "request_body": null,
-  "retrieved_at": "2026-10-03T00:32:53+00:00",
+  "retrieved_at": "2026-10-03T00:36:55+00:00",
   "sha256": "ae7b1098dcb27854bba9d35ac22af8c303752fadb068ae8d35b88b3d6612de63",
   "status": "fresh",
   "url": "https://rplumber.ilo.org/data/indicator/?id=EAR_EHRM_SEX_CUR_NB_A&sex=SEX_T&timefrom=2000&format=.csv"
@@ -56,7 +56,7 @@
   "url": "https://rplumber.ilo.org/data/indicator/?id=EAR_EHRM_SEX_NB_A&sex=SEX_T&timefrom=2000&format=.csv"
  },
  "ilostat/EAR_EMTA_SEX_CUR_NB_A": {
-  "attempted_at": "2026-10-03T00:32:54+00:00",
+  "attempted_at": "2026-10-03T00:36:56+00:00",
   "bytes": 749009,
   "content_type": "application/octet-stream",
   "error": null,
@@ -64,7 +64,7 @@
   "method": "GET",
   "path": "data/raw/ilostat/EAR_EMTA_SEX_CUR_NB_A.csv",
   "request_body": null,
-  "retrieved_at": "2026-10-03T00:32:54+00:00",
+  "retrieved_at": "2026-10-03T00:36:56+00:00",
   "sha256": "8100089cf53f3e22d903dd279eb39840f349f1cb061786e88e63ea1ed1353d19",
   "status": "fresh",
   "url": "https://rplumber.ilo.org/data/indicator/?id=EAR_EMTA_SEX_CUR_NB_A&sex=SEX_T&timefrom=2000&format=.csv"
@@ -84,7 +84,7 @@
   "url": "https://rplumber.ilo.org/data/indicator/?id=EAR_EMTA_SEX_ECO_NB_A&sex=SEX_T&classif1=ECO_SECTOR_TOTAL&timefrom=2000&format=.csv"
  },
  "ilostat/EAR_EMTM_SEX_CUR_NB_A": {
-  "attempted_at": "2026-10-03T00:32:56+00:00",
+  "attempted_at": "2026-10-03T00:36:57+00:00",
   "bytes": 482742,
   "content_type": "application/octet-stream",
   "error": null,
@@ -92,7 +92,7 @@
   "method": "GET",
   "path": "data/raw/ilostat/EAR_EMTM_SEX_CUR_NB_A.csv",
   "request_body": null,
-  "retrieved_at": "2026-10-03T00:32:56+00:00",
+  "retrieved_at": "2026-10-03T00:36:57+00:00",
   "sha256": "fa60a85c40236a45ba6a8e952e0ddfd08566ddd60ef6b89ef301f928dc758256",
   "status": "fresh",
   "url": "https://rplumber.ilo.org/data/indicator/?id=EAR_EMTM_SEX_CUR_NB_A&sex=SEX_T&timefrom=2000&format=.csv"
@@ -112,7 +112,7 @@
   "url": "https://rplumber.ilo.org/data/indicator/?id=EAR_EMTM_SEX_NB_A&sex=SEX_T&timefrom=2000&format=.csv"
  },
  "ilostat/HOW_XEES_SEX_NB_A": {
-  "attempted_at": "2026-10-03T00:32:57+00:00",
+  "attempted_at": "2026-10-03T00:36:58+00:00",
   "bytes": 128877,
   "content_type": "application/octet-stream",
   "error": null,
@@ -120,13 +120,13 @@
   "method": "GET",
   "path": "data/raw/ilostat/HOW_XEES_SEX_NB_A.csv",
   "request_body": null,
-  "retrieved_at": "2026-10-03T00:32:57+00:00",
+  "retrieved_at": "2026-10-03T00:36:58+00:00",
   "sha256": "b37e0e6551e2da6969c43ff1f607bb0bba21d8b4d6507e8e88cd9a9d531635ae",
   "status": "fresh",
   "url": "https://rplumber.ilo.org/data/indicator/?id=HOW_XEES_SEX_NB_A&sex=SEX_T&timefrom=2000&format=.csv"
  },
  "ilostat/dic_note_indicator": {
-  "attempted_at": "2026-10-03T00:33:00+00:00",
+  "attempted_at": "2026-10-03T00:37:01+00:00",
   "bytes": 35748,
   "content_type": "application/octet-stream",
   "error": null,
@@ -134,13 +134,13 @@
   "method": "GET",
   "path": "data/raw/ilostat/dic_note_indicator.csv",
   "request_body": null,
-  "retrieved_at": "2026-10-03T00:33:00+00:00",
+  "retrieved_at": "2026-10-03T00:37:01+00:00",
   "sha256": "a5a03f637172636744eed76940144189ae7313eee666cedd6dabb934c8a5af0d",
   "status": "fresh",
   "url": "https://rplumber.ilo.org/metadata/dic/?var=note_indicator&lang=en&format=.csv"
  },
  "ilostat/dic_note_source": {
-  "attempted_at": "2026-10-03T00:32:59+00:00",
+  "attempted_at": "2026-10-03T00:36:59+00:00",
   "bytes": 14606,
   "content_type": "application/octet-stream",
   "error": null,
@@ -148,13 +148,13 @@
   "method": "GET",
   "path": "data/raw/ilostat/dic_note_source.csv",
   "request_body": null,
-  "retrieved_at": "2026-10-03T00:32:59+00:00",
+  "retrieved_at": "2026-10-03T00:36:59+00:00",
   "sha256": "35d6f835d68b89a3fae98f462b4d2ea4f8ce8aca24bf0b49eec3f4cabb43b9fd",
   "status": "fresh",
   "url": "https://rplumber.ilo.org/metadata/dic/?var=note_source&lang=en&format=.csv"
  },
  "ilostat/dic_obs_status": {
-  "attempted_at": "2026-10-03T00:33:01+00:00",
+  "attempted_at": "2026-10-03T00:37:02+00:00",
   "bytes": 157,
   "content_type": "application/octet-stream",
   "error": null,
@@ -162,13 +162,13 @@
   "method": "GET",
   "path": "data/raw/ilostat/dic_obs_status.csv",
   "request_body": null,
-  "retrieved_at": "2026-10-03T00:33:01+00:00",
+  "retrieved_at": "2026-10-03T00:37:02+00:00",
   "sha256": "4f78a0a382c92e52fca71e94ef8f544fafb8bb3f877d1fcc5cb0de838eb9424a",
   "status": "fresh",
   "url": "https://rplumber.ilo.org/metadata/dic/?var=obs_status&lang=en&format=.csv"
  },
  "ilostat/dic_ref_area": {
-  "attempted_at": "2026-10-03T00:33:01+00:00",
+  "attempted_at": "2026-10-03T00:37:02+00:00",
   "bytes": 7816,
   "content_type": "application/octet-stream",
   "error": null,
@@ -176,13 +176,13 @@
   "method": "GET",
   "path": "data/raw/ilostat/dic_ref_area.csv",
   "request_body": null,
-  "retrieved_at": "2026-10-03T00:33:01+00:00",
+  "retrieved_at": "2026-10-03T00:37:02+00:00",
   "sha256": "73483867f9fee42ede25ac4d07c5a5a3b1ef1df5b2db68a3b24ad5666a7e3cf7",
   "status": "fresh",
   "url": "https://rplumber.ilo.org/metadata/dic/?var=ref_area&lang=en&format=.csv"
  },
  "ilostat/dic_source": {
-  "attempted_at": "2026-10-03T00:32:58+00:00",
+  "attempted_at": "2026-10-03T00:36:58+00:00",
   "bytes": 214163,
   "content_type": "application/octet-stream",
   "error": null,
@@ -190,13 +190,13 @@
   "method": "GET",
   "path": "data/raw/ilostat/dic_source.csv",
   "request_body": null,
-  "retrieved_at": "2026-10-03T00:32:58+00:00",
+  "retrieved_at": "2026-10-03T00:36:58+00:00",
   "sha256": "f0fe6308df810781ff4e71d27f90247f4cc879850d74b6343cb456a017dbf101",
   "status": "fresh",
   "url": "https://rplumber.ilo.org/metadata/dic/?var=source&lang=en&format=.csv"
  },
  "imf/pcps_pgold_monthly": {
-  "attempted_at": "2026-10-03T00:31:30+00:00",
+  "attempted_at": "2026-10-03T00:35:50+00:00",
   "bytes": 61811,
   "content_type": "application/xml",
   "error": null,
@@ -204,13 +204,13 @@
   "method": "GET",
   "path": "data/raw/imf/pcps_pgold_monthly.xml",
   "request_body": null,
-  "retrieved_at": "2026-10-03T00:31:30+00:00",
-  "sha256": "be85a9c485eb533b5effc9cffbb887b4d04583f297b86e2d6d21e8e59d2fba56",
+  "retrieved_at": "2026-10-03T00:35:50+00:00",
+  "sha256": "1521e1ca2297b737f0893a150651f3e722c08b524ccfdcb8010c915d7a28c877",
   "status": "fresh",
   "url": "https://api.imf.org/external/sdmx/2.1/data/IMF.RES,PCPS,9.0.0/G001.PGOLD.USD.M?startPeriod=1990-01"
  },
  "mhlw/bsws/2020_ippan_sangyo_t1": {
-  "attempted_at": "2026-10-03T00:32:16+00:00",
+  "attempted_at": "2026-10-03T00:36:40+00:00",
   "bytes": 2229760,
   "content_type": "application/octet-stream",
   "error": null,
@@ -218,13 +218,13 @@
   "method": "GET",
   "path": "data/raw/mhlw/bsws/2020_ippan_sangyo_t1.xls",
   "request_body": null,
-  "retrieved_at": "2026-10-03T00:32:16+00:00",
+  "retrieved_at": "2026-10-03T00:36:40+00:00",
   "sha256": "624c761c87dd29e2ab9244054d74bab9b50596b5100f6cb6a63fe9470c93ae0f",
   "status": "fresh",
   "url": "https://www.e-stat.go.jp/stat-search/file-download?statInfId=000032069350&fileKind=0"
  },
  "mhlw/bsws/2021_ippan_sangyo_t1": {
-  "attempted_at": "2026-10-03T00:32:19+00:00",
+  "attempted_at": "2026-10-03T00:36:41+00:00",
   "bytes": 1516641,
   "content_type": "application/octet-stream",
   "error": null,
@@ -232,13 +232,13 @@
   "method": "GET",
   "path": "data/raw/mhlw/bsws/2021_ippan_sangyo_t1.xlsx",
   "request_body": null,
-  "retrieved_at": "2026-10-03T00:32:19+00:00",
+  "retrieved_at": "2026-10-03T00:36:41+00:00",
   "sha256": "c78fef8823edf07725f4023a9cfb95fad402180886b0fdffcee69ac78089ebb2",
   "status": "fresh",
   "url": "https://www.e-stat.go.jp/stat-search/file-download?statInfId=000032182871&fileKind=4"
  },
  "mhlw/bsws/2022_ippan_sangyo_t1": {
-  "attempted_at": "2026-10-03T00:32:22+00:00",
+  "attempted_at": "2026-10-03T00:36:43+00:00",
   "bytes": 1458063,
   "content_type": "application/octet-stream",
   "error": null,
@@ -246,13 +246,13 @@
   "method": "GET",
   "path": "data/raw/mhlw/bsws/2022_ippan_sangyo_t1.xlsx",
   "request_body": null,
-  "retrieved_at": "2026-10-03T00:32:22+00:00",
+  "retrieved_at": "2026-10-03T00:36:43+00:00",
   "sha256": "281b54bf71cd94e2830bf5474dedd4a3650ff53f88303266dd7fd3831d45bd3e",
   "status": "fresh",
   "url": "https://www.e-stat.go.jp/stat-search/file-download?statInfId=000040029100&fileKind=4"
  },
  "mhlw/bsws/2023_ippan_sangyo_t1": {
-  "attempted_at": "2026-10-03T00:32:24+00:00",
+  "attempted_at": "2026-10-03T00:36:45+00:00",
   "bytes": 1458388,
   "content_type": "application/octet-stream",
   "error": null,
@@ -260,13 +260,13 @@
   "method": "GET",
   "path": "data/raw/mhlw/bsws/2023_ippan_sangyo_t1.xlsx",
   "request_body": null,
-  "retrieved_at": "2026-10-03T00:32:24+00:00",
+  "retrieved_at": "2026-10-03T00:36:45+00:00",
   "sha256": "291c97702f24f61355d59ca6f4b48751920b780892434397df9b0f0baefc855c",
   "status": "fresh",
   "url": "https://www.e-stat.go.jp/stat-search/file-download?statInfId=000040163660&fileKind=4"
  },
  "mhlw/bsws/2024_ippan_sangyo_t1": {
-  "attempted_at": "2026-10-03T00:32:26+00:00",
+  "attempted_at": "2026-10-03T00:36:46+00:00",
   "bytes": 1464145,
   "content_type": "application/octet-stream",
   "error": null,
@@ -274,13 +274,13 @@
   "method": "GET",
   "path": "data/raw/mhlw/bsws/2024_ippan_sangyo_t1.xlsx",
   "request_body": null,
-  "retrieved_at": "2026-10-03T00:32:26+00:00",
+  "retrieved_at": "2026-10-03T00:36:46+00:00",
   "sha256": "5da958771ef0c91742d741d61daf8f4cc6d31881f5ee636112888984442f37f5",
   "status": "fresh",
   "url": "https://www.e-stat.go.jp/stat-search/file-download?statInfId=000040247773&fileKind=4"
  },
  "mhlw/bsws/2025_ippan_sangyo_t1": {
-  "attempted_at": "2026-10-03T00:32:29+00:00",
+  "attempted_at": "2026-10-03T00:36:47+00:00",
   "bytes": 1542010,
   "content_type": "application/octet-stream",
   "error": null,
@@ -288,7 +288,7 @@
   "method": "GET",
   "path": "data/raw/mhlw/bsws/2025_ippan_sangyo_t1.xlsx",
   "request_body": null,
-  "retrieved_at": "2026-10-03T00:32:29+00:00",
+  "retrieved_at": "2026-10-03T00:36:47+00:00",
   "sha256": "83b686102ce2ec947018b9604727029ac01c00a37650c63fd3ce6fc97d5ab3bc",
   "status": "fresh",
   "url": "https://www.e-stat.go.jp/stat-search/file-download?statInfId=000040420843&fileKind=4"
@@ -364,7 +364,7 @@
   "url": "https://www.stats.gov.cn/sj/zxfb/202605/t20260515_1963707.html"
  },
  "oecd/av_an_wage": {
-  "attempted_at": "2026-10-03T00:31:32+00:00",
+  "attempted_at": "2026-10-03T00:35:55+00:00",
   "bytes": 694706,
   "content_type": "application/vnd.sdmx.data+csv; labels=name; charset=utf-8; version=2",
   "error": null,
@@ -372,13 +372,13 @@
   "method": "GET",
   "path": "data/raw/oecd/av_an_wage.csv",
   "request_body": null,
-  "retrieved_at": "2026-10-03T00:31:32+00:00",
+  "retrieved_at": "2026-10-03T00:35:55+00:00",
   "sha256": "4281aa6a560245398ec784035b6280be540624f03d954e7fd7cc76e5a36bb274",
   "status": "fresh",
   "url": "https://sdmx.oecd.org/public/rest/data/OECD.ELS.SAE,DSD_EARNINGS@AV_AN_WAGE,1.0/all?startPeriod=2000&format=csvfilewithlabels"
  },
  "oecd/avg_usual_weekly_hours": {
-  "attempted_at": "2026-10-03T00:31:32+00:00",
+  "attempted_at": "2026-10-03T00:35:55+00:00",
   "bytes": 430204,
   "content_type": "application/vnd.sdmx.data+csv; labels=name; version=2; charset=utf-8",
   "error": null,
@@ -386,13 +386,13 @@
   "method": "GET",
   "path": "data/raw/oecd/avg_usual_weekly_hours.csv",
   "request_body": null,
-  "retrieved_at": "2026-10-03T00:31:32+00:00",
+  "retrieved_at": "2026-10-03T00:35:55+00:00",
   "sha256": "3754bfa5c6e294bc1adc0d2b466ca79a2f0e525860fbea37036fbcf4da93dafc",
   "status": "fresh",
   "url": "https://sdmx.oecd.org/public/rest/data/OECD.ELS.SAE,DSD_HW@DF_AVG_USL_WK_WKD,1.0/.HW.H_WK_PS._T._T.EMP.W.USUAL.ICSE93_1.FT.MEAN._Z.MAIN?startPeriod=2000&format=csvfilewithlabels"
  },
  "worldbank/CMO-Historical-Data-Monthly": {
-  "attempted_at": "2026-10-03T00:31:29+00:00",
+  "attempted_at": "2026-10-03T00:35:50+00:00",
   "bytes": 586099,
   "content_type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
   "error": null,
@@ -400,13 +400,13 @@
   "method": "GET",
   "path": "data/raw/worldbank/CMO-Historical-Data-Monthly.xlsx",
   "request_body": null,
-  "retrieved_at": "2026-10-03T00:31:29+00:00",
+  "retrieved_at": "2026-10-03T00:35:50+00:00",
   "sha256": "ea1c350827878ea3bbe30e3cda16a13fd3bd5b409b8458940dc94a36b5a33154",
   "status": "fresh",
   "url": "https://thedocs.worldbank.org/en/doc/74e8be41ceb20fa0da750cda2f6b9e4e-0050012026/related/CMO-Historical-Data-Monthly.xlsx"
  },
  "worldbank/commodity_markets_landing": {
-  "attempted_at": "2026-10-03T00:31:29+00:00",
+  "attempted_at": "2026-10-03T00:35:50+00:00",
   "bytes": 55841,
   "content_type": "text/html;charset=utf-8",
   "error": null,
@@ -414,13 +414,13 @@
   "method": "GET",
   "path": "data/raw/worldbank/commodity_markets_landing.html",
   "request_body": null,
-  "retrieved_at": "2026-10-03T00:31:29+00:00",
+  "retrieved_at": "2026-10-03T00:35:50+00:00",
   "sha256": "1890d7ef631410ca9a3d6a927faecf00327bbc68aeaa45e72e80cf255b5069e4",
   "status": "fresh",
   "url": "https://www.worldbank.org/en/research/commodity-markets"
  },
  "worldbank/countries": {
-  "attempted_at": "2026-10-03T00:31:29+00:00",
+  "attempted_at": "2026-10-03T00:35:49+00:00",
   "bytes": 113590,
   "content_type": "application/json;charset=utf-8",
   "error": null,
@@ -428,13 +428,13 @@
   "method": "GET",
   "path": "data/raw/worldbank/countries.json",
   "request_body": null,
-  "retrieved_at": "2026-10-03T00:31:29+00:00",
+  "retrieved_at": "2026-10-03T00:35:49+00:00",
   "sha256": "d29d57f8adf954c5e2a1520a02fb2c7b45575d8db3bd327a9dff47d66914231c",
   "status": "fresh",
   "url": "https://api.worldbank.org/v2/country?format=json&per_page=400"
  },
  "worldbank/fpn_CoHD_LCU": {
-  "attempted_at": "2026-10-03T00:31:32+00:00",
+  "attempted_at": "2026-10-03T00:35:53+00:00",
   "bytes": 531914,
   "content_type": "application/json;charset=utf-8",
   "error": null,
@@ -442,13 +442,13 @@
   "method": "GET",
   "path": "data/raw/worldbank/fpn_CoHD_LCU.json",
   "request_body": null,
-  "retrieved_at": "2026-10-03T00:31:32+00:00",
+  "retrieved_at": "2026-10-03T00:35:53+00:00",
   "sha256": "c44fe6f2bd721ce8a3831fb029c26954bbc46af1f2271555068216b20e910337",
   "status": "fresh",
   "url": "https://api.worldbank.org/v2/sources/88/country/all/series/CoHD_LCU/time/all?format=json&per_page=20000"
  },
  "worldbank/fpn_CoHD_PPP": {
-  "attempted_at": "2026-10-03T00:31:32+00:00",
+  "attempted_at": "2026-10-03T00:35:54+00:00",
   "bytes": 516187,
   "content_type": "application/json;charset=utf-8",
   "error": null,
@@ -456,13 +456,13 @@
   "method": "GET",
   "path": "data/raw/worldbank/fpn_CoHD_PPP.json",
   "request_body": null,
-  "retrieved_at": "2026-10-03T00:31:32+00:00",
+  "retrieved_at": "2026-10-03T00:35:54+00:00",
   "sha256": "12d22fe31195f419452b31b5b390ef38cd9170802be251beeddbde433b70c37c",
   "status": "fresh",
   "url": "https://api.worldbank.org/v2/sources/88/country/all/series/CoHD_PPP/time/all?format=json&per_page=20000"
  },
  "worldbank/fpn_CoHD_asf_LCU": {
-  "attempted_at": "2026-10-03T00:31:32+00:00",
+  "attempted_at": "2026-10-03T00:35:54+00:00",
   "bytes": 545891,
   "content_type": "application/json;charset=utf-8",
   "error": null,
@@ -470,13 +470,13 @@
   "method": "GET",
   "path": "data/raw/worldbank/fpn_CoHD_asf_LCU.json",
   "request_body": null,
-  "retrieved_at": "2026-10-03T00:31:32+00:00",
+  "retrieved_at": "2026-10-03T00:35:54+00:00",
   "sha256": "a36a224d3ded17878d811c607157d115ddafdceebb1daa6df20a69beab73a5a1",
   "status": "fresh",
   "url": "https://api.worldbank.org/v2/sources/88/country/all/series/CoHD_asf_LCU/time/all?format=json&per_page=20000"
  },
  "worldbank/fpn_CoHD_f_LCU": {
-  "attempted_at": "2026-10-03T00:31:32+00:00",
+  "attempted_at": "2026-10-03T00:35:54+00:00",
   "bytes": 519936,
   "content_type": "application/json;charset=utf-8",
   "error": null,
@@ -484,13 +484,13 @@
   "method": "GET",
   "path": "data/raw/worldbank/fpn_CoHD_f_LCU.json",
   "request_body": null,
-  "retrieved_at": "2026-10-03T00:31:32+00:00",
+  "retrieved_at": "2026-10-03T00:35:54+00:00",
   "sha256": "3112b285be73e244fd926107d1ad2bba81ab02088ecf7fe40f93ba4b6a1fc1d4",
   "status": "fresh",
   "url": "https://api.worldbank.org/v2/sources/88/country/all/series/CoHD_f_LCU/time/all?format=json&per_page=20000"
  },
  "worldbank/fpn_CoHD_lns_LCU": {
-  "attempted_at": "2026-10-03T00:31:32+00:00",
+  "attempted_at": "2026-10-03T00:35:54+00:00",
   "bytes": 552751,
   "content_type": "application/json;charset=utf-8",
   "error": null,
@@ -498,13 +498,13 @@
   "method": "GET",
   "path": "data/raw/worldbank/fpn_CoHD_lns_LCU.json",
   "request_body": null,
-  "retrieved_at": "2026-10-03T00:31:32+00:00",
+  "retrieved_at": "2026-10-03T00:35:54+00:00",
   "sha256": "bb74ba28ffedc08018d594e18ba18c80b99610f09f1c2843e910d48f9e107944",
   "status": "fresh",
   "url": "https://api.worldbank.org/v2/sources/88/country/all/series/CoHD_lns_LCU/time/all?format=json&per_page=20000"
  },
  "worldbank/fpn_CoHD_of_LCU": {
-  "attempted_at": "2026-10-03T00:31:32+00:00",
+  "attempted_at": "2026-10-03T00:35:54+00:00",
   "bytes": 533731,
   "content_type": "application/json;charset=utf-8",
   "error": null,
@@ -512,13 +512,13 @@
   "method": "GET",
   "path": "data/raw/worldbank/fpn_CoHD_of_LCU.json",
   "request_body": null,
-  "retrieved_at": "2026-10-03T00:31:32+00:00",
+  "retrieved_at": "2026-10-03T00:35:54+00:00",
   "sha256": "856bff9ee4bcf8e7fce28561a35691b4e24457f6a5707ceaef7522289999fb9e",
   "status": "fresh",
   "url": "https://api.worldbank.org/v2/sources/88/country/all/series/CoHD_of_LCU/time/all?format=json&per_page=20000"
  },
  "worldbank/fpn_CoHD_ss_LCU": {
-  "attempted_at": "2026-10-03T00:31:32+00:00",
+  "attempted_at": "2026-10-03T00:35:54+00:00",
   "bytes": 537238,
   "content_type": "application/json;charset=utf-8",
   "error": null,
@@ -526,13 +526,13 @@
   "method": "GET",
   "path": "data/raw/worldbank/fpn_CoHD_ss_LCU.json",
   "request_body": null,
-  "retrieved_at": "2026-10-03T00:31:32+00:00",
+  "retrieved_at": "2026-10-03T00:35:54+00:00",
   "sha256": "855889f6aea646045fc51499693da780b6c9ca8de0f9ce48a4d2518a8476217b",
   "status": "fresh",
   "url": "https://api.worldbank.org/v2/sources/88/country/all/series/CoHD_ss_LCU/time/all?format=json&per_page=20000"
  },
  "worldbank/fpn_CoHD_v_LCU": {
-  "attempted_at": "2026-10-03T00:31:32+00:00",
+  "attempted_at": "2026-10-03T00:35:54+00:00",
   "bytes": 526862,
   "content_type": "application/json;charset=utf-8",
   "error": null,
@@ -540,13 +540,13 @@
   "method": "GET",
   "path": "data/raw/worldbank/fpn_CoHD_v_LCU.json",
   "request_body": null,
-  "retrieved_at": "2026-10-03T00:31:32+00:00",
+  "retrieved_at": "2026-10-03T00:35:54+00:00",
   "sha256": "e43dcec933486346fea6c8b220ab338e7e89291acb9c4ec27a294cfd6243255c",
   "status": "fresh",
   "url": "https://api.worldbank.org/v2/sources/88/country/all/series/CoHD_v_LCU/time/all?format=json&per_page=20000"
  },
  "worldbank/icp2021_PPPGlob": {
-  "attempted_at": "2026-10-03T00:31:32+00:00",
+  "attempted_at": "2026-10-03T00:35:53+00:00",
   "bytes": 1164291,
   "content_type": "application/json;charset=utf-8",
   "error": null,
@@ -554,13 +554,13 @@
   "method": "GET",
   "path": "data/raw/worldbank/icp2021_PPPGlob.json",
   "request_body": null,
-  "retrieved_at": "2026-10-03T00:31:32+00:00",
+  "retrieved_at": "2026-10-03T00:35:53+00:00",
   "sha256": "453c9748889de8879eace51714b5aa3eb128a0de0f9e8adf0ad6cb9a19ae8756",
   "status": "fresh",
   "url": "https://api.worldbank.org/v2/sources/90/country/all/series/9100000;1101000;1101110;1101120;1101130;1101140;1101150;1101160;1101170;1103000;1105000;9060000;9080000;1107000;1108000;9110000;9120000;1111000/classification/PPPGlob/time/YR2021?format=json&per_page=20000"
  },
  "worldbank/icp2021_PX.WL": {
-  "attempted_at": "2026-10-03T00:31:31+00:00",
+  "attempted_at": "2026-10-03T00:35:53+00:00",
   "bytes": 1128824,
   "content_type": "application/json;charset=utf-8",
   "error": null,
@@ -568,13 +568,13 @@
   "method": "GET",
   "path": "data/raw/worldbank/icp2021_PX.WL.json",
   "request_body": null,
-  "retrieved_at": "2026-10-03T00:31:31+00:00",
+  "retrieved_at": "2026-10-03T00:35:53+00:00",
   "sha256": "26e7fdc3299c582f9b26d62a87c53d233a13d59af8e2891e3302ea5882e3b801",
   "status": "fresh",
   "url": "https://api.worldbank.org/v2/sources/90/country/all/series/9100000;1101000;1101110;1101120;1101130;1101140;1101150;1101160;1101170;1103000;1105000;9060000;9080000;1107000;1108000;9110000;9120000;1111000/classification/PX.WL/time/YR2021?format=json&per_page=20000"
  },
  "worldbank/wdi_NE.CON.PRVT.CN": {
-  "attempted_at": "2026-10-03T00:31:31+00:00",
+  "attempted_at": "2026-10-03T00:35:53+00:00",
   "bytes": 2417450,
   "content_type": "application/json;charset=utf-8",
   "error": null,
@@ -582,13 +582,13 @@
   "method": "GET",
   "path": "data/raw/worldbank/wdi_NE.CON.PRVT.CN.json",
   "request_body": null,
-  "retrieved_at": "2026-10-03T00:31:31+00:00",
+  "retrieved_at": "2026-10-03T00:35:53+00:00",
   "sha256": "8f0d3ed733cc9c45a4c15aebc15059ba1cd8e63da7b015ba4b0195cacd853b00",
   "status": "fresh",
   "url": "https://api.worldbank.org/v2/country/all/indicator/NE.CON.PRVT.CN?format=json&per_page=20000&date=1990:2030"
  },
  "worldbank/wdi_NE.CON.PRVT.PP.CD": {
-  "attempted_at": "2026-10-03T00:31:31+00:00",
+  "attempted_at": "2026-10-03T00:35:53+00:00",
   "bytes": 2642740,
   "content_type": "application/json;charset=utf-8",
   "error": null,
@@ -596,13 +596,13 @@
   "method": "GET",
   "path": "data/raw/worldbank/wdi_NE.CON.PRVT.PP.CD.json",
   "request_body": null,
-  "retrieved_at": "2026-10-03T00:31:31+00:00",
+  "retrieved_at": "2026-10-03T00:35:53+00:00",
   "sha256": "444697547064d0d904cdcb43efdc71f9061794d996a7289b49834d59d0ff4d44",
   "status": "fresh",
   "url": "https://api.worldbank.org/v2/country/all/indicator/NE.CON.PRVT.PP.CD?format=json&per_page=20000&date=1990:2030"
  },
  "worldbank/wdi_NY.GDP.MKTP.CD": {
-  "attempted_at": "2026-10-03T00:31:31+00:00",
+  "attempted_at": "2026-10-03T00:35:52+00:00",
   "bytes": 2016973,
   "content_type": "application/json;charset=utf-8",
   "error": null,
@@ -610,13 +610,13 @@
   "method": "GET",
   "path": "data/raw/worldbank/wdi_NY.GDP.MKTP.CD.json",
   "request_body": null,
-  "retrieved_at": "2026-10-03T00:31:31+00:00",
+  "retrieved_at": "2026-10-03T00:35:52+00:00",
   "sha256": "26028a2d8b6bf75927b10cba2eba0a2dab71f38729e33fad9b96d4c7967fe11a",
   "status": "fresh",
   "url": "https://api.worldbank.org/v2/country/all/indicator/NY.GDP.MKTP.CD?format=json&per_page=20000&date=1990:2030"
  },
  "worldbank/wdi_NY.GDP.MKTP.CN": {
-  "attempted_at": "2026-10-03T00:31:31+00:00",
+  "attempted_at": "2026-10-03T00:35:52+00:00",
   "bytes": 1971289,
   "content_type": "application/json;charset=utf-8",
   "error": null,
@@ -624,13 +624,13 @@
   "method": "GET",
   "path": "data/raw/worldbank/wdi_NY.GDP.MKTP.CN.json",
   "request_body": null,
-  "retrieved_at": "2026-10-03T00:31:31+00:00",
+  "retrieved_at": "2026-10-03T00:35:52+00:00",
   "sha256": "6934ba511e7aadf7ac119277ad96546073732d1d51bf4b400b58d757f8eecb17",
   "status": "fresh",
   "url": "https://api.worldbank.org/v2/country/all/indicator/NY.GDP.MKTP.CN?format=json&per_page=20000&date=1990:2030"
  },
  "worldbank/wdi_PA.NUS.FCRF": {
-  "attempted_at": "2026-10-03T00:31:30+00:00",
+  "attempted_at": "2026-10-03T00:35:51+00:00",
   "bytes": 2280487,
   "content_type": "application/json;charset=utf-8",
   "error": null,
@@ -638,13 +638,13 @@
   "method": "GET",
   "path": "data/raw/worldbank/wdi_PA.NUS.FCRF.json",
   "request_body": null,
-  "retrieved_at": "2026-10-03T00:31:30+00:00",
+  "retrieved_at": "2026-10-03T00:35:51+00:00",
   "sha256": "4d02ffb8db00f033421f99a46680f0c102fc4d41fa98034bc322ae93093423f7",
   "status": "fresh",
   "url": "https://api.worldbank.org/v2/country/all/indicator/PA.NUS.FCRF?format=json&per_page=20000&date=1990:2030"
  },
  "worldbank/wdi_PA.NUS.PPP": {
-  "attempted_at": "2026-10-03T00:31:31+00:00",
+  "attempted_at": "2026-10-03T00:35:52+00:00",
   "bytes": 2284222,
   "content_type": "application/json;charset=utf-8",
   "error": null,
@@ -652,13 +652,13 @@
   "method": "GET",
   "path": "data/raw/worldbank/wdi_PA.NUS.PPP.json",
   "request_body": null,
-  "retrieved_at": "2026-10-03T00:31:31+00:00",
+  "retrieved_at": "2026-10-03T00:35:52+00:00",
   "sha256": "bcf161d3e007ff12ff6202c7aadf005a4476581d580bd55e3b44a8128176ccaa",
   "status": "fresh",
   "url": "https://api.worldbank.org/v2/country/all/indicator/PA.NUS.PPP?format=json&per_page=20000&date=1990:2030"
  },
  "worldbank/wdi_PA.NUS.PRVT.PP": {
-  "attempted_at": "2026-10-03T00:31:30+00:00",
+  "attempted_at": "2026-10-03T00:35:51+00:00",
   "bytes": 2771097,
   "content_type": "application/json;charset=utf-8",
   "error": null,
@@ -666,13 +666,13 @@
   "method": "GET",
   "path": "data/raw/worldbank/wdi_PA.NUS.PRVT.PP.json",
   "request_body": null,
-  "retrieved_at": "2026-10-03T00:31:30+00:00",
+  "retrieved_at": "2026-10-03T00:35:51+00:00",
   "sha256": "9371b1adba0d04f0308ba0920401d06ed82c974b93248a6963ff86cf3b2323d7",
   "status": "fresh",
   "url": "https://api.worldbank.org/v2/country/all/indicator/PA.NUS.PRVT.PP?format=json&per_page=20000&date=1990:2030"
  },
  "worldbank/wdi_SP.POP.TOTL": {
-  "attempted_at": "2026-10-03T00:31:31+00:00",
+  "attempted_at": "2026-10-03T00:35:52+00:00",
   "bytes": 1917051,
   "content_type": "application/json;charset=utf-8",
   "error": null,
@@ -680,7 +680,7 @@
   "method": "GET",
   "path": "data/raw/worldbank/wdi_SP.POP.TOTL.json",
   "request_body": null,
-  "retrieved_at": "2026-10-03T00:31:31+00:00",
+  "retrieved_at": "2026-10-03T00:35:52+00:00",
   "sha256": "1dacdc84ba13e2c8dc9aa4bef80413fb8ffa4043446addf4a80a8afcfd648f6f",
   "status": "fresh",
   "url": "https://api.worldbank.org/v2/country/all/indicator/SP.POP.TOTL?format=json&per_page=20000&date=1990:2030"

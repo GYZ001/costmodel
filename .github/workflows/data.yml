@@ -58,8 +58,10 @@ jobs:
           PY
           cp /tmp/online.json web/public/data/dataset.json
       # 原始快照与校验报告总是提交（便于审计和排查）；网站数据集只有全部校验通过才会更新。
+      # 被取消的运行（同一分支上有更新的提交，见 concurrency）不提交：它的快照可能只抓了一部分，
+      # 而接替它的运行会重新抓取全部数据。
       - name: Commit snapshots, check report and (if valid) dataset
-        if: always()
+        if: ${{ !cancelled() }}
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
